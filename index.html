@@ -120,6 +120,33 @@
   .card-change.up { color: #dc2626; }
   .card-change.down { color: #2563eb; }
   .card-change.flat { color: #6b7280; }
+  .price-row {
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+    margin: 8px 0 6px;
+    flex-wrap: wrap;
+  }
+  .price {
+    font-weight: 700;
+    font-size: 16px;
+    font-variant-numeric: tabular-nums;
+    color: #1a1a1a;
+  }
+  .change-won {
+    font-weight: 600;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+  }
+  .change-won.up { color: #dc2626; }
+  .change-won.down { color: #2563eb; }
+  .change-won.flat { color: #6b7280; }
+  .volume-info {
+    font-size: 11px;
+    color: #6b7280;
+    margin-left: auto;
+    font-variant-numeric: tabular-nums;
+  }
   .description { font-size: 13px; color: #4b5563; margin: 6px 0 10px; }
   .links { display: flex; gap: 6px; flex-wrap: wrap; }
   .link-btn {
@@ -215,6 +242,10 @@
     .role-related { background: #1a2a4a; color: #93c5fd; }
     .card-change.up { color: #fca5a5; }
     .card-change.down { color: #93c5fd; }
+    .price { color: #e5e7eb; }
+    .change-won.up { color: #fca5a5; }
+    .change-won.down { color: #93c5fd; }
+    .volume-info { color: #9ca3af; }
     .strength-section { background: #1a1d23; border-color: #2a2f3a; }
     .strength-table th { color: #9ca3af; border-bottom-color: #2a2f3a; }
     .strength-table td { border-bottom-color: #2a2f3a; }
@@ -896,6 +927,13 @@ function scrollToSection(id) {
   window.scrollTo({ top, behavior: 'smooth' });
 }
 
+function fmtVolume(v) {
+  if (!v) return '0';
+  if (v >= 100000000) return (v / 100000000).toFixed(2) + '억';
+  if (v >= 10000) return Math.floor(v / 10000).toLocaleString('ko-KR') + '만';
+  return v.toLocaleString('ko-KR');
+}
+
 function render() {
   const tabsEl = document.getElementById('tabs');
   const contentEl = document.getElementById('content');
@@ -950,10 +988,21 @@ function renderContent() {
       const roleClass = c.role === '핵심주' ? 'role-core' : 'role-related';
       const sd = (typeof MARKET !== 'undefined' && MARKET) ? MARKET.stocks[c.code] : null;
       let chgHtml = '';
+      let priceRow = '';
       if (sd) {
         const cls = sd.change > 0 ? 'up' : sd.change < 0 ? 'down' : 'flat';
         const sign = sd.change > 0 ? '+' : '';
         chgHtml = `<span class="card-change ${cls}">${sign}${sd.change.toFixed(2)}%</span>`;
+        const changeWon = sd.change !== 0
+          ? Math.round(sd.price * sd.change / (100 + sd.change))
+          : 0;
+        const arrow = sd.change > 0 ? '▲' : sd.change < 0 ? '▼' : '─';
+        const wonStr = changeWon === 0 ? '0' : Math.abs(changeWon).toLocaleString('ko-KR');
+        priceRow = `<div class="price-row">
+          <span class="price">${sd.price.toLocaleString('ko-KR')}원</span>
+          <span class="change-won ${cls}">${arrow} ${wonStr}</span>
+          <span class="volume-info">거래량 ${fmtVolume(sd.volume)}</span>
+        </div>`;
       }
       html += `<div class="card">
         <div class="card-top">
@@ -964,6 +1013,7 @@ function renderContent() {
           </div>
           <span class="role ${roleClass}">${c.role}</span>
         </div>
+        ${priceRow}
         <div class="description">${c.description}</div>
         <div class="links">
           <a class="link-btn" target="_blank" rel="noopener" href="https://finance.naver.com/item/main.naver?code=${c.code}">네이버 증권</a>
