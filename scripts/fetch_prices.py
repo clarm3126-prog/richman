@@ -143,55 +143,63 @@ def fetch_index(code):
         return None
 
 
-def fetch_new_highs():
-    """52주 신고가 종목 코드 리스트 (KOSPI + KOSDAQ)."""
-    out = []
-    url_patterns = [
-        "https://finance.naver.com/sise/sise_high_low.naver?type=high&sosok={sosok}&page={page}",
-        "https://finance.naver.com/sise/sise_new_high.naver?sosok={sosok}&page={page}",
+def fetch_52w_high_for_stock(code):
+    """단일 종목의 52주 최고가 + 오늘 고가 반환."""
+    url = f"https://m.stock.naver.com/api/stock/{code}/integration"
+    headers = {**HEADERS, "Referer": "https://m.stock.naver.com/"}
+    for _ in range(2):
+        try:
+            r = requests.get(url, headers=headers, timeout=8)
+            if r.status_code == 429:
+                time.sleep(1.5)
+                continue
+            if r.status_code != 200:
+                return code, None, None
+            data = r.json()
+            high_52w = None
+            today_high = None
+            for item in data.get("totalInfos", []):
+                ic = item.get("code")
+                v = str(item.get("value", "")).replace(",", "")
+                if ic == "highPriceOf52Weeks":
+                    try:
+                        high_52w = int(v)
+                    except ValueError:
+                        pass
+                elif ic == "highPrice":
+                    try:
+                        today_high = int(v)
+                    except ValueError:
+                        pass
+            return code, high_52w, today_high
+        except Exception:
+            return code, None, None
+    return code, None, None
+
+
+def find_new_highs(stocks):
+    """52주 신고가 종목 찾기. 모바일 API 병렬 호출 후 오늘 고가가 52주 최고가에 도달한 종목 추출."""
+    import concurrent.futures
+    candidates = [
+        code for code, s in stocks.items()
+        if s.get("volume", 0) > 5000 and s.get("price", 0) > 0
     ]
-    for sosok in [0, 1]:
-        sosok_codes = []
-        for url_template in url_patterns:
-            page = 1
-            while page <= 10:
-                url = url_template.format(sosok=sosok, page=page)
-                try:
-                    r = requests.get(url, headers=HEADERS, timeout=15)
-                    if r.status_code != 200:
-                        break
-                    r.encoding = "euc-kr"
-                    soup = BeautifulSoup(r.text, "html.parser")
-                    links = soup.select("a.tltle")
-                    if not links:
-                        break
-                    found = 0
-                    for link in links:
-                        m = re.search(r"code=(\d+)", link.get("href", ""))
-                        if m:
-                            code = m.group(1).zfill(6)
-                            if code not in sosok_codes:
-                                sosok_codes.append(code)
-                                found += 1
-                    if found == 0:
-                        break
-                    page += 1
-                    time.sleep(0.15)
-                except Exception as e:
-                    print(f"  new_highs sosok={sosok} page={page} failed: {e}")
-                    break
-            if sosok_codes:
-                break
-        market_name = "KOSPI" if sosok == 0 else "KOSDAQ"
-        print(f"  {market_name} new_highs: {len(sosok_codes)}")
-        out.extend(sosok_codes)
-    seen = set()
-    deduped = []
-    for c in out:
-        if c not in seen:
-            seen.add(c)
-            deduped.append(c)
-    return deduped
+    print(f"  Checking {len(candidates)} candidates for 52w high...")
+
+    new_highs = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=15) as ex:
+        futures = {ex.submit(fetch_52w_high_for_stock, c): c for c in candidates}
+        done = 0
+        for f in concurrent.futures.as_completed(futures):
+            code, high_52w, today_high = f.result()
+            done += 1
+            if done % 500 == 0:
+                print(f"    ...{done}/{len(candidates)} checked")
+            if high_52w and today_high and today_high >= high_52w:
+                new_highs.append(code)
+    new_highs.sort(key=lambda c: stocks[c].get("change", 0), reverse=True)
+    print(f"  Found {len(new_highs)} stocks at 52w high")
+    return new_highs
 
 
 def main():
@@ -215,8 +223,7 @@ def main():
     }
     print(f"Indices: {indices}")
 
-    new_highs = fetch_new_highs()
-    print(f"52w new highs: {len(new_highs)}")
+    new_highs = find_new_highs(stocks)
 
     out = {
         "updated": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
