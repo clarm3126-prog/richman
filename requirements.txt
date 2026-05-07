@@ -1,3 +1,3 @@
 pykrx
-FinanceDataReader
+finance-datareader
 pytz
