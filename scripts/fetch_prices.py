@@ -324,6 +324,7 @@ def main():
 
     naver_themes = fetch_naver_themes()
     enrich_top_themes_with_stocks(naver_themes, top_n=10)
+    day_str = datetime.now(KST).strftime("%Y%m%d")
     save_history(naver_themes, day_str)
 
     out = {
