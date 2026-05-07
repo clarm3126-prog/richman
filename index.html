@@ -852,6 +852,7 @@ const DATA = {
 };
 
 const state = { activeTheme: "전체", query: "" };
+let MARKET = null;
 
 function render() {
   const tabsEl = document.getElementById('tabs');
@@ -946,7 +947,6 @@ document.getElementById('search').addEventListener('input', e => {
 render();
 
 // === 시장 데이터 (GitHub Actions로 10분마다 자동 갱신) ===
-let MARKET = null;
 
 async function loadMarket() {
   const res = await fetch('data/market.json?t=' + Date.now());
