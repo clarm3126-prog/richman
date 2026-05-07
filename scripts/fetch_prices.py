@@ -143,6 +143,57 @@ def fetch_index(code):
         return None
 
 
+def fetch_new_highs():
+    """52주 신고가 종목 코드 리스트 (KOSPI + KOSDAQ)."""
+    out = []
+    url_patterns = [
+        "https://finance.naver.com/sise/sise_high_low.naver?type=high&sosok={sosok}&page={page}",
+        "https://finance.naver.com/sise/sise_new_high.naver?sosok={sosok}&page={page}",
+    ]
+    for sosok in [0, 1]:
+        sosok_codes = []
+        for url_template in url_patterns:
+            page = 1
+            while page <= 10:
+                url = url_template.format(sosok=sosok, page=page)
+                try:
+                    r = requests.get(url, headers=HEADERS, timeout=15)
+                    if r.status_code != 200:
+                        break
+                    r.encoding = "euc-kr"
+                    soup = BeautifulSoup(r.text, "html.parser")
+                    links = soup.select("a.tltle")
+                    if not links:
+                        break
+                    found = 0
+                    for link in links:
+                        m = re.search(r"code=(\d+)", link.get("href", ""))
+                        if m:
+                            code = m.group(1).zfill(6)
+                            if code not in sosok_codes:
+                                sosok_codes.append(code)
+                                found += 1
+                    if found == 0:
+                        break
+                    page += 1
+                    time.sleep(0.15)
+                except Exception as e:
+                    print(f"  new_highs sosok={sosok} page={page} failed: {e}")
+                    break
+            if sosok_codes:
+                break
+        market_name = "KOSPI" if sosok == 0 else "KOSDAQ"
+        print(f"  {market_name} new_highs: {len(sosok_codes)}")
+        out.extend(sosok_codes)
+    seen = set()
+    deduped = []
+    for c in out:
+        if c not in seen:
+            seen.add(c)
+            deduped.append(c)
+    return deduped
+
+
 def main():
     print(f"Run time: {datetime.now(KST).strftime('%Y-%m-%d %H:%M:%S KST')}")
     print("Fetching Naver Finance market data...")
@@ -164,11 +215,15 @@ def main():
     }
     print(f"Indices: {indices}")
 
+    new_highs = fetch_new_highs()
+    print(f"52w new highs: {len(new_highs)}")
+
     out = {
         "updated": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
         "trading_day": datetime.now(KST).strftime("%Y%m%d"),
         "indices": indices,
         "stocks": stocks,
+        "new_highs": new_highs,
     }
 
     out_path = Path("data/market.json")

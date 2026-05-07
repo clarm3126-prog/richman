@@ -22,9 +22,13 @@
   }
   h1 { font-size: 18px; font-weight: 700; margin-bottom: 12px; }
   .top-nav {
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 6px;
     margin-bottom: 12px;
+  }
+  @media (min-width: 600px) {
+    .top-nav { grid-template-columns: repeat(4, 1fr); }
   }
   .nav-btn {
     flex: 1;
@@ -42,7 +46,7 @@
     -webkit-tap-highlight-color: transparent;
   }
   .nav-btn:active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
-  #section-strength, #section-movers, #content { scroll-margin-top: 240px; }
+  #section-strength, #section-movers, #section-newhighs, #content { scroll-margin-top: 280px; }
   .search-box {
     width: 100%;
     padding: 10px 14px;
@@ -233,6 +237,7 @@
     <button class="nav-btn" onclick="scrollToSection('section-strength')">🔥 강도 TOP10</button>
     <button class="nav-btn" onclick="scrollToSection('content')">🏷️ 테마별 종목</button>
     <button class="nav-btn" onclick="scrollToSection('section-movers')">📈 TOP10 주식</button>
+    <button class="nav-btn" onclick="scrollToSection('section-newhighs')">🚀 52주 신고가</button>
   </div>
   <input type="text" class="search-box" id="search" placeholder="회사명·종목코드·키워드 검색">
   <div class="tabs" id="tabs"></div>
@@ -1116,6 +1121,35 @@ function renderMarket(market) {
     </tr>`;
   });
   html += '</tbody></table>';
+  html += `</div>`;
+
+  // --- 52주 신고가 ---
+  html += `<div class="strength-section" id="section-newhighs">`;
+  html += `<div class="strength-title" style="margin-bottom:8px">🚀 52주 신고가</div>`;
+  html += `<div class="strength-meta" style="margin-bottom:6px">52주 최고가 갱신 종목 · 행 클릭 시 네이버 시세</div>`;
+  const newHighs = market.new_highs || [];
+  if (newHighs.length === 0) {
+    html += `<div class="strength-loading">52주 신고가 데이터를 준비 중입니다.<br><span style="font-size:11px">GitHub Actions 다음 실행 후 표시됩니다.</span></div>`;
+  } else {
+    html += '<table class="strength-table"><tbody>';
+    let shown = 0;
+    for (const code of newHighs) {
+      if (shown >= 30) break;
+      const s = market.stocks[code];
+      if (!s) continue;
+      const cls = s.change > 0 ? 'up' : s.change < 0 ? 'down' : 'flat';
+      shown++;
+      html += `<tr class="strength-row" data-code="${code}">
+        <td>${shown}</td>
+        <td>${s.name}<div class="company-code" style="display:block;font-size:10px;margin-top:2px">${code} · ${s.market}</div></td>
+        <td class="num ${cls}">${fmtPct(s.change)}</td>
+      </tr>`;
+    }
+    html += '</tbody></table>';
+    if (newHighs.length > 30) {
+      html += `<div class="strength-meta" style="margin-top:6px;text-align:center">총 ${newHighs.length}종목 중 상위 30개 표시</div>`;
+    }
+  }
   html += `</div>`;
 
   el.innerHTML = html;
