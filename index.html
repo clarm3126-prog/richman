@@ -156,6 +156,15 @@
   .progress-fill {
     height: 100%; background: #2563eb; transition: width 0.3s; width: 0%;
   }
+  .market-overview {
+    display: flex; gap: 20px; flex-wrap: wrap;
+    padding-bottom: 12px; margin-bottom: 12px;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 14px;
+  }
+  .idx { display: flex; gap: 6px; align-items: baseline; }
+  .idx-name { font-weight: 700; font-size: 12px; color: #6b7280; }
+  .strength-section + .strength-section { margin-top: 0; }
   @media (prefers-color-scheme: dark) {
     html, body { background: #0f1115; color: #e5e7eb; }
     header { background: #1a1d23; border-bottom-color: #2a2f3a; }
@@ -175,6 +184,8 @@
     .refresh-btn { background: #2a2f3a; border-color: #3a414f; color: #e5e7eb; }
     .strength-row:active { background: #2a2f3a; }
     .progress-bar { background: #2a2f3a; }
+    .market-overview { border-bottom-color: #2a2f3a; }
+    .idx-name { color: #9ca3af; }
   }
 </style>
 </head>
@@ -187,9 +198,7 @@
 </header>
 
 <main>
-  <section id="strength" class="strength-section">
-    <div class="strength-loading">⏳ 시세 데이터를 준비 중입니다...</div>
-  </section>
+  <div id="strength"></div>
   <div id="content"></div>
 </main>
 
@@ -767,73 +776,27 @@ document.getElementById('search').addEventListener('input', e => {
 
 render();
 
-// === 실시간 테마 강도 (15분 지연 데이터) ===
-const PROXY = url => `https://corsproxy.io/?${encodeURIComponent(url)}`;
-const CACHE_KEY = 'price_cache_v1';
-const CACHE_TTL = 5 * 60 * 1000;
+// === 시장 데이터 (GitHub Actions로 10분마다 자동 갱신) ===
+let MARKET = null;
 
-function getPriceCache() {
-  try { return JSON.parse(localStorage.getItem(CACHE_KEY) || '{}'); }
-  catch { return {}; }
-}
-function setPriceCache(c) {
-  try { localStorage.setItem(CACHE_KEY, JSON.stringify(c)); } catch {}
-}
-
-async function fetchOnePrice(code, cache) {
-  const now = Date.now();
-  if (cache[code] && (now - cache[code].t) < CACHE_TTL) {
-    return cache[code].data;
+async function loadMarket() {
+  const res = await fetch('data/market.json?t=' + Date.now());
+  if (!res.ok) throw new Error('market.json not found');
+  const data = await res.json();
+  if (!data.stocks || Object.keys(data.stocks).length === 0) {
+    throw new Error('empty');
   }
-  for (const suffix of ['.KS', '.KQ']) {
-    try {
-      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${code}${suffix}?range=1d&interval=1m`;
-      const res = await fetch(PROXY(url));
-      if (!res.ok) continue;
-      const data = await res.json();
-      const meta = data?.chart?.result?.[0]?.meta;
-      if (!meta) continue;
-      const price = meta.regularMarketPrice;
-      const prev = meta.previousClose ?? meta.chartPreviousClose;
-      if (price == null || prev == null) continue;
-      const result = {
-        price, prev,
-        change: ((price - prev) / prev) * 100,
-        time: meta.regularMarketTime ? meta.regularMarketTime * 1000 : Date.now(),
-      };
-      cache[code] = { t: now, data: result };
-      return result;
-    } catch (e) {}
-  }
-  cache[code] = { t: now, data: null };
-  return null;
+  return data;
 }
 
-async function fetchAllPrices(onProgress) {
-  const cache = getPriceCache();
-  const codes = [...new Set(DATA.themes.flatMap(t => t.companies.map(c => c.code)))];
-  const results = {};
-  const batchSize = 15;
-  let done = 0;
-  for (let i = 0; i < codes.length; i += batchSize) {
-    const batch = codes.slice(i, i + batchSize);
-    const batchResults = await Promise.all(batch.map(c => fetchOnePrice(c, cache)));
-    batch.forEach((c, j) => results[c] = batchResults[j]);
-    done += batch.length;
-    if (onProgress) onProgress(done, codes.length);
-  }
-  setPriceCache(cache);
-  return results;
-}
-
-function calcStrength(prices) {
+function calcStrength(market) {
   return DATA.themes.map(theme => {
     let weighted = 0, totalWeight = 0, valid = 0;
     for (const c of theme.companies) {
-      const p = prices[c.code];
-      if (!p) continue;
+      const s = market.stocks[c.code];
+      if (!s) continue;
       const weight = c.role === '핵심주' ? 2 : 1;
-      weighted += p.change * weight;
+      weighted += s.change * weight;
       totalWeight += weight;
       valid++;
     }
@@ -846,58 +809,113 @@ function calcStrength(prices) {
   }).filter(t => t.avg !== null).sort((a, b) => b.avg - a.avg);
 }
 
-function renderStrength(strengths) {
+function getTopMovers(market, n) {
+  const arr = Object.entries(market.stocks)
+    .map(([code, s]) => ({ code, ...s }))
+    .filter(s => s.volume > 10000 && s.price > 0);
+  return {
+    gainers: [...arr].sort((a, b) => b.change - a.change).slice(0, n),
+    losers: [...arr].sort((a, b) => a.change - b.change).slice(0, n),
+  };
+}
+
+const colorClass = v => v > 0 ? 'up' : v < 0 ? 'down' : 'flat';
+const fmtPct = v => (v > 0 ? '+' : '') + v.toFixed(2) + '%';
+const fmtNum = v => v.toLocaleString('ko-KR');
+
+function renderMarket(market) {
   const el = document.getElementById('strength');
-  if (!strengths.length) {
-    el.innerHTML = `<div class="strength-loading">
-      ⚠️ 시세 데이터를 불러오지 못했습니다.<br>
-      <span style="font-size:11px">CORS 프록시가 일시적으로 응답하지 않거나 야후 API에 일시 장애가 있을 수 있습니다.</span><br>
-      <button class="refresh-btn" onclick="initStrength(true)" style="margin-top:10px">↻ 다시 시도</button>
-    </div>`;
-    return;
-  }
-  const top = strengths.slice(0, 10);
-  const bottom = strengths.slice(-3).reverse();
-  const now = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+  const strengths = calcStrength(market);
+  const movers = getTopMovers(market, 10);
 
-  let html = `<div class="strength-header">
+  let html = '';
+
+  // --- 시장 오버뷰 카드 ---
+  html += `<div class="strength-section">`;
+  html += `<div class="strength-header">
     <div>
-      <div class="strength-title">🔥 테마 강도 (15분 지연)</div>
-      <div class="strength-meta">${now} 갱신 · 행 클릭 시 해당 테마로 이동</div>
+      <div class="strength-title">📊 시장 현황</div>
+      <div class="strength-meta">${market.updated} · ${Object.keys(market.stocks).length.toLocaleString()}개 종목</div>
     </div>
-    <button class="refresh-btn" onclick="initStrength(true)">↻ 새로고침</button>
+    <button class="refresh-btn" onclick="initMarket()">↻</button>
   </div>`;
+  if (market.indices?.kospi || market.indices?.kosdaq) {
+    html += `<div class="market-overview">`;
+    if (market.indices.kospi) {
+      const k = market.indices.kospi;
+      html += `<div class="idx"><span class="idx-name">KOSPI</span> <span class="num">${k.value.toFixed(2)}</span> <span class="num ${colorClass(k.change)}">${fmtPct(k.change)}</span></div>`;
+    }
+    if (market.indices.kosdaq) {
+      const q = market.indices.kosdaq;
+      html += `<div class="idx"><span class="idx-name">KOSDAQ</span> <span class="num">${q.value.toFixed(2)}</span> <span class="num ${colorClass(q.change)}">${fmtPct(q.change)}</span></div>`;
+    }
+    html += `</div>`;
+  }
+  html += `</div>`;
 
+  // --- 테마 강도 카드 ---
+  html += `<div class="strength-section">`;
+  html += `<div class="strength-title" style="margin-bottom:8px">🔥 테마 강도 TOP 10</div>`;
+  html += `<div class="strength-meta" style="margin-bottom:6px">행 클릭 시 해당 테마로 이동 · 핵심주 가중치 2배 적용</div>`;
   html += '<table class="strength-table"><thead><tr><th>#</th><th>테마</th><th class="num">평균</th><th class="num">유효</th></tr></thead><tbody>';
-  top.forEach((t, i) => {
-    const cls = t.avg > 0 ? 'up' : t.avg < 0 ? 'down' : 'flat';
-    const sign = t.avg > 0 ? '+' : '';
+  strengths.slice(0, 10).forEach((t, i) => {
     html += `<tr class="strength-row" data-theme="${t.name}">
       <td>${i + 1}</td><td>${t.name}</td>
-      <td class="num ${cls}">${sign}${t.avg.toFixed(2)}%</td>
+      <td class="num ${colorClass(t.avg)}">${fmtPct(t.avg)}</td>
       <td class="num">${t.valid}/${t.total}</td>
     </tr>`;
   });
   html += '</tbody></table>';
 
-  if (bottom.length && bottom[0].avg < 0) {
+  const bottom3 = strengths.slice(-3).reverse();
+  if (bottom3.length && bottom3[0].avg < 0) {
     html += '<div class="strength-bottom-title">📉 약한 테마</div>';
     html += '<table class="strength-table"><tbody>';
-    bottom.forEach((t, i) => {
-      const cls = t.avg > 0 ? 'up' : t.avg < 0 ? 'down' : 'flat';
-      const sign = t.avg > 0 ? '+' : '';
-      const rank = strengths.length - bottom.length + i + 1;
+    bottom3.forEach((t, i) => {
+      const rank = strengths.length - bottom3.length + i + 1;
       html += `<tr class="strength-row" data-theme="${t.name}">
         <td>${rank}</td><td>${t.name}</td>
-        <td class="num ${cls}">${sign}${t.avg.toFixed(2)}%</td>
+        <td class="num ${colorClass(t.avg)}">${fmtPct(t.avg)}</td>
         <td class="num">${t.valid}/${t.total}</td>
       </tr>`;
     });
     html += '</tbody></table>';
   }
+  html += `</div>`;
+
+  // --- 전체 시장 상승 TOP 10 ---
+  html += `<div class="strength-section">`;
+  html += `<div class="strength-title" style="margin-bottom:8px">📈 전체 시장 상승 TOP 10</div>`;
+  html += `<div class="strength-meta" style="margin-bottom:6px">KOSPI + KOSDAQ 전 종목 · 행 클릭 시 네이버 시세</div>`;
+  html += '<table class="strength-table"><tbody>';
+  movers.gainers.forEach((s, i) => {
+    html += `<tr class="strength-row" data-code="${s.code}">
+      <td>${i + 1}</td>
+      <td>${s.name}<div class="company-code" style="display:block;font-size:10px;margin-top:2px">${s.code} · ${s.market}</div></td>
+      <td class="num up">${fmtPct(s.change)}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  html += `</div>`;
+
+  // --- 전체 시장 하락 TOP 10 ---
+  html += `<div class="strength-section">`;
+  html += `<div class="strength-title" style="margin-bottom:8px">📉 전체 시장 하락 TOP 10</div>`;
+  html += '<table class="strength-table"><tbody>';
+  movers.losers.forEach((s, i) => {
+    html += `<tr class="strength-row" data-code="${s.code}">
+      <td>${i + 1}</td>
+      <td>${s.name}<div class="company-code" style="display:block;font-size:10px;margin-top:2px">${s.code} · ${s.market}</div></td>
+      <td class="num down">${fmtPct(s.change)}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  html += `</div>`;
 
   el.innerHTML = html;
-  el.querySelectorAll('.strength-row').forEach(row => {
+
+  // 테마 행 → 해당 테마 필터링
+  el.querySelectorAll('.strength-row[data-theme]').forEach(row => {
     row.onclick = () => {
       const themeName = row.dataset.theme;
       state.activeTheme = themeName;
@@ -907,30 +925,31 @@ function renderStrength(strengths) {
       if (c) c.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
   });
+  // 종목 행 → 네이버 시세 새 탭
+  el.querySelectorAll('.strength-row[data-code]').forEach(row => {
+    row.onclick = () => {
+      window.open(`https://m.stock.naver.com/domestic/stock/${row.dataset.code}/total`, '_blank');
+    };
+  });
 }
 
-async function initStrength(force) {
+async function initMarket() {
   const el = document.getElementById('strength');
-  if (force) localStorage.removeItem(CACHE_KEY);
-  el.innerHTML = `<div class="strength-loading">
-    ⏳ 시세 불러오는 중... <span id="strProgress">0 / 0</span>
-    <div class="progress-bar"><div class="progress-fill" id="strProgressBar"></div></div>
-  </div>`;
+  el.innerHTML = `<div class="strength-section"><div class="strength-loading">⏳ 시장 데이터 불러오는 중...</div></div>`;
   try {
-    const prices = await fetchAllPrices((done, total) => {
-      const p = document.getElementById('strProgress');
-      const bar = document.getElementById('strProgressBar');
-      if (p) p.textContent = `${done} / ${total}`;
-      if (bar) bar.style.width = `${(done / total) * 100}%`;
-    });
-    renderStrength(calcStrength(prices));
+    MARKET = await loadMarket();
+    renderMarket(MARKET);
   } catch (e) {
+    el.innerHTML = `<div class="strength-section"><div class="strength-loading">
+      ⚠️ 시장 데이터를 아직 불러올 수 없습니다.<br>
+      <span style="font-size:11px;line-height:1.6">GitHub Actions 첫 실행 후 데이터가 준비됩니다.<br>레포 → Actions 탭 → "Fetch Prices" → "Run workflow"로 수동 실행 가능.</span><br>
+      <button class="refresh-btn" onclick="initMarket()" style="margin-top:10px">↻ 다시 시도</button>
+    </div></div>`;
     console.error(e);
-    renderStrength([]);
   }
 }
 
-initStrength();
+initMarket();
 </script>
 </body>
 </html>
