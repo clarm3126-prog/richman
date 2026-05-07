@@ -103,6 +103,59 @@
     padding: 40px 20px;
     font-size: 14px;
   }
+  .strength-section {
+    background: #fff;
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 20px;
+    border: 1px solid #e5e7eb;
+  }
+  .strength-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    gap: 10px;
+  }
+  .strength-title { font-size: 15px; font-weight: 700; }
+  .strength-meta { font-size: 11px; color: #6b7280; margin-top: 2px; }
+  .refresh-btn {
+    font-size: 12px;
+    padding: 6px 10px;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    cursor: pointer;
+    color: #374151;
+    white-space: nowrap;
+  }
+  .refresh-btn:active { background: #e5e7eb; }
+  .strength-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .strength-table th {
+    text-align: left; font-weight: 500; color: #6b7280;
+    padding: 6px 4px; border-bottom: 1px solid #e5e7eb; font-size: 11px;
+  }
+  .strength-table td { padding: 8px 4px; border-bottom: 1px solid #f3f4f6; }
+  .strength-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .strength-table .up { color: #dc2626; font-weight: 600; }
+  .strength-table .down { color: #2563eb; font-weight: 600; }
+  .strength-table .flat { color: #6b7280; }
+  .strength-row { cursor: pointer; }
+  .strength-row:active { background: #f9fafb; }
+  .strength-loading {
+    font-size: 13px; color: #6b7280; text-align: center; padding: 16px 8px;
+  }
+  .strength-bottom-title {
+    font-size: 12px; color: #6b7280; margin: 14px 0 4px; font-weight: 600;
+  }
+  .progress-bar {
+    height: 4px; background: #e5e7eb; border-radius: 2px;
+    overflow: hidden; margin-top: 10px; max-width: 240px;
+    margin-left: auto; margin-right: auto;
+  }
+  .progress-fill {
+    height: 100%; background: #2563eb; transition: width 0.3s; width: 0%;
+  }
   @media (prefers-color-scheme: dark) {
     html, body { background: #0f1115; color: #e5e7eb; }
     header { background: #1a1d23; border-bottom-color: #2a2f3a; }
@@ -114,6 +167,14 @@
     .link-btn { background: #2a2f3a; color: #d1d5db; border-color: #3a414f; }
     .role-core { background: #3a1818; color: #fca5a5; }
     .role-related { background: #1a2a4a; color: #93c5fd; }
+    .strength-section { background: #1a1d23; border-color: #2a2f3a; }
+    .strength-table th { color: #9ca3af; border-bottom-color: #2a2f3a; }
+    .strength-table td { border-bottom-color: #2a2f3a; }
+    .strength-table .up { color: #fca5a5; }
+    .strength-table .down { color: #93c5fd; }
+    .refresh-btn { background: #2a2f3a; border-color: #3a414f; color: #e5e7eb; }
+    .strength-row:active { background: #2a2f3a; }
+    .progress-bar { background: #2a2f3a; }
   }
 </style>
 </head>
@@ -125,7 +186,12 @@
   <div class="tabs" id="tabs"></div>
 </header>
 
-<main id="content"></main>
+<main>
+  <section id="strength" class="strength-section">
+    <div class="strength-loading">⏳ 시세 데이터를 준비 중입니다...</div>
+  </section>
+  <div id="content"></div>
+</main>
 
 <script>
 const DATA = {
@@ -700,6 +766,171 @@ document.getElementById('search').addEventListener('input', e => {
 });
 
 render();
+
+// === 실시간 테마 강도 (15분 지연 데이터) ===
+const PROXY = url => `https://corsproxy.io/?${encodeURIComponent(url)}`;
+const CACHE_KEY = 'price_cache_v1';
+const CACHE_TTL = 5 * 60 * 1000;
+
+function getPriceCache() {
+  try { return JSON.parse(localStorage.getItem(CACHE_KEY) || '{}'); }
+  catch { return {}; }
+}
+function setPriceCache(c) {
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify(c)); } catch {}
+}
+
+async function fetchOnePrice(code, cache) {
+  const now = Date.now();
+  if (cache[code] && (now - cache[code].t) < CACHE_TTL) {
+    return cache[code].data;
+  }
+  for (const suffix of ['.KS', '.KQ']) {
+    try {
+      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${code}${suffix}?range=1d&interval=1m`;
+      const res = await fetch(PROXY(url));
+      if (!res.ok) continue;
+      const data = await res.json();
+      const meta = data?.chart?.result?.[0]?.meta;
+      if (!meta) continue;
+      const price = meta.regularMarketPrice;
+      const prev = meta.previousClose ?? meta.chartPreviousClose;
+      if (price == null || prev == null) continue;
+      const result = {
+        price, prev,
+        change: ((price - prev) / prev) * 100,
+        time: meta.regularMarketTime ? meta.regularMarketTime * 1000 : Date.now(),
+      };
+      cache[code] = { t: now, data: result };
+      return result;
+    } catch (e) {}
+  }
+  cache[code] = { t: now, data: null };
+  return null;
+}
+
+async function fetchAllPrices(onProgress) {
+  const cache = getPriceCache();
+  const codes = [...new Set(DATA.themes.flatMap(t => t.companies.map(c => c.code)))];
+  const results = {};
+  const batchSize = 15;
+  let done = 0;
+  for (let i = 0; i < codes.length; i += batchSize) {
+    const batch = codes.slice(i, i + batchSize);
+    const batchResults = await Promise.all(batch.map(c => fetchOnePrice(c, cache)));
+    batch.forEach((c, j) => results[c] = batchResults[j]);
+    done += batch.length;
+    if (onProgress) onProgress(done, codes.length);
+  }
+  setPriceCache(cache);
+  return results;
+}
+
+function calcStrength(prices) {
+  return DATA.themes.map(theme => {
+    let weighted = 0, totalWeight = 0, valid = 0;
+    for (const c of theme.companies) {
+      const p = prices[c.code];
+      if (!p) continue;
+      const weight = c.role === '핵심주' ? 2 : 1;
+      weighted += p.change * weight;
+      totalWeight += weight;
+      valid++;
+    }
+    return {
+      name: theme.name,
+      avg: totalWeight > 0 ? weighted / totalWeight : null,
+      valid,
+      total: theme.companies.length,
+    };
+  }).filter(t => t.avg !== null).sort((a, b) => b.avg - a.avg);
+}
+
+function renderStrength(strengths) {
+  const el = document.getElementById('strength');
+  if (!strengths.length) {
+    el.innerHTML = `<div class="strength-loading">
+      ⚠️ 시세 데이터를 불러오지 못했습니다.<br>
+      <span style="font-size:11px">CORS 프록시가 일시적으로 응답하지 않거나 야후 API에 일시 장애가 있을 수 있습니다.</span><br>
+      <button class="refresh-btn" onclick="initStrength(true)" style="margin-top:10px">↻ 다시 시도</button>
+    </div>`;
+    return;
+  }
+  const top = strengths.slice(0, 10);
+  const bottom = strengths.slice(-3).reverse();
+  const now = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+
+  let html = `<div class="strength-header">
+    <div>
+      <div class="strength-title">🔥 테마 강도 (15분 지연)</div>
+      <div class="strength-meta">${now} 갱신 · 행 클릭 시 해당 테마로 이동</div>
+    </div>
+    <button class="refresh-btn" onclick="initStrength(true)">↻ 새로고침</button>
+  </div>`;
+
+  html += '<table class="strength-table"><thead><tr><th>#</th><th>테마</th><th class="num">평균</th><th class="num">유효</th></tr></thead><tbody>';
+  top.forEach((t, i) => {
+    const cls = t.avg > 0 ? 'up' : t.avg < 0 ? 'down' : 'flat';
+    const sign = t.avg > 0 ? '+' : '';
+    html += `<tr class="strength-row" data-theme="${t.name}">
+      <td>${i + 1}</td><td>${t.name}</td>
+      <td class="num ${cls}">${sign}${t.avg.toFixed(2)}%</td>
+      <td class="num">${t.valid}/${t.total}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+
+  if (bottom.length && bottom[0].avg < 0) {
+    html += '<div class="strength-bottom-title">📉 약한 테마</div>';
+    html += '<table class="strength-table"><tbody>';
+    bottom.forEach((t, i) => {
+      const cls = t.avg > 0 ? 'up' : t.avg < 0 ? 'down' : 'flat';
+      const sign = t.avg > 0 ? '+' : '';
+      const rank = strengths.length - bottom.length + i + 1;
+      html += `<tr class="strength-row" data-theme="${t.name}">
+        <td>${rank}</td><td>${t.name}</td>
+        <td class="num ${cls}">${sign}${t.avg.toFixed(2)}%</td>
+        <td class="num">${t.valid}/${t.total}</td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+  }
+
+  el.innerHTML = html;
+  el.querySelectorAll('.strength-row').forEach(row => {
+    row.onclick = () => {
+      const themeName = row.dataset.theme;
+      state.activeTheme = themeName;
+      document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.textContent === themeName));
+      renderContent();
+      const c = document.getElementById('content');
+      if (c) c.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+  });
+}
+
+async function initStrength(force) {
+  const el = document.getElementById('strength');
+  if (force) localStorage.removeItem(CACHE_KEY);
+  el.innerHTML = `<div class="strength-loading">
+    ⏳ 시세 불러오는 중... <span id="strProgress">0 / 0</span>
+    <div class="progress-bar"><div class="progress-fill" id="strProgressBar"></div></div>
+  </div>`;
+  try {
+    const prices = await fetchAllPrices((done, total) => {
+      const p = document.getElementById('strProgress');
+      const bar = document.getElementById('strProgressBar');
+      if (p) p.textContent = `${done} / ${total}`;
+      if (bar) bar.style.width = `${(done / total) * 100}%`;
+    });
+    renderStrength(calcStrength(prices));
+  } catch (e) {
+    console.error(e);
+    renderStrength([]);
+  }
+}
+
+initStrength();
 </script>
 </body>
 </html>
