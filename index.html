@@ -36,11 +36,9 @@
   .tabs {
     display: flex;
     gap: 6px;
-    overflow-x: auto;
+    flex-wrap: wrap;
     padding: 12px 0 4px;
-    scrollbar-width: none;
   }
-  .tabs::-webkit-scrollbar { display: none; }
   .tab {
     flex-shrink: 0;
     padding: 8px 14px;
@@ -87,6 +85,15 @@
   }
   .role-core { background: #fef2f2; color: #dc2626; }
   .role-related { background: #eff6ff; color: #2563eb; }
+  .card-change {
+    font-size: 13px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    margin-left: 4px;
+  }
+  .card-change.up { color: #dc2626; }
+  .card-change.down { color: #2563eb; }
+  .card-change.flat { color: #6b7280; }
   .description { font-size: 13px; color: #4b5563; margin: 6px 0 10px; }
   .links { display: flex; gap: 6px; flex-wrap: wrap; }
   .link-btn {
@@ -178,6 +185,8 @@
     .link-btn { background: #2a2f3a; color: #d1d5db; border-color: #3a414f; }
     .role-core { background: #3a1818; color: #fca5a5; }
     .role-related { background: #1a2a4a; color: #93c5fd; }
+    .card-change.up { color: #fca5a5; }
+    .card-change.down { color: #93c5fd; }
     .strength-section { background: #1a1d23; border-color: #2a2f3a; }
     .strength-table th { color: #9ca3af; border-bottom-color: #2a2f3a; }
     .strength-table td { border-bottom-color: #2a2f3a; }
@@ -224,7 +233,17 @@ const DATA = {
         { code: "067310", name: "하나마이크론", role: "관련주",
           description: "반도체 후공정(패키징·테스트) 전문. 메모리·시스템 반도체 OSAT." },
         { code: "131970", name: "두산테스나", role: "관련주",
-          description: "시스템 반도체 후공정 테스트 국내 1위. AI·자율주행 칩 테스트 수혜." }
+          description: "시스템 반도체 후공정 테스트 국내 1위. AI·자율주행 칩 테스트 수혜." },
+        { code: "005290", name: "동진쎄미켐", role: "핵심주",
+          description: "반도체 포토레지스트(PR)·EUV용 PR 글로벌 강자. 화학소재." },
+        { code: "240810", name: "원익IPS", role: "핵심주",
+          description: "반도체 증착(CVD) 장비. 삼성·SK 주력 공급." },
+        { code: "403870", name: "HPSP", role: "핵심주",
+          description: "고압 수소 어닐링 장비 글로벌 1위. 첨단 반도체 핵심 공정." },
+        { code: "357780", name: "솔브레인", role: "관련주",
+          description: "반도체 식각액·CMP 등 화학소재 종합." },
+        { code: "036930", name: "주성엔지니어링", role: "관련주",
+          description: "반도체·디스플레이 ALD 증착장비 강자." }
       ]
     },
     {
@@ -244,7 +263,17 @@ const DATA = {
         { code: "278280", name: "천보", role: "관련주",
           description: "전해질 첨가제·범용 전해질 핵심 소재. LiFSI(F전해질) 강자." },
         { code: "005070", name: "코스모신소재", role: "관련주",
-          description: "단결정 양극재·NCM 양극재 생산. LG·삼성 양사 공급." }
+          description: "단결정 양극재·NCM 양극재 생산. LG·삼성 양사 공급." },
+        { code: "086520", name: "에코프로", role: "핵심주",
+          description: "에코프로비엠·에코프로머티 모회사. 양극재 그룹 지주." },
+        { code: "020150", name: "롯데에너지머티리얼즈", role: "핵심주",
+          description: "동박(전지박) 글로벌 톱티어. 옛 일진머티리얼즈." },
+        { code: "011790", name: "SKC", role: "핵심주",
+          description: "SK넥실리스 통한 동박 사업 글로벌 강자." },
+        { code: "393890", name: "더블유씨피", role: "핵심주",
+          description: "2차전지 분리막 글로벌 강자. 삼성SDI 주력 공급." },
+        { code: "121600", name: "나노신소재", role: "관련주",
+          description: "CNT 도전재 글로벌 강자. 차세대 배터리 핵심 소재." }
       ]
     },
     {
@@ -264,7 +293,17 @@ const DATA = {
         { code: "128940", name: "한미약품", role: "관련주",
           description: "비만·당뇨 신약 파이프라인 보유. 머크·MSD 등과 라이선스 계약 이력." },
         { code: "141080", name: "리가켐바이오", role: "관련주",
-          description: "ADC(항체-약물 접합체) 플랫폼 강자. 다수 글로벌 빅파마와 기술이전 계약." }
+          description: "ADC(항체-약물 접합체) 플랫폼 강자. 다수 글로벌 빅파마와 기술이전 계약." },
+        { code: "028300", name: "HLB", role: "핵심주",
+          description: "항암 신약 '리보세라닙' 간암 표적치료제. FDA 승인 추진 중." },
+        { code: "087010", name: "펩트론", role: "핵심주",
+          description: "비만치료제 장기지속형 'SmartDepot' 플랫폼. 일라이릴리와 협력." },
+        { code: "237690", name: "에스티팜", role: "핵심주",
+          description: "올리고핵산 CDMO 글로벌 강자. 노바티스·앨나이람 주력 공급." },
+        { code: "185750", name: "종근당", role: "관련주",
+          description: "신약 개발·CSO 사업. CKD-510 노바티스 1.7조원 라이선스." },
+        { code: "298380", name: "에이비엘바이오", role: "관련주",
+          description: "이중항체 신약 'Grabody' 플랫폼. 사노피 1조원대 라이선스." }
       ]
     },
     {
@@ -284,7 +323,13 @@ const DATA = {
         { code: "298040", name: "효성중공업", role: "관련주",
           description: "초고압 변압기·HVDC 강자. 원전 송배전 인프라 수혜." },
         { code: "105840", name: "우진", role: "관련주",
-          description: "원자로 노내계측기·열전대 제조. SMR·차세대 원전 부품 공급." }
+          description: "원자로 노내계측기·열전대 제조. SMR·차세대 원전 부품 공급." },
+        { code: "015760", name: "한국전력", role: "관련주",
+          description: "원전 발주 주체. 체코 원전 한국 컨소시엄 핵심." },
+        { code: "094820", name: "일진파워", role: "관련주",
+          description: "원전 정비·플랜트. 신한울 등 신규 원전 수혜." },
+        { code: "457550", name: "우진엔텍", role: "관련주",
+          description: "원전 정비 전문. 신규 상장사 (2024년)." }
       ]
     },
     {
@@ -304,7 +349,15 @@ const DATA = {
         { code: "103140", name: "풍산", role: "관련주",
           description: "탄약·신주(동합금) 제조. 우크라전 이후 글로벌 수요 급증." },
         { code: "005870", name: "휴니드", role: "관련주",
-          description: "군 통신장비·전술정보통신체계(TICN). 미군·국방부 주력 공급." }
+          description: "군 통신장비·전술정보통신체계(TICN). 미군·국방부 주력 공급." },
+        { code: "065450", name: "빅텍", role: "관련주",
+          description: "군용 통신·전자전 핵심 부품 공급." },
+        { code: "010820", name: "퍼스텍", role: "관련주",
+          description: "정밀 유도무기·항법장치 부품 전문." },
+        { code: "003570", name: "SNT다이내믹스", role: "관련주",
+          description: "K9 자주포·차륜형 장갑차용 변속기·부품." },
+        { code: "361390", name: "제노코", role: "관련주",
+          description: "군 위성통신·항공전자 장비 전문." }
       ]
     },
     {
@@ -324,7 +377,13 @@ const DATA = {
         { code: "077970", name: "STX엔진", role: "관련주",
           description: "선박용 디젤엔진·발전기 제조. 친환경 엔진 사업 확장." },
         { code: "075580", name: "세진중공업", role: "관련주",
-          description: "선박 데크하우스·LPG 탱크 등 의장품 전문." }
+          description: "선박 데크하우스·LPG 탱크 등 의장품 전문." },
+        { code: "082740", name: "한화엔진", role: "핵심주",
+          description: "옛 HSD엔진. 선박엔진 글로벌 강자, 한화 인수 후 시너지." },
+        { code: "064820", name: "케이프", role: "관련주",
+          description: "조선·해양 부품. 친환경 선박 부품 사업 확장." },
+        { code: "101930", name: "인화정공", role: "관련주",
+          description: "선박 의장품·LNG 보냉재 부품 전문." }
       ]
     },
     {
@@ -344,7 +403,13 @@ const DATA = {
         { code: "117730", name: "티로보틱스", role: "관련주",
           description: "디스플레이·반도체 진공이송로봇 국내 1위." },
         { code: "056080", name: "유진로봇", role: "관련주",
-          description: "자율주행 서비스 로봇·라이다 센서 개발." }
+          description: "자율주행 서비스 로봇·라이다 센서 개발." },
+        { code: "389500", name: "에스비비테크", role: "핵심주",
+          description: "하모닉 감속기 국내 1위. 휴머노이드·협동로봇 핵심 부품." },
+        { code: "140670", name: "알에스오토메이션", role: "관련주",
+          description: "산업용 로봇 컨트롤러·자동화 솔루션." },
+        { code: "090710", name: "휴림로봇", role: "관련주",
+          description: "협동로봇·산업용 로봇 종합." }
       ]
     },
     {
@@ -394,7 +459,13 @@ const DATA = {
         { code: "001440", name: "대한전선", role: "관련주",
           description: "초고압 전력케이블 국내 2위. 해외 송전 인프라 수주 확대." },
         { code: "000500", name: "가온전선", role: "관련주",
-          description: "전력·통신 케이블 종합. LS그룹 계열사." }
+          description: "전력·통신 케이블 종합. LS그룹 계열사." },
+        { code: "298040", name: "효성중공업", role: "핵심주",
+          description: "초고압 변압기·HVDC. AI 데이터센터·신재생 인프라 수혜. (원전 중복)" },
+        { code: "017040", name: "광명전기", role: "관련주",
+          description: "변압기·차단기·수배전반 등 중전기 종합." },
+        { code: "147830", name: "제룡산업", role: "관련주",
+          description: "송배전 부품·계기용 변성기 강자." }
       ]
     },
     {
@@ -412,7 +483,13 @@ const DATA = {
         { code: "042370", name: "비츠로테크", role: "관련주",
           description: "우주발사체 추진제 탱크·핵융합 부품. 누리호 참여 기업." },
         { code: "221840", name: "하이즈항공", role: "관련주",
-          description: "항공기 부품·구조물 가공. KAI 협력사." }
+          description: "항공기 부품·구조물 가공. KAI 협력사." },
+        { code: "047810", name: "한국항공우주", role: "핵심주",
+          description: "FA-50·KF-21·차세대 발사체 등. (방산 중복)" },
+        { code: "272210", name: "한화시스템", role: "핵심주",
+          description: "정찰위성·우주방위 사업. (방산 중복)" },
+        { code: "451760", name: "컨텍", role: "관련주",
+          description: "위성 지상국 글로벌 강자. 위성 데이터 서비스 확장." }
       ]
     },
     {
@@ -434,7 +511,11 @@ const DATA = {
         { code: "118990", name: "모트렉스", role: "관련주",
           description: "차량용 AVN·인포테인먼트 시스템. 글로벌 OEM 공급." },
         { code: "089010", name: "켐트로닉스", role: "관련주",
-          description: "자율주행 부품·반도체 식각액 사업 다각화." }
+          description: "자율주행 부품·반도체 식각액 사업 다각화." },
+        { code: "082210", name: "옵트론텍", role: "관련주",
+          description: "자율주행 카메라·이미지센서 모듈 전문." },
+        { code: "094360", name: "칩스앤미디어", role: "관련주",
+          description: "비디오 코덱 IP 글로벌 강자. 자율주행 영상처리." }
       ]
     },
     {
@@ -454,7 +535,17 @@ const DATA = {
         { code: "293490", name: "카카오게임즈", role: "관련주",
           description: "모바일·PC 게임 퍼블리셔. 카카오그룹 게임 자회사." },
         { code: "304100", name: "솔트룩스", role: "관련주",
-          description: "자체 LLM '루시아(Luxia)' 개발. 공공·기업 AI 솔루션 공급." }
+          description: "자체 LLM '루시아(Luxia)' 개발. 공공·기업 AI 솔루션 공급." },
+        { code: "263750", name: "펄어비스", role: "관련주",
+          description: "'검은사막'·'붉은사막' 글로벌 게임. 자체 엔진 보유." },
+        { code: "078340", name: "컴투스", role: "관련주",
+          description: "'서머너즈워' 글로벌 모바일 게임 강자." },
+        { code: "112040", name: "위메이드", role: "관련주",
+          description: "'미르4'·블록체인 게임 'WEMIX' 생태계." },
+        { code: "194480", name: "데브시스터즈", role: "관련주",
+          description: "'쿠키런' 시리즈 글로벌. IP 확장 전략." },
+        { code: "108860", name: "셀바스AI", role: "관련주",
+          description: "AI 음성·문자 인식 솔루션. 의료·교육 분야." }
       ]
     },
     {
@@ -474,7 +565,13 @@ const DATA = {
         { code: "214450", name: "파마리서치", role: "관련주",
           description: "스킨부스터 '리쥬란' 글로벌 히트. PDRN 기반 의료미용 강자." },
         { code: "200670", name: "휴메딕스", role: "관련주",
-          description: "필러·HA 기반 미용 의료기기. 휴온스그룹 계열." }
+          description: "필러·HA 기반 미용 의료기기. 휴온스그룹 계열." },
+        { code: "086900", name: "메디톡스", role: "관련주",
+          description: "보툴리눔톡신 '메디톡신'·필러 종합." },
+        { code: "243070", name: "휴온스", role: "관련주",
+          description: "보툴리눔톡신·필러·전문의약품. 휴메딕스 모회사." },
+        { code: "092730", name: "네오팜", role: "관련주",
+          description: "더모코스메틱 '아토팜' 강자. 민감성 피부 시장." }
       ]
     },
     {
@@ -492,7 +589,13 @@ const DATA = {
         { code: "002140", name: "고려산업", role: "관련주",
           description: "양계·축산 사료 제조. 부산 본사." },
         { code: "003310", name: "대주산업", role: "관련주",
-          description: "사료 제조 중견기업. 곡물가 테마 시 거래량 급증." }
+          description: "사료 제조 중견기업. 곡물가 테마 시 거래량 급증." },
+        { code: "007160", name: "사조산업", role: "관련주",
+          description: "사조그룹 주력. 참치·수산 가공·축산 통합." },
+        { code: "003380", name: "하림지주", role: "관련주",
+          description: "하림그룹 양계·식품 지주사." },
+        { code: "027740", name: "마니커", role: "관련주",
+          description: "양계·닭고기 가공 전문." }
       ]
     },
     {
@@ -512,7 +615,9 @@ const DATA = {
         { code: "004690", name: "삼천리", role: "관련주",
           description: "수도권 도시가스 공급. 안정적 배당주." },
         { code: "117580", name: "대성에너지", role: "관련주",
-          description: "대구·경북 도시가스 공급사." }
+          description: "대구·경북 도시가스 공급사." },
+        { code: "034590", name: "인천도시가스", role: "관련주",
+          description: "인천 지역 도시가스 공급." }
       ]
     },
     {
@@ -534,7 +639,17 @@ const DATA = {
         { code: "004020", name: "현대제철", role: "관련주",
           description: "철강 종합. 자동차강판 강자." },
         { code: "000670", name: "영풍", role: "관련주",
-          description: "아연 제련. 고려아연과 동일 그룹사." }
+          description: "아연 제련. 고려아연과 동일 그룹사." },
+        { code: "460860", name: "동국제강", role: "관련주",
+          description: "봉형강·후판 강자. 분할 후 신설 회사." },
+        { code: "001430", name: "세아베스틸지주", role: "관련주",
+          description: "특수강 국내 1위. 자동차·기계 산업용." },
+        { code: "016380", name: "KG스틸", role: "관련주",
+          description: "컬러강판·아연도금강판 강자." },
+        { code: "104700", name: "한국철강", role: "관련주",
+          description: "봉형강 전문. 건설용 철근." },
+        { code: "298050", name: "효성첨단소재", role: "관련주",
+          description: "탄소섬유·아라미드 글로벌 강자." }
       ]
     },
     {
@@ -556,7 +671,17 @@ const DATA = {
         { code: "017810", name: "풀무원", role: "관련주",
           description: "두부·간편식 1위. 미국 사업 흑자 전환." },
         { code: "005180", name: "빙그레", role: "관련주",
-          description: "바나나우유·메로나. 유제품·빙과 종합." }
+          description: "바나나우유·메로나. 유제품·빙과 종합." },
+        { code: "003230", name: "삼양식품", role: "핵심주",
+          description: "불닭볶음면 글로벌 K-라면 대표주. 미국·유럽 매출 폭증." },
+        { code: "007310", name: "오뚜기", role: "관련주",
+          description: "진라면·카레·소스 등 종합식품." },
+        { code: "267980", name: "매일유업", role: "관련주",
+          description: "우유·유제품 1위. 셀렉스(단백질) 사업 확장." },
+        { code: "033780", name: "KT&G", role: "관련주",
+          description: "담배·인삼공사(정관장) 종합. 안정적 배당주." },
+        { code: "000080", name: "하이트진로", role: "관련주",
+          description: "주류 1위. 참이슬·테라·켈리." }
       ]
     },
     {
@@ -578,7 +703,15 @@ const DATA = {
         { code: "044490", name: "태웅", role: "관련주",
           description: "풍력 단조 부품 강자. 글로벌 풍력 OEM 공급망." },
         { code: "018000", name: "유니슨", role: "관련주",
-          description: "풍력 발전기 제조." }
+          description: "풍력 발전기 제조." },
+        { code: "271940", name: "일진하이솔루스", role: "핵심주",
+          description: "수소차용 고압 수소탱크 글로벌 1위." },
+        { code: "120110", name: "코오롱인더", role: "관련주",
+          description: "수소차 MEA·연료전지 핵심 부품." },
+        { code: "126340", name: "비나텍", role: "관련주",
+          description: "슈퍼커패시터 강자·수소 연료전지 부품." },
+        { code: "089980", name: "상아프론테크", role: "관련주",
+          description: "수소차 멤브레인·반도체 부품." }
       ]
     },
     {
@@ -598,7 +731,17 @@ const DATA = {
         { code: "237880", name: "클리오", role: "관련주",
           description: "페리페라·구달. 색조 인디브랜드 강자." },
         { code: "018250", name: "애경산업", role: "관련주",
-          description: "에이지투웨니스(AGE 20's) 등 색조. 일본·중국 수출." }
+          description: "에이지투웨니스(AGE 20's) 등 색조. 일본·중국 수출." },
+        { code: "278470", name: "에이피알", role: "핵심주",
+          description: "메디큐브 글로벌 인디 화장품·뷰티 디바이스 강자." },
+        { code: "439090", name: "마녀공장", role: "관련주",
+          description: "인디 화장품 '비피다 바이옴'. 일본·미국 수출." },
+        { code: "114840", name: "아이패밀리에스씨", role: "관련주",
+          description: "'롬앤(rom&nd)' 색조 인디 강자." },
+        { code: "241710", name: "코스메카코리아", role: "관련주",
+          description: "화장품 ODM. 한국·미국 공장 운영." },
+        { code: "388790", name: "잉글우드랩", role: "관련주",
+          description: "인디 화장품 ODM. 미국 시장 강자." }
       ]
     },
     {
@@ -618,7 +761,13 @@ const DATA = {
         { code: "253450", name: "스튜디오드래곤", role: "관련주",
           description: "K-드라마 1위 제작사. 넷플릭스·디즈니+ 글로벌 공급." },
         { code: "036420", name: "콘텐트리중앙", role: "관련주",
-          description: "JTBC스튜디오·메가박스. 종합 콘텐츠." }
+          description: "JTBC스튜디오·메가박스. 종합 콘텐츠." },
+        { code: "376300", name: "디어유", role: "관련주",
+          description: "K-팝 팬덤 플랫폼 '버블' 운영. SM 자회사." },
+        { code: "086980", name: "쇼박스", role: "관련주",
+          description: "영화 배급사. '부산행' 등 흥행작 다수." },
+        { code: "241840", name: "에이스토리", role: "관련주",
+          description: "K-드라마 제작사. '킹덤'·'이상한 변호사 우영우'." }
       ]
     },
     {
@@ -634,7 +783,11 @@ const DATA = {
         { code: "072020", name: "중앙백신", role: "관련주",
           description: "동물 백신 전문기업. 가축·반려동물." },
         { code: "036480", name: "대성미생물", role: "관련주",
-          description: "동물용 의약품·생균제 제조." }
+          description: "동물용 의약품·생균제 제조." },
+        { code: "323990", name: "박셀바이오", role: "관련주",
+          description: "동물 항암 신약·사람 항암 동시 개발." },
+        { code: "362320", name: "청담글로벌", role: "관련주",
+          description: "글로벌 화장품·펫 식품 유통." }
       ]
     },
     {
@@ -686,7 +839,11 @@ const DATA = {
         { code: "264450", name: "유비쿼스", role: "관련주",
           description: "통신 네트워크 장비. 광전송·스위치." },
         { code: "039560", name: "다산네트웍스", role: "관련주",
-          description: "통신·네트워크 장비." }
+          description: "통신·네트워크 장비." },
+        { code: "230240", name: "에치에프알", role: "관련주",
+          description: "5G 광 통신·O-RAN 장비. 미국·일본 수출." },
+        { code: "332570", name: "와이팜", role: "관련주",
+          description: "5G RF 전력증폭기 글로벌 강자." }
       ]
     }
   ]
@@ -746,11 +903,19 @@ function renderContent() {
 
     filtered.forEach(c => {
       const roleClass = c.role === '핵심주' ? 'role-core' : 'role-related';
+      const sd = (typeof MARKET !== 'undefined' && MARKET) ? MARKET.stocks[c.code] : null;
+      let chgHtml = '';
+      if (sd) {
+        const cls = sd.change > 0 ? 'up' : sd.change < 0 ? 'down' : 'flat';
+        const sign = sd.change > 0 ? '+' : '';
+        chgHtml = `<span class="card-change ${cls}">${sign}${sd.change.toFixed(2)}%</span>`;
+      }
       html += `<div class="card">
         <div class="card-top">
           <div class="name-block">
             <span class="company-name">${c.name}</span>
             <span class="company-code">${c.code}</span>
+            ${chgHtml}
           </div>
           <span class="role ${roleClass}">${c.role}</span>
         </div>
@@ -941,6 +1106,7 @@ async function initMarket() {
   try {
     MARKET = await loadMarket();
     renderMarket(MARKET);
+    renderContent();
   } catch (e) {
     el.innerHTML = `<div class="strength-section"><div class="strength-loading">
       ⚠️ 시장 데이터를 아직 불러올 수 없습니다.<br>
