@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>테마별 종목 노트</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    background: #f4f5f7;
+    color: #1a1a1a;
+    line-height: 1.5;
+  }
+  header {
+    position: sticky; top: 0; z-index: 10;
+    background: #fff;
+    padding: 16px 16px 8px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  h1 { font-size: 18px; font-weight: 700; margin-bottom: 12px; }
+  .search-box {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    font-size: 15px;
+    outline: none;
+    background: #f9fafb;
+  }
+  .search-box:focus { border-color: #2563eb; background: #fff; }
+  .tabs {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 12px 0 4px;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    flex-shrink: 0;
+    padding: 8px 14px;
+    background: #f3f4f6;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    font-size: 14px;
+    cursor: pointer;
+    white-space: nowrap;
+    color: #374151;
+  }
+  .tab.active {
+    background: #1a1a1a;
+    color: #fff;
+  }
+  main { padding: 12px 16px 80px; }
+  .theme-section { margin-bottom: 24px; }
+  .theme-header {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 8px; padding: 0 2px;
+  }
+  .theme-name { font-size: 16px; font-weight: 700; }
+  .theme-desc { font-size: 12px; color: #6b7280; margin-bottom: 10px; padding: 0 2px; }
+  .count-badge { font-size: 12px; color: #6b7280; }
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 8px;
+    border: 1px solid #e5e7eb;
+  }
+  .card-top {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 6px;
+  }
+  .name-block { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .company-name { font-size: 16px; font-weight: 600; }
+  .company-code { font-size: 12px; color: #6b7280; font-family: ui-monospace, monospace; }
+  .role {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+  }
+  .role-core { background: #fef2f2; color: #dc2626; }
+  .role-related { background: #eff6ff; color: #2563eb; }
+  .description { font-size: 13px; color: #4b5563; margin: 6px 0 10px; }
+  .links { display: flex; gap: 6px; flex-wrap: wrap; }
+  .link-btn {
+    font-size: 12px;
+    padding: 5px 10px;
+    background: #f3f4f6;
+    color: #374151;
+    border-radius: 6px;
+    text-decoration: none;
+    border: 1px solid #e5e7eb;
+  }
+  .link-btn:active { background: #e5e7eb; }
+  .empty {
+    text-align: center;
+    color: #9ca3af;
+    padding: 40px 20px;
+    font-size: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    html, body { background: #0f1115; color: #e5e7eb; }
+    header { background: #1a1d23; border-bottom-color: #2a2f3a; }
+    .search-box { background: #2a2f3a; border-color: #3a414f; color: #e5e7eb; }
+    .tab { background: #2a2f3a; color: #d1d5db; }
+    .tab.active { background: #e5e7eb; color: #0f1115; }
+    .card { background: #1a1d23; border-color: #2a2f3a; }
+    .description { color: #9ca3af; }
+    .link-btn { background: #2a2f3a; color: #d1d5db; border-color: #3a414f; }
+    .role-core { background: #3a1818; color: #fca5a5; }
+    .role-related { background: #1a2a4a; color: #93c5fd; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>테마별 종목 노트</h1>
+  <input type="text" class="search-box" id="search" placeholder="회사명·종목코드·키워드 검색">
+  <div class="tabs" id="tabs"></div>
+</header>
+
+<main id="content"></main>
+
+<script>
+const DATA = {
+  themes: [
+    {
+      name: "AI 반도체",
+      description: "AI 연산·HBM 메모리·반도체 후공정 관련",
+      companies: [
+        { code: "000660", name: "SK하이닉스", role: "핵심주",
+          description: "HBM(고대역폭 메모리) 글로벌 1위. 엔비디아 AI GPU에 HBM3E 독점 공급 중." },
+        { code: "005930", name: "삼성전자", role: "핵심주",
+          description: "메모리 종합 1위. HBM3E 엔비디아 퀄 진행 중, 파운드리 사업도 보유." },
+        { code: "042700", name: "한미반도체", role: "핵심주",
+          description: "HBM 핵심 장비 'TC 본더' 글로벌 1위. SK하이닉스 주력 공급사." },
+        { code: "058470", name: "리노공업", role: "관련주",
+          description: "반도체 테스트 소켓·핀 제조. 시스템 반도체 비메모리 수혜." },
+        { code: "039030", name: "이오테크닉스", role: "관련주",
+          description: "반도체 레이저 장비. HBM 공정용 레이저 어닐링 장비 공급." },
+        { code: "067310", name: "하나마이크론", role: "관련주",
+          description: "반도체 후공정(패키징·테스트) 전문. 메모리·시스템 반도체 OSAT." },
+        { code: "131970", name: "두산테스나", role: "관련주",
+          description: "시스템 반도체 후공정 테스트 국내 1위. AI·자율주행 칩 테스트 수혜." }
+      ]
+    },
+    {
+      name: "2차전지",
+      description: "전기차·ESS용 리튬이온 배터리 셀·소재",
+      companies: [
+        { code: "373220", name: "LG에너지솔루션", role: "핵심주",
+          description: "글로벌 배터리 셀 제조 톱티어. GM·현대차 등 주요 완성차에 공급." },
+        { code: "006400", name: "삼성SDI", role: "핵심주",
+          description: "프리미엄 배터리 셀 제조. BMW·스텔란티스 공급, 전고체 배터리 개발 중." },
+        { code: "247540", name: "에코프로비엠", role: "핵심주",
+          description: "하이니켈 양극재 글로벌 톱티어. 삼성SDI·SK온 주력 공급사." },
+        { code: "003670", name: "포스코퓨처엠", role: "핵심주",
+          description: "양극재·음극재 모두 생산 가능한 국내 유일 종합 소재사." },
+        { code: "066970", name: "엘앤에프", role: "관련주",
+          description: "하이니켈 NCMA 양극재 전문. LG에너지솔루션·테슬라 공급망 진입." },
+        { code: "278280", name: "천보", role: "관련주",
+          description: "전해질 첨가제·범용 전해질 핵심 소재. LiFSI(F전해질) 강자." },
+        { code: "005070", name: "코스모신소재", role: "관련주",
+          description: "단결정 양극재·NCM 양극재 생산. LG·삼성 양사 공급." }
+      ]
+    },
+    {
+      name: "바이오",
+      description: "신약 개발·CDMO·바이오시밀러",
+      companies: [
+        { code: "207940", name: "삼성바이오로직스", role: "핵심주",
+          description: "글로벌 CDMO(위탁개발생산) 1위. 생산능력 세계 최대." },
+        { code: "068270", name: "셀트리온", role: "핵심주",
+          description: "바이오시밀러 글로벌 강자. 램시마·트룩시마·허쥬마 등 보유." },
+        { code: "196170", name: "알테오젠", role: "핵심주",
+          description: "피하주사(SC) 변환 플랫폼 'ALT-B4' 보유. MSD 키트루다 SC 제형 공급 계약." },
+        { code: "000100", name: "유한양행", role: "핵심주",
+          description: "비소세포폐암 치료제 '렉라자' 미국 FDA 승인. 얀센과 글로벌 판권 계약." },
+        { code: "326030", name: "SK바이오팜", role: "관련주",
+          description: "뇌전증 신약 '세노바메이트(엑스코프리)' 미국 직판. 흑자 전환 진입." },
+        { code: "128940", name: "한미약품", role: "관련주",
+          description: "비만·당뇨 신약 파이프라인 보유. 머크·MSD 등과 라이선스 계약 이력." },
+        { code: "141080", name: "리가켐바이오", role: "관련주",
+          description: "ADC(항체-약물 접합체) 플랫폼 강자. 다수 글로벌 빅파마와 기술이전 계약." }
+      ]
+    },
+    {
+      name: "원전",
+      description: "원전 주기기·설계·정비·SMR 관련",
+      companies: [
+        { code: "034020", name: "두산에너빌리티", role: "핵심주",
+          description: "APR1400 원전 주기기 제조 국내 유일. 체코 원전 수주, SMR 글로벌 수혜주." },
+        { code: "052690", name: "한전기술", role: "핵심주",
+          description: "한국형 원전 종합설계 독점. SMART·i-SMR 표준설계 주도." },
+        { code: "051600", name: "한전KPS", role: "핵심주",
+          description: "원전·발전소 정비 독점. 원전 가동률 상승의 직접 수혜." },
+        { code: "083650", name: "비에이치아이", role: "관련주",
+          description: "원전 보조기기·복수기·열교환기 제조. 두산에너빌리티 협력사." },
+        { code: "032820", name: "우리기술", role: "관련주",
+          description: "원전 제어계측 시스템(MMIS) 개발. 차세대 원전 자동화 솔루션." },
+        { code: "298040", name: "효성중공업", role: "관련주",
+          description: "초고압 변압기·HVDC 강자. 원전 송배전 인프라 수혜." },
+        { code: "105840", name: "우진", role: "관련주",
+          description: "원자로 노내계측기·열전대 제조. SMR·차세대 원전 부품 공급." }
+      ]
+    },
+    {
+      name: "방산",
+      description: "K-방산 수출 호조, 미사일·전차·항공기",
+      companies: [
+        { code: "012450", name: "한화에어로스페이스", role: "핵심주",
+          description: "K9 자주포·천무·항공엔진. 폴란드·이집트 등 글로벌 수주 1위." },
+        { code: "079550", name: "LIG넥스원", role: "핵심주",
+          description: "천궁·현궁 등 미사일·유도무기. 사우디 천궁-II 대규모 수출 계약." },
+        { code: "064350", name: "현대로템", role: "핵심주",
+          description: "K2 전차·차륜형 장갑차. 폴란드 K2 수출 진행 중." },
+        { code: "047810", name: "한국항공우주", role: "핵심주",
+          description: "FA-50 경공격기·KF-21 보라매. 폴란드·말레이시아 수출." },
+        { code: "272210", name: "한화시스템", role: "관련주",
+          description: "군 레이더·전자전·정찰위성 사업. 우주방위 영역 확장." },
+        { code: "103140", name: "풍산", role: "관련주",
+          description: "탄약·신주(동합금) 제조. 우크라전 이후 글로벌 수요 급증." },
+        { code: "005870", name: "휴니드", role: "관련주",
+          description: "군 통신장비·전술정보통신체계(TICN). 미군·국방부 주력 공급." }
+      ]
+    },
+    {
+      name: "조선",
+      description: "LNG선 슈퍼사이클·해양플랜트·방산",
+      companies: [
+        { code: "009540", name: "HD한국조선해양", role: "핵심주",
+          description: "HD현대그룹 조선 지주. 자회사 통합 수주잔량 글로벌 1위." },
+        { code: "329180", name: "HD현대중공업", role: "핵심주",
+          description: "조선 글로벌 1위. LNG선·컨테이너선·해양플랜트 전 분야 강자." },
+        { code: "010140", name: "삼성중공업", role: "핵심주",
+          description: "LNG선·FLNG 강자. 해양플랜트 기술력 세계 톱티어." },
+        { code: "042660", name: "한화오션", role: "핵심주",
+          description: "옛 대우조선해양. 한화 인수 후 방산·잠수함 시너지 본격화." },
+        { code: "010620", name: "HD현대미포", role: "관련주",
+          description: "중형 컨테이너선·PC선·LPG선 전문. 친환경 선박 수주 강세." },
+        { code: "077970", name: "STX엔진", role: "관련주",
+          description: "선박용 디젤엔진·발전기 제조. 친환경 엔진 사업 확장." },
+        { code: "075580", name: "세진중공업", role: "관련주",
+          description: "선박 데크하우스·LPG 탱크 등 의장품 전문." }
+      ]
+    },
+    {
+      name: "로봇",
+      description: "협동로봇·휴머노이드·산업용 로봇",
+      companies: [
+        { code: "454910", name: "두산로보틱스", role: "핵심주",
+          description: "협동로봇 국내 1위·글로벌 4위. 가반하중 라인업 업계 최다." },
+        { code: "277810", name: "레인보우로보틱스", role: "핵심주",
+          description: "휴머노이드 'HUBO' 개발사. 삼성전자 지분 확대 중." },
+        { code: "058610", name: "에스피지", role: "관련주",
+          description: "정밀 감속기 국내 1위. 협동로봇·휴머노이드 핵심 부품 공급." },
+        { code: "090360", name: "로보스타", role: "관련주",
+          description: "산업용 다관절 로봇 제조. LG전자 자회사." },
+        { code: "218150", name: "하이젠알앤엠", role: "관련주",
+          description: "산업용 모터·감속기. 로봇·전기차 모터 사업 확장." },
+        { code: "117730", name: "티로보틱스", role: "관련주",
+          description: "디스플레이·반도체 진공이송로봇 국내 1위." },
+        { code: "056080", name: "유진로봇", role: "관련주",
+          description: "자율주행 서비스 로봇·라이다 센서 개발." }
+      ]
+    },
+    {
+      name: "양자컴퓨터",
+      description: "양자 연산·양자컴퓨팅 인프라·R&D",
+      companies: [
+        { code: "030200", name: "KT", role: "관련주",
+          description: "양자컴퓨팅 클라우드 서비스 추진. 국내 양자 인프라 선두." },
+        { code: "017670", name: "SK텔레콤", role: "관련주",
+          description: "스위스 IDQ 인수. 양자컴퓨팅·양자키분배 글로벌 거점." },
+        { code: "115440", name: "우리넷", role: "핵심주",
+          description: "양자컴퓨팅·양자암호 단말기 R&D 진행. 양자 테마 대표주." },
+        { code: "115500", name: "케이씨에스", role: "핵심주",
+          description: "양자암호 통신 칩·HSM(하드웨어 보안모듈) 제조." }
+      ]
+    },
+    {
+      name: "양자보안",
+      description: "양자키분배(QKD)·양자내성암호(PQC)",
+      companies: [
+        { code: "056360", name: "코위버", role: "핵심주",
+          description: "양자암호 키분배(QKD) 장비 국내 선두. 통신 3사에 공급." },
+        { code: "115500", name: "케이씨에스", role: "핵심주",
+          description: "양자암호 칩·하드웨어 보안모듈(HSM) 제조." },
+        { code: "054920", name: "한컴위드", role: "관련주",
+          description: "양자내성암호(PQC) 솔루션 개발. 한컴그룹 보안 자회사." },
+        { code: "356680", name: "엑스게이트", role: "관련주",
+          description: "통합보안·양자보안 솔루션. 공공·금융 보안 사업." },
+        { code: "115440", name: "우리넷", role: "관련주",
+          description: "양자암호 통신 단말 사업. 양자보안 통신 인프라 공급." }
+      ]
+    },
+    {
+      name: "전력기기",
+      description: "AI 데이터센터 전력 수요·미국 송배전 교체 수혜",
+      companies: [
+        { code: "267260", name: "HD현대일렉트릭", role: "핵심주",
+          description: "초고압 변압기 글로벌 강자. 미국향 매출 급증, AI 데이터센터 직접 수혜." },
+        { code: "010120", name: "LS일렉트릭", role: "핵심주",
+          description: "전력기기 종합 1위. 변압기·차단기·자동화. 북미·유럽 수출 확대." },
+        { code: "033100", name: "제룡전기", role: "핵심주",
+          description: "미국향 배전용 변압기 전문. 최근 수년간 수주잔량 폭증." },
+        { code: "062040", name: "산일전기", role: "핵심주",
+          description: "북미향 특수변압기 전문. 데이터센터·신재생 인프라 공급." },
+        { code: "103590", name: "일진전기", role: "관련주",
+          description: "초고압 전력케이블·중전기. 해저케이블 사업 확장." },
+        { code: "001440", name: "대한전선", role: "관련주",
+          description: "초고압 전력케이블 국내 2위. 해외 송전 인프라 수주 확대." },
+        { code: "000500", name: "가온전선", role: "관련주",
+          description: "전력·통신 케이블 종합. LS그룹 계열사." }
+      ]
+    },
+    {
+      name: "우주항공",
+      description: "위성·발사체·항공기 부품",
+      companies: [
+        { code: "099320", name: "쎄트렉아이", role: "핵심주",
+          description: "초소형 정찰위성 국내 1위. 한화 인수 후 우주 사업 본격화." },
+        { code: "189300", name: "인텔리안테크", role: "핵심주",
+          description: "위성통신 안테나 글로벌 강자. 스타링크·OneWeb 등 LEO 위성망 수혜." },
+        { code: "274090", name: "켄코아에어로스페이스", role: "관련주",
+          description: "항공우주 부품·소재 가공. 보잉·록히드마틴 공급망 진입." },
+        { code: "211270", name: "AP위성", role: "관련주",
+          description: "위성 통신단말기 제조. 군·해상통신 분야." },
+        { code: "042370", name: "비츠로테크", role: "관련주",
+          description: "우주발사체 추진제 탱크·핵융합 부품. 누리호 참여 기업." },
+        { code: "221840", name: "하이즈항공", role: "관련주",
+          description: "항공기 부품·구조물 가공. KAI 협력사." }
+      ]
+    },
+    {
+      name: "자율주행",
+      description: "ADAS·자율주행 SoC·V2X",
+      companies: [
+        { code: "012330", name: "현대모비스", role: "핵심주",
+          description: "현대차그룹 자율주행 핵심. ADAS 시스템·전동화 모듈 공급." },
+        { code: "204320", name: "HL만도", role: "핵심주",
+          description: "ADAS·전동화 부품 글로벌 강자. 자율주행 자회사 HL클레무브 보유." },
+        { code: "054450", name: "텔레칩스", role: "핵심주",
+          description: "자동차용 SoC '돌핀' 시리즈 개발. 현대차·삼성과 협력." },
+        { code: "396270", name: "넥스트칩", role: "관련주",
+          description: "자율주행용 ISP·뷰 카메라 칩 전문." },
+        { code: "317120", name: "라닉스", role: "관련주",
+          description: "V2X 통신 보안 칩. 자율주행 차량간 통신 핵심 기술." },
+        { code: "005850", name: "에스엘", role: "관련주",
+          description: "차량용 라이팅 글로벌 강자. 지능형 헤드램프(IFS) 자율주행 핵심 부품." },
+        { code: "118990", name: "모트렉스", role: "관련주",
+          description: "차량용 AVN·인포테인먼트 시스템. 글로벌 OEM 공급." },
+        { code: "089010", name: "켐트로닉스", role: "관련주",
+          description: "자율주행 부품·반도체 식각액 사업 다각화." }
+      ]
+    },
+    {
+      name: "게임·AI",
+      description: "생성형 AI 플랫폼·LLM·게임 AI",
+      companies: [
+        { code: "035420", name: "네이버", role: "핵심주",
+          description: "자체 LLM 'HyperCLOVA X' 보유. 국내 생성형 AI 플랫폼 1위." },
+        { code: "035720", name: "카카오", role: "핵심주",
+          description: "자체 LLM '카나나(Kanana)' 개발. AI 메신저·서비스 통합 진행." },
+        { code: "259960", name: "크래프톤", role: "핵심주",
+          description: "글로벌 'PUBG' 개발사. 자체 AI 기술 'CPC'로 게임 AI 강화." },
+        { code: "036570", name: "엔씨소프트", role: "핵심주",
+          description: "자체 LLM 'VARCO' 개발. 게임에 AI 통합 본격화." },
+        { code: "251270", name: "넷마블", role: "관련주",
+          description: "모바일 게임 강자. AI 기반 게임 개발 본격화." },
+        { code: "293490", name: "카카오게임즈", role: "관련주",
+          description: "모바일·PC 게임 퍼블리셔. 카카오그룹 게임 자회사." },
+        { code: "304100", name: "솔트룩스", role: "관련주",
+          description: "자체 LLM '루시아(Luxia)' 개발. 공공·기업 AI 솔루션 공급." }
+      ]
+    },
+    {
+      name: "미용기기",
+      description: "에너지기반 미용기기·톡신·필러",
+      companies: [
+        { code: "214150", name: "클래시스", role: "핵심주",
+          description: "HIFU 미용기기 '슈링크'·'볼뉴머' 글로벌 강자. 영업이익률 50%대." },
+        { code: "336570", name: "원텍", role: "핵심주",
+          description: "고주파(RF) 미용기기 '올리지오' 글로벌 판매 호조." },
+        { code: "287410", name: "제이시스메디칼", role: "핵심주",
+          description: "마이크로니들 RF '포텐자' 등 미용기기. 미국·일본 수출 확대." },
+        { code: "335890", name: "비올", role: "핵심주",
+          description: "마이크로니들 RF '실펌X' 글로벌 히트. 미국 매출 급증." },
+        { code: "145020", name: "휴젤", role: "관련주",
+          description: "보툴리눔톡신 '보툴렉스'·필러 '더채움' 글로벌 강자. 미국 FDA 승인." },
+        { code: "214450", name: "파마리서치", role: "관련주",
+          description: "스킨부스터 '리쥬란' 글로벌 히트. PDRN 기반 의료미용 강자." },
+        { code: "200670", name: "휴메딕스", role: "관련주",
+          description: "필러·HA 기반 미용 의료기기. 휴온스그룹 계열." }
+      ]
+    }
+  ]
+};
+
+const state = { activeTheme: "전체", query: "" };
+
+function render() {
+  const tabsEl = document.getElementById('tabs');
+  const contentEl = document.getElementById('content');
+
+  if (!tabsEl.children.length) {
+    const themes = ["전체", ...DATA.themes.map(t => t.name)];
+    themes.forEach(name => {
+      const tab = document.createElement('button');
+      tab.className = 'tab' + (name === state.activeTheme ? ' active' : '');
+      tab.textContent = name;
+      tab.onclick = () => {
+        state.activeTheme = name;
+        document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.textContent === name));
+        renderContent();
+      };
+      tabsEl.appendChild(tab);
+    });
+  }
+
+  renderContent();
+}
+
+function renderContent() {
+  const contentEl = document.getElementById('content');
+  const q = state.query.trim().toLowerCase();
+  const themes = state.activeTheme === "전체"
+    ? DATA.themes
+    : DATA.themes.filter(t => t.name === state.activeTheme);
+
+  let html = '';
+  let totalShown = 0;
+
+  themes.forEach(theme => {
+    const filtered = theme.companies.filter(c => {
+      if (!q) return true;
+      return c.name.toLowerCase().includes(q)
+        || c.code.includes(q)
+        || c.description.toLowerCase().includes(q)
+        || theme.name.toLowerCase().includes(q);
+    });
+    if (!filtered.length) return;
+    totalShown += filtered.length;
+
+    html += `<section class="theme-section">
+      <div class="theme-header">
+        <span class="theme-name">${theme.name}</span>
+        <span class="count-badge">${filtered.length}종목</span>
+      </div>
+      <div class="theme-desc">${theme.description}</div>`;
+
+    filtered.forEach(c => {
+      const roleClass = c.role === '핵심주' ? 'role-core' : 'role-related';
+      html += `<div class="card">
+        <div class="card-top">
+          <div class="name-block">
+            <span class="company-name">${c.name}</span>
+            <span class="company-code">${c.code}</span>
+          </div>
+          <span class="role ${roleClass}">${c.role}</span>
+        </div>
+        <div class="description">${c.description}</div>
+        <div class="links">
+          <a class="link-btn" target="_blank" rel="noopener" href="https://finance.naver.com/item/main.naver?code=${c.code}">네이버 증권</a>
+          <a class="link-btn" target="_blank" rel="noopener" href="https://m.stock.naver.com/domestic/stock/${c.code}/total">모바일 시세</a>
+        </div>
+      </div>`;
+    });
+    html += `</section>`;
+  });
+
+  if (!totalShown) {
+    html = `<div class="empty">검색 결과가 없습니다.</div>`;
+  }
+
+  contentEl.innerHTML = html;
+}
+
+document.getElementById('search').addEventListener('input', e => {
+  state.query = e.target.value;
+  renderContent();
+});
+
+render();
+</script>
+</body>
+</html>
