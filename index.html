@@ -21,6 +21,28 @@
     border-bottom: 1px solid #e5e7eb;
   }
   h1 { font-size: 18px; font-weight: 700; margin-bottom: 12px; }
+  .top-nav {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+  .nav-btn {
+    flex: 1;
+    padding: 10px 6px;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    color: #374151;
+    white-space: nowrap;
+    text-align: center;
+    font-family: inherit;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .nav-btn:active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+  #section-strength, #section-movers, #content { scroll-margin-top: 240px; }
   .search-box {
     width: 100%;
     padding: 10px 14px;
@@ -199,13 +221,19 @@
     .progress-bar { background: #2a2f3a; }
     .market-overview { border-bottom-color: #2a2f3a; }
     .idx-name { color: #9ca3af; }
+    .nav-btn { background: #2a2f3a; border-color: #3a414f; color: #e5e7eb; }
+    .nav-btn:active { background: #e5e7eb; color: #0f1115; border-color: #e5e7eb; }
   }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>테마별 종목 노트</h1>
+  <div class="top-nav">
+    <button class="nav-btn" onclick="scrollToSection('section-strength')">🔥 강도 TOP10</button>
+    <button class="nav-btn" onclick="scrollToSection('content')">🏷️ 테마별 종목</button>
+    <button class="nav-btn" onclick="scrollToSection('section-movers')">📈 TOP10 주식</button>
+  </div>
   <input type="text" class="search-box" id="search" placeholder="회사명·종목코드·키워드 검색">
   <div class="tabs" id="tabs"></div>
 </header>
@@ -854,6 +882,15 @@ const DATA = {
 const state = { activeTheme: "전체", query: "" };
 let MARKET = null;
 
+function scrollToSection(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const header = document.querySelector('header');
+  const offset = header ? header.offsetHeight + 8 : 100;
+  const top = el.getBoundingClientRect().top + window.pageYOffset - offset;
+  window.scrollTo({ top, behavior: 'smooth' });
+}
+
 function render() {
   const tabsEl = document.getElementById('tabs');
   const contentEl = document.getElementById('content');
@@ -1023,7 +1060,7 @@ function renderMarket(market) {
   html += `</div>`;
 
   // --- 테마 강도 카드 ---
-  html += `<div class="strength-section">`;
+  html += `<div class="strength-section" id="section-strength">`;
   html += `<div class="strength-title" style="margin-bottom:8px">🔥 테마 강도 TOP 10</div>`;
   html += `<div class="strength-meta" style="margin-bottom:6px">행 클릭 시 해당 테마로 이동 · 핵심주 가중치 2배 적용</div>`;
   html += '<table class="strength-table"><thead><tr><th>#</th><th>테마</th><th class="num">평균</th><th class="num">유효</th></tr></thead><tbody>';
@@ -1053,7 +1090,7 @@ function renderMarket(market) {
   html += `</div>`;
 
   // --- 전체 시장 상승 TOP 10 ---
-  html += `<div class="strength-section">`;
+  html += `<div class="strength-section" id="section-movers">`;
   html += `<div class="strength-title" style="margin-bottom:8px">📈 전체 시장 상승 TOP 10</div>`;
   html += `<div class="strength-meta" style="margin-bottom:6px">KOSPI + KOSDAQ 전 종목 · 행 클릭 시 네이버 시세</div>`;
   html += '<table class="strength-table"><tbody>';
