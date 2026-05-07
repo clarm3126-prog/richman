@@ -71,6 +71,37 @@
     flex-wrap: wrap;
     padding: 12px 0 4px;
   }
+  .tabs.collapsed { display: none; }
+  .tabs-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 9px 14px;
+    background: #f9fafb;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    color: #1a1a1a;
+    margin-top: 8px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .tabs-toggle:active { background: #f3f4f6; }
+  .tabs-toggle-label {
+    font-weight: 600;
+    flex: 1;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .tabs-toggle-arrow {
+    font-size: 11px;
+    color: #6b7280;
+    margin-left: 8px;
+  }
   .tab {
     flex-shrink: 0;
     padding: 8px 14px;
@@ -298,6 +329,9 @@
     .idx-name { color: #9ca3af; }
     .nav-btn { background: #2a2f3a; border-color: #3a414f; color: #e5e7eb; }
     .nav-btn:active { background: #e5e7eb; color: #0f1115; border-color: #e5e7eb; }
+    .tabs-toggle { background: #2a2f3a; border-color: #3a414f; color: #e5e7eb; }
+    .tabs-toggle:active { background: #3a414f; }
+    .tabs-toggle-arrow { color: #9ca3af; }
     .history-date { background: #2a2f3a; border-color: #3a414f; color: #e5e7eb; }
     .history-reset { background: #2a2f3a; border-color: #3a414f; color: #e5e7eb; }
     .history-reset:active { background: #3a414f; }
@@ -315,7 +349,11 @@
     <button class="nav-btn" onclick="scrollToSection('section-newhighs')">🚀 52주 신고가</button>
   </div>
   <input type="text" class="search-box" id="search" placeholder="회사명·종목코드·키워드 검색">
-  <div class="tabs" id="tabs"></div>
+  <button class="tabs-toggle" id="tabsToggle" onclick="toggleTabs()">
+    <span class="tabs-toggle-label" id="tabsToggleLabel">테마: 전체</span>
+    <span class="tabs-toggle-arrow" id="tabsToggleArrow">▼</span>
+  </button>
+  <div class="tabs collapsed" id="tabs"></div>
 </header>
 
 <main>
@@ -993,6 +1031,34 @@ function resetHistory() {
   if (MARKET) renderMarket(MARKET);
 }
 
+function toggleTabs() {
+  const tabs = document.getElementById('tabs');
+  const arrow = document.getElementById('tabsToggleArrow');
+  if (!tabs) return;
+  tabs.classList.toggle('collapsed');
+  if (arrow) arrow.textContent = tabs.classList.contains('collapsed') ? '▼' : '▲';
+}
+
+function selectTheme(name, opts) {
+  opts = opts || {};
+  state.activeTheme = name;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.textContent === name));
+  renderContent();
+  const label = document.getElementById('tabsToggleLabel');
+  if (label) label.textContent = `테마: ${name}`;
+  // 선택 후 자동 접기
+  const tabs = document.getElementById('tabs');
+  const arrow = document.getElementById('tabsToggleArrow');
+  if (tabs && !tabs.classList.contains('collapsed')) {
+    tabs.classList.add('collapsed');
+    if (arrow) arrow.textContent = '▼';
+  }
+  if (opts.scroll) {
+    const c = document.getElementById('content');
+    if (c) c.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
 function scrollToSection(id) {
   const el = document.getElementById(id);
   if (!el) return;
@@ -1042,11 +1108,7 @@ function render() {
     const tab = document.createElement('button');
     tab.className = 'tab' + (name === state.activeTheme ? ' active' : '');
     tab.textContent = name;
-    tab.onclick = () => {
-      state.activeTheme = name;
-      document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.textContent === name));
-      renderContent();
-    };
+    tab.onclick = () => selectTheme(name);
     tabsEl.appendChild(tab);
   });
   renderContent();
@@ -1316,21 +1378,20 @@ function renderMarket(market) {
 
   el.innerHTML = html;
 
-  // 테마 행 → 해당 테마 필터링 (내부 테마)
+  // 내부 테마 행 (있을 시) → 해당 테마로 필터링
   el.querySelectorAll('.strength-row[data-theme]').forEach(row => {
-    row.onclick = () => {
-      const themeName = row.dataset.theme;
-      state.activeTheme = themeName;
-      document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.textContent === themeName));
-      renderContent();
-      const c = document.getElementById('content');
-      if (c) c.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    };
+    row.onclick = () => selectTheme(row.dataset.theme, { scroll: true });
   });
-  // 네이버 테마 행 → 네이버 테마 페이지 새 탭
+  // 네이버 테마 행 → 멤버 종목이 있으면 앱 내부에서, 없으면 네이버 페이지 새 탭
   el.querySelectorAll('.strength-row[data-theme-no]').forEach(row => {
     row.onclick = () => {
-      window.open(`https://finance.naver.com/sise/sise_group_detail.naver?type=theme&no=${row.dataset.themeNo}`, '_blank');
+      const no = row.dataset.themeNo;
+      const t = (MARKET && MARKET.naver_themes) ? MARKET.naver_themes.find(x => x.no === no) : null;
+      if (t && t.stocks && t.stocks.length > 0) {
+        selectTheme(`📊 ${t.name}`, { scroll: true });
+      } else {
+        window.open(`https://finance.naver.com/sise/sise_group_detail.naver?type=theme&no=${no}`, '_blank');
+      }
     };
   });
   // 종목 행 → 네이버 시세 새 탭
