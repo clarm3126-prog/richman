@@ -224,6 +224,40 @@
   .progress-fill {
     height: 100%; background: #2563eb; transition: width 0.3s; width: 0%;
   }
+  .history-controls {
+    display: flex; gap: 6px; align-items: center; flex-shrink: 0;
+  }
+  .history-date {
+    font-size: 12px;
+    padding: 5px 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: #fff;
+    color: #1a1a1a;
+    font-family: inherit;
+  }
+  .history-reset {
+    font-size: 12px;
+    padding: 5px 10px;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    cursor: pointer;
+    color: #374151;
+    font-family: inherit;
+  }
+  .history-reset:active { background: #e5e7eb; }
+  .history-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    background: #fef2f2;
+    color: #dc2626;
+    border-radius: 4px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
   .market-overview {
     display: flex; gap: 20px; flex-wrap: wrap;
     padding-bottom: 12px; margin-bottom: 12px;
@@ -264,6 +298,10 @@
     .idx-name { color: #9ca3af; }
     .nav-btn { background: #2a2f3a; border-color: #3a414f; color: #e5e7eb; }
     .nav-btn:active { background: #e5e7eb; color: #0f1115; border-color: #e5e7eb; }
+    .history-date { background: #2a2f3a; border-color: #3a414f; color: #e5e7eb; }
+    .history-reset { background: #2a2f3a; border-color: #3a414f; color: #e5e7eb; }
+    .history-reset:active { background: #3a414f; }
+    .history-badge { background: #3a1818; color: #fca5a5; }
   }
 </style>
 </head>
@@ -921,8 +959,39 @@ const DATA = {
   ]
 };
 
-const state = { activeTheme: "전체", query: "" };
+const state = { activeTheme: "전체", query: "", historyDate: null, historyThemes: null };
 let MARKET = null;
+
+function fmtDateStr(yyyymmdd) {
+  if (!yyyymmdd || yyyymmdd.length !== 8) return '';
+  return `${yyyymmdd.slice(0,4)}-${yyyymmdd.slice(4,6)}-${yyyymmdd.slice(6,8)}`;
+}
+
+async function onHistoryDateChange(input) {
+  const v = input.value;
+  if (!v) { resetHistory(); return; }
+  const dateStr = v.replace(/-/g, '');
+  try {
+    const res = await fetch(`data/history/${dateStr}.json?t=${Date.now()}`);
+    if (!res.ok) {
+      alert(`${v} 데이터가 없습니다.\n\n데이터는 영업일에만 수집됩니다.`);
+      input.value = state.historyDate ? fmtDateStr(state.historyDate) : '';
+      return;
+    }
+    const data = await res.json();
+    state.historyDate = dateStr;
+    state.historyThemes = data.themes || [];
+    if (MARKET) renderMarket(MARKET);
+  } catch (e) {
+    alert('데이터 로드 실패');
+  }
+}
+
+function resetHistory() {
+  state.historyDate = null;
+  state.historyThemes = null;
+  if (MARKET) renderMarket(MARKET);
+}
 
 function scrollToSection(id) {
   const el = document.getElementById(id);
@@ -1120,11 +1189,22 @@ function renderMarket(market) {
   }
   html += `</div>`;
 
-  // --- 테마 강도 카드 (네이버 금융 기준) ---
+  // --- 테마 강도 카드 (네이버 금융 기준 + 날짜 선택) ---
   html += `<div class="strength-section" id="section-strength">`;
-  html += `<div class="strength-title" style="margin-bottom:8px">🔥 테마 강도 TOP 10</div>`;
-  html += `<div class="strength-meta" style="margin-bottom:6px">네이버 금융 기준 · 행 클릭 시 네이버 테마 페이지</div>`;
-  const naverThemes = market.naver_themes || [];
+  const isHist = !!state.historyDate;
+  const naverThemes = isHist ? (state.historyThemes || []) : (market.naver_themes || []);
+  const histLabel = isHist ? `<span class="history-badge">📅 ${fmtDateStr(state.historyDate)}</span>` : '';
+  const todayIso = new Date().toISOString().slice(0, 10);
+  html += `<div class="strength-header">
+    <div>
+      <div class="strength-title">🔥 테마 강도 TOP 10${histLabel}</div>
+      <div class="strength-meta">${isHist ? '과거 일자 데이터' : '네이버 금융 기준'} · 행 클릭 시 네이버 테마 페이지</div>
+    </div>
+    <div class="history-controls">
+      <input type="date" class="history-date" max="${todayIso}" value="${isHist ? fmtDateStr(state.historyDate) : ''}" onchange="onHistoryDateChange(this)">
+      ${isHist ? '<button class="history-reset" onclick="resetHistory()">오늘</button>' : ''}
+    </div>
+  </div>`;
   if (naverThemes.length === 0) {
     html += '<div class="strength-loading">네이버 테마 데이터를 준비 중입니다.<br><span style="font-size:11px">GitHub Actions 다음 실행 후 표시됩니다.</span></div>';
   } else {

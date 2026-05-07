@@ -143,6 +143,28 @@ def fetch_index(code):
         return None
 
 
+def save_history(themes, trading_day):
+    """일별 테마 강도 데이터를 data/history/{YYYYMMDD}.json 으로 저장하고 index 갱신."""
+    if not trading_day or not themes:
+        return
+    hist_dir = Path("data/history")
+    hist_dir.mkdir(parents=True, exist_ok=True)
+    today_file = hist_dir / f"{trading_day}.json"
+    with open(today_file, "w", encoding="utf-8") as f:
+        json.dump({
+            "updated": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
+            "trading_day": trading_day,
+            "themes": themes,
+        }, f, ensure_ascii=False, separators=(",", ":"))
+    dates = sorted(
+        [f.stem for f in hist_dir.glob("*.json") if f.stem != "index"],
+        reverse=True,
+    )
+    with open(hist_dir / "index.json", "w", encoding="utf-8") as f:
+        json.dump({"dates": dates}, f)
+    print(f"  history saved: {today_file.name} (total {len(dates)} days)")
+
+
 def fetch_naver_themes():
     """네이버 금융 테마 리스트 (등락률·상승/하락 종목수 포함)."""
     out = []
@@ -273,6 +295,7 @@ def main():
     new_highs = find_new_highs(stocks)
 
     naver_themes = fetch_naver_themes()
+    save_history(naver_themes, day_str)
 
     out = {
         "updated": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
