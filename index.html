@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="종목노트">
+<meta name="theme-color" content="#0f1115">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>테마별 종목 노트</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -1114,33 +1120,37 @@ function renderMarket(market) {
   }
   html += `</div>`;
 
-  // --- 테마 강도 카드 ---
+  // --- 테마 강도 카드 (네이버 금융 기준) ---
   html += `<div class="strength-section" id="section-strength">`;
   html += `<div class="strength-title" style="margin-bottom:8px">🔥 테마 강도 TOP 10</div>`;
-  html += `<div class="strength-meta" style="margin-bottom:6px">행 클릭 시 해당 테마로 이동 · 핵심주 가중치 2배 적용</div>`;
-  html += '<table class="strength-table"><thead><tr><th>#</th><th>테마</th><th class="num">평균</th><th class="num">유효</th></tr></thead><tbody>';
-  strengths.slice(0, 10).forEach((t, i) => {
-    html += `<tr class="strength-row" data-theme="${t.name}">
-      <td>${i + 1}</td><td>${t.name}</td>
-      <td class="num ${colorClass(t.avg)}">${fmtPct(t.avg)}</td>
-      <td class="num">${t.valid}/${t.total}</td>
-    </tr>`;
-  });
-  html += '</tbody></table>';
-
-  const bottom3 = strengths.slice(-3).reverse();
-  if (bottom3.length && bottom3[0].avg < 0) {
-    html += '<div class="strength-bottom-title">📉 약한 테마</div>';
-    html += '<table class="strength-table"><tbody>';
-    bottom3.forEach((t, i) => {
-      const rank = strengths.length - bottom3.length + i + 1;
-      html += `<tr class="strength-row" data-theme="${t.name}">
-        <td>${rank}</td><td>${t.name}</td>
-        <td class="num ${colorClass(t.avg)}">${fmtPct(t.avg)}</td>
-        <td class="num">${t.valid}/${t.total}</td>
+  html += `<div class="strength-meta" style="margin-bottom:6px">네이버 금융 기준 · 행 클릭 시 네이버 테마 페이지</div>`;
+  const naverThemes = market.naver_themes || [];
+  if (naverThemes.length === 0) {
+    html += '<div class="strength-loading">네이버 테마 데이터를 준비 중입니다.<br><span style="font-size:11px">GitHub Actions 다음 실행 후 표시됩니다.</span></div>';
+  } else {
+    html += '<table class="strength-table"><thead><tr><th>#</th><th>테마</th><th class="num">등락률</th><th class="num">↑/↓</th></tr></thead><tbody>';
+    naverThemes.slice(0, 10).forEach((t, i) => {
+      html += `<tr class="strength-row" data-theme-no="${t.no}">
+        <td>${i + 1}</td><td>${t.name}</td>
+        <td class="num ${colorClass(t.change)}">${fmtPct(t.change)}</td>
+        <td class="num"><span class="up">${t.rise}</span>/<span class="down">${t.fall}</span></td>
       </tr>`;
     });
     html += '</tbody></table>';
+
+    const weak = [...naverThemes].sort((a, b) => a.change - b.change).slice(0, 3);
+    if (weak.length && weak[0].change < 0) {
+      html += '<div class="strength-bottom-title">📉 약한 테마</div>';
+      html += '<table class="strength-table"><tbody>';
+      weak.forEach(t => {
+        html += `<tr class="strength-row" data-theme-no="${t.no}">
+          <td>·</td><td>${t.name}</td>
+          <td class="num ${colorClass(t.change)}">${fmtPct(t.change)}</td>
+          <td class="num"><span class="up">${t.rise}</span>/<span class="down">${t.fall}</span></td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+    }
   }
   html += `</div>`;
 
@@ -1204,7 +1214,7 @@ function renderMarket(market) {
 
   el.innerHTML = html;
 
-  // 테마 행 → 해당 테마 필터링
+  // 테마 행 → 해당 테마 필터링 (내부 테마)
   el.querySelectorAll('.strength-row[data-theme]').forEach(row => {
     row.onclick = () => {
       const themeName = row.dataset.theme;
@@ -1213,6 +1223,12 @@ function renderMarket(market) {
       renderContent();
       const c = document.getElementById('content');
       if (c) c.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+  });
+  // 네이버 테마 행 → 네이버 테마 페이지 새 탭
+  el.querySelectorAll('.strength-row[data-theme-no]').forEach(row => {
+    row.onclick = () => {
+      window.open(`https://finance.naver.com/sise/sise_group_detail.naver?type=theme&no=${row.dataset.themeNo}`, '_blank');
     };
   });
   // 종목 행 → 네이버 시세 새 탭

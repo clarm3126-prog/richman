@@ -143,6 +143,53 @@ def fetch_index(code):
         return None
 
 
+def fetch_naver_themes():
+    """네이버 금융 테마 리스트 (등락률·상승/하락 종목수 포함)."""
+    out = []
+    for page in range(1, 15):
+        url = f"https://finance.naver.com/sise/theme.naver?page={page}"
+        try:
+            r = requests.get(url, headers=HEADERS, timeout=15)
+            r.encoding = "euc-kr"
+        except Exception as e:
+            print(f"  themes page {page} failed: {e}")
+            break
+        m = re.search(r'<table[^>]*type_1\s+theme[^>]*>(.*?)</table>', r.text, re.S)
+        if not m:
+            break
+        rows = re.findall(r'<tr[^>]*>(.*?)</tr>', m.group(1), re.S)
+        found = 0
+        for row in rows:
+            nm = re.search(r'no=(\d+)[^>]*>([^<]+)</a>', row)
+            if not nm:
+                continue
+            pct = re.search(r'col_type2.*?(red01|nv01)[^>]*>\s*([+\-]?\d+\.\d+)\s*%', row, re.S)
+            if pct:
+                cls, val = pct.groups()
+                change = float(val) if cls == "red01" else -abs(float(val))
+            else:
+                change = 0.0
+            nums = re.findall(r'col_type4[^>]*>\s*(\d+)\s*</td>', row)
+            rise = int(nums[0]) if len(nums) > 0 else 0
+            flat = int(nums[1]) if len(nums) > 1 else 0
+            fall = int(nums[2]) if len(nums) > 2 else 0
+            out.append({
+                "no": nm.group(1),
+                "name": nm.group(2).strip(),
+                "change": change,
+                "rise": rise,
+                "flat": flat,
+                "fall": fall,
+            })
+            found += 1
+        if found == 0:
+            break
+        time.sleep(0.15)
+    out.sort(key=lambda t: t["change"], reverse=True)
+    print(f"  Naver themes: {len(out)}")
+    return out
+
+
 def fetch_52w_high_for_stock(code):
     """단일 종목의 52주 최고가 + 오늘 고가 반환."""
     url = f"https://m.stock.naver.com/api/stock/{code}/integration"
@@ -225,12 +272,15 @@ def main():
 
     new_highs = find_new_highs(stocks)
 
+    naver_themes = fetch_naver_themes()
+
     out = {
         "updated": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
         "trading_day": datetime.now(KST).strftime("%Y%m%d"),
         "indices": indices,
         "stocks": stocks,
         "new_highs": new_highs,
+        "naver_themes": naver_themes,
     }
 
     out_path = Path("data/market.json")
