@@ -1009,34 +1009,56 @@ function fmtVolume(v) {
   return v.toLocaleString('ko-KR');
 }
 
-function render() {
-  const tabsEl = document.getElementById('tabs');
-  const contentEl = document.getElementById('content');
-
-  if (!tabsEl.children.length) {
-    const themes = ["전체", ...DATA.themes.map(t => t.name)];
-    themes.forEach(name => {
-      const tab = document.createElement('button');
-      tab.className = 'tab' + (name === state.activeTheme ? ' active' : '');
-      tab.textContent = name;
-      tab.onclick = () => {
-        state.activeTheme = name;
-        document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.textContent === name));
-        renderContent();
-      };
-      tabsEl.appendChild(tab);
+function getAllThemes() {
+  const myThemes = DATA.themes;
+  const naverHot = [];
+  if (MARKET && MARKET.naver_themes) {
+    MARKET.naver_themes.slice(0, 10).forEach((nt, i) => {
+      if (nt.stocks && nt.stocks.length > 0) {
+        const sign = nt.change > 0 ? '+' : '';
+        naverHot.push({
+          name: `📊 ${nt.name}`,
+          description: `네이버 강세 #${i + 1} · ${sign}${nt.change.toFixed(2)}% · ↑${nt.rise} ↓${nt.fall}`,
+          isNaver: true,
+          themeNo: nt.no,
+          companies: nt.stocks.map((s, j) => ({
+            code: s.code,
+            name: s.name,
+            role: j < 3 ? '핵심주' : '관련주',
+            description: `네이버 [${nt.name}] 테마 멤버주`,
+          })),
+        });
+      }
     });
   }
+  return [...naverHot, ...myThemes];
+}
 
+function render() {
+  const tabsEl = document.getElementById('tabs');
+  tabsEl.innerHTML = '';
+  const themes = ["전체", ...getAllThemes().map(t => t.name)];
+  themes.forEach(name => {
+    const tab = document.createElement('button');
+    tab.className = 'tab' + (name === state.activeTheme ? ' active' : '');
+    tab.textContent = name;
+    tab.onclick = () => {
+      state.activeTheme = name;
+      document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.textContent === name));
+      renderContent();
+    };
+    tabsEl.appendChild(tab);
+  });
   renderContent();
 }
 
 function renderContent() {
   const contentEl = document.getElementById('content');
   const q = state.query.trim().toLowerCase();
+  const allThemes = getAllThemes();
   const themes = state.activeTheme === "전체"
-    ? DATA.themes
-    : DATA.themes.filter(t => t.name === state.activeTheme);
+    ? allThemes
+    : allThemes.filter(t => t.name === state.activeTheme);
 
   let html = '';
   let totalShown = 0;
@@ -1325,7 +1347,7 @@ async function initMarket() {
   try {
     MARKET = await loadMarket();
     renderMarket(MARKET);
-    renderContent();
+    render();
   } catch (e) {
     el.innerHTML = `<div class="strength-section"><div class="strength-loading">
       ⚠️ 시장 데이터를 아직 불러올 수 없습니다.<br>

@@ -143,6 +143,34 @@ def fetch_index(code):
         return None
 
 
+def enrich_top_themes_with_stocks(themes, top_n=10):
+    """상위 N개 네이버 테마에 멤버 종목 리스트 추가."""
+    for theme in themes[:top_n]:
+        theme_no = theme.get("no")
+        if not theme_no:
+            continue
+        url = f"https://m.stock.naver.com/api/stocks/theme/{theme_no}?page=1&pageSize=50"
+        headers = {**HEADERS, "Referer": "https://m.stock.naver.com/"}
+        try:
+            r = requests.get(url, headers=headers, timeout=10)
+            if r.status_code != 200:
+                theme["stocks"] = []
+                continue
+            data = r.json()
+            stocks = []
+            for s in data.get("stocks", []):
+                code = s.get("itemCode")
+                name = s.get("stockName")
+                if code and name:
+                    stocks.append({"code": str(code).zfill(6), "name": name})
+            theme["stocks"] = stocks
+        except Exception as e:
+            print(f"  theme {theme_no} stocks fetch failed: {e}")
+            theme["stocks"] = []
+        time.sleep(0.1)
+    print(f"  enriched {top_n} themes with member stocks")
+
+
 def save_history(themes, trading_day):
     """일별 테마 강도 데이터를 data/history/{YYYYMMDD}.json 으로 저장하고 index 갱신."""
     if not trading_day or not themes:
@@ -295,6 +323,7 @@ def main():
     new_highs = find_new_highs(stocks)
 
     naver_themes = fetch_naver_themes()
+    enrich_top_themes_with_stocks(naver_themes, top_n=10)
     save_history(naver_themes, day_str)
 
     out = {
