@@ -1,3 +1,10 @@
 {
-  "alerts": []
+  "alerts": [
+    {
+      "code": "005930",
+      "name": "삼성전자",
+      "target": 260000,
+      "direction": "above"
+    }
+  ]
 }
