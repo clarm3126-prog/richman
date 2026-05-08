@@ -44,7 +44,27 @@ jobs:
           git add data/market.json data/history/ data/descriptions.json
           if git diff --cached --quiet; then
             echo "No changes"
-          else
-            git commit -m "chore: update market data [auto]"
-            git push
+            exit 0
           fi
+          git commit -m "chore: update market data [auto]"
+          # Retry up to 3 times with rebase if remote has new commits
+          for i in 1 2 3; do
+            if git push; then
+              echo "Push succeeded on attempt $i"
+              exit 0
+            fi
+            echo "Push attempt $i failed, fetching and rebasing..."
+            git fetch origin main
+            git rebase origin/main || {
+              echo "Rebase failed; aborting and retrying with stash"
+              git rebase --abort || true
+              git stash
+              git pull --rebase origin main
+              git stash pop || true
+              git add data/market.json data/history/ data/descriptions.json
+              git diff --cached --quiet || git commit --amend --no-edit
+            }
+            sleep 2
+          done
+          echo "Failed to push after 3 attempts"
+          exit 1
