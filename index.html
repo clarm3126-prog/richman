@@ -758,6 +758,10 @@
     <div class="modal-form">
       <label class="modal-label">GitHub Personal Access Token</label>
       <input type="password" id="patInput" class="modal-input" placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxx" autocomplete="off">
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <button class="modal-btn modal-btn-cancel" style="flex:1;font-size:11px" onclick="togglePatVisibility()">👁️ 보기/숨기기</button>
+        <button class="modal-btn modal-btn-cancel" style="flex:1;font-size:11px" onclick="copyPatToClipboard()" id="copyPatBtn">📋 복사</button>
+      </div>
       <div style="font-size:11px;color:#9ca3af;margin-top:8px;line-height:1.7">
         <b>📋 발급 방법:</b><br>
         1. <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" style="color:#2563eb">새 Fine-grained Token 발급 페이지 열기</a><br>
@@ -1913,6 +1917,31 @@ function clearPatFromModal() {
     document.getElementById('patInput').value = '';
     closeSettingsModal();
     if (state.currentView === 'watchlist') renderWatchlistView();
+  }
+}
+
+function togglePatVisibility() {
+  const inp = document.getElementById('patInput');
+  inp.type = (inp.type === 'password') ? 'text' : 'password';
+}
+
+async function copyPatToClipboard() {
+  const inp = document.getElementById('patInput');
+  if (!inp.value) {
+    alert('복사할 Token이 없습니다');
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(inp.value);
+    const btn = document.getElementById('copyPatBtn');
+    const orig = btn.textContent;
+    btn.textContent = '✓ 복사됨';
+    setTimeout(() => { btn.textContent = orig; }, 1500);
+  } catch {
+    inp.type = 'text';
+    inp.select();
+    document.execCommand('copy');
+    alert('복사됨!');
   }
 }
 
