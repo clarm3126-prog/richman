@@ -15,7 +15,9 @@
     {
       "code": "419120",
       "name": "산돌",
-      "addedAt": 1778257855720
+      "addedAt": 1778257855720,
+      "target": 3700,
+      "direction": "below"
     },
     {
       "code": "033100",
