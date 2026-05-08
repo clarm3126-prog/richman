@@ -5,6 +5,12 @@
       "name": "와이씨",
       "target": 24000,
       "direction": "above"
+    },
+    {
+      "code": "419120",
+      "name": "산돌",
+      "target": 3700,
+      "direction": "below"
     }
   ]
 }
