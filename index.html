@@ -1475,36 +1475,60 @@ function loadWatchlist() {
 }
 
 async function syncWatchlistFromGitHub() {
-  // GitHub의 alerts_config.json에서 알림이 설정된 종목들을 자동 복원
-  // (다른 기기에서 추가한 알림이 이 기기에도 보이게)
+  // 다른 기기에서 추가한 관심 종목/알림을 자동 복원
+  let changed = false;
+  // 1. watchlist.json (전체 관심 종목)
   try {
-    const r = await fetch('data/alerts_config.json?t=' + Date.now());
-    if (!r.ok) return;
-    const cfg = await r.json();
-    let changed = false;
-    for (const a of (cfg.alerts || [])) {
-      const code = String(a.code).padStart(6, '0');
-      if (!WATCHLIST[code]) {
-        // 이 기기에 없는 종목이면 새로 추가 (알림 포함)
-        WATCHLIST[code] = {
-          name: a.name || code,
-          target: a.target,
-          direction: a.direction || 'above',
-          addedAt: Date.now(),
-        };
-        changed = true;
-      } else if (!WATCHLIST[code].target && a.target) {
-        // 관심 종목은 있는데 알림은 없으면 → 알림만 추가
-        WATCHLIST[code].target = a.target;
-        WATCHLIST[code].direction = a.direction || 'above';
-        changed = true;
+    const r = await fetch('data/watchlist.json?t=' + Date.now());
+    if (r.ok) {
+      const cfg = await r.json();
+      for (const item of (cfg.watchlist || [])) {
+        const code = String(item.code).padStart(6, '0');
+        if (!WATCHLIST[code]) {
+          WATCHLIST[code] = {
+            name: item.name || code,
+            addedAt: item.addedAt || Date.now(),
+          };
+          if (item.target) {
+            WATCHLIST[code].target = item.target;
+            WATCHLIST[code].direction = item.direction || 'above';
+          }
+          changed = true;
+        } else if (!WATCHLIST[code].target && item.target) {
+          WATCHLIST[code].target = item.target;
+          WATCHLIST[code].direction = item.direction || 'above';
+          changed = true;
+        }
       }
     }
-    if (changed) {
-      saveWatchlist();
-      if (state.currentView === 'watchlist') renderWatchlistView();
+  } catch {}
+  // 2. alerts_config.json (호환용 — 알림만)
+  try {
+    const r = await fetch('data/alerts_config.json?t=' + Date.now());
+    if (r.ok) {
+      const cfg = await r.json();
+      for (const a of (cfg.alerts || [])) {
+        const code = String(a.code).padStart(6, '0');
+        if (!WATCHLIST[code]) {
+          WATCHLIST[code] = {
+            name: a.name || code,
+            target: a.target,
+            direction: a.direction || 'above',
+            addedAt: Date.now(),
+          };
+          changed = true;
+        } else if (!WATCHLIST[code].target && a.target) {
+          WATCHLIST[code].target = a.target;
+          WATCHLIST[code].direction = a.direction || 'above';
+          changed = true;
+        }
+      }
     }
   } catch {}
+  if (changed) {
+    saveWatchlist();
+    if (state.currentView === 'watchlist') renderWatchlistView();
+  }
 }
 
 function saveWatchlist() {
@@ -1529,6 +1553,7 @@ function toggleWatchlist(code, name) {
     btn.textContent = isWatched(code) ? '★' : '☆';
     btn.classList.toggle('starred', isWatched(code));
   });
+  autoSyncIfPossible();
 }
 
 async function requestNotificationPermission() {
@@ -1781,6 +1806,7 @@ function addFromSearch(code, name) {
   if (!WATCHLIST[code]) {
     WATCHLIST[code] = { name, addedAt: Date.now() };
     saveWatchlist();
+    autoSyncIfPossible();
   }
   renderWatchlistView();
   // Re-trigger search to update buttons
@@ -1803,6 +1829,39 @@ function buildAlertsJson() {
   return { alerts };
 }
 
+async function pushFileToGitHub(path, contentObj, commitMsg) {
+  const pat = getPat();
+  if (!pat) return { ok: false, err: 'no PAT' };
+  const content = JSON.stringify(contentObj, null, 2) + '\n';
+  const apiBase = `https://api.github.com/repos/clarm3126-prog/richman/contents/${path}`;
+  const headers = {
+    'Authorization': `Bearer ${pat}`,
+    'Accept': 'application/vnd.github+json',
+    'Content-Type': 'application/json',
+  };
+  try {
+    let sha = null;
+    const getRes = await fetch(apiBase, { headers });
+    if (getRes.ok) {
+      const fileData = await getRes.json();
+      sha = fileData.sha;
+    }
+    const base64 = btoa(unescape(encodeURIComponent(content)));
+    const body = { message: commitMsg, content: base64, branch: 'main' };
+    if (sha) body.sha = sha;
+    const putRes = await fetch(apiBase, {
+      method: 'PUT', headers, body: JSON.stringify(body),
+    });
+    if (!putRes.ok) {
+      const errTxt = await putRes.text();
+      return { ok: false, err: `${putRes.status}: ${errTxt.slice(0, 200)}` };
+    }
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, err: String(e) };
+  }
+}
+
 async function autoSyncAlerts(silent) {
   const pat = getPat();
   if (!pat) {
@@ -1810,39 +1869,27 @@ async function autoSyncAlerts(silent) {
     return false;
   }
   const config = buildAlertsJson();
-  const newContent = JSON.stringify(config, null, 2) + '\n';
-  const apiBase = 'https://api.github.com/repos/clarm3126-prog/richman/contents/data/alerts_config.json';
-  const headers = {
-    'Authorization': `Bearer ${pat}`,
-    'Accept': 'application/vnd.github+json',
-    'Content-Type': 'application/json',
-  };
-  try {
-    const getRes = await fetch(apiBase, { headers });
-    if (!getRes.ok) throw new Error(`파일 조회 실패 (${getRes.status})`);
-    const fileData = await getRes.json();
-    const sha = fileData.sha;
-    const base64 = btoa(unescape(encodeURIComponent(newContent)));
-    const putRes = await fetch(apiBase, {
-      method: 'PUT',
-      headers,
-      body: JSON.stringify({
-        message: `Update alerts (${config.alerts.length}개)`,
-        content: base64,
-        sha,
-        branch: 'main',
-      }),
-    });
-    if (!putRes.ok) {
-      const errTxt = await putRes.text();
-      throw new Error(`업데이트 실패 (${putRes.status})\n${errTxt.slice(0, 200)}`);
-    }
-    if (!silent) alert(`✅ 동기화 완료!\n${config.alerts.length}개 알림이 GitHub에 저장되었습니다.\n다음 GitHub Actions 실행(최대 5분 후) 시 적용됩니다.`);
-    return true;
-  } catch (e) {
-    if (!silent) alert(`❌ 동기화 실패\n${e.message}\n\nToken이 올바른지 확인해주세요.`);
-    return false;
+  const res = await pushFileToGitHub('data/alerts_config.json', config, `Update alerts (${config.alerts.length}개)`);
+  if (!silent) {
+    if (res.ok) alert(`✅ 동기화 완료!\n${config.alerts.length}개 알림이 저장되었습니다.`);
+    else alert(`❌ 동기화 실패\n${res.err}`);
   }
+  return res.ok;
+}
+
+async function autoSyncWatchlistFile() {
+  const list = [];
+  for (const code in WATCHLIST) {
+    const w = WATCHLIST[code];
+    const item = { code, name: w.name, addedAt: w.addedAt || Date.now() };
+    if (w.target) {
+      item.target = w.target;
+      item.direction = w.direction || 'above';
+    }
+    list.push(item);
+  }
+  const res = await pushFileToGitHub('data/watchlist.json', { watchlist: list }, `Update watchlist (${list.length}개)`);
+  return res.ok;
 }
 
 function openSettingsModal() {
@@ -1897,18 +1944,20 @@ async function triggerActionsRun() {
 
 async function autoSyncIfPossible() {
   if (!getPat()) return false;
-  const ok = await autoSyncAlerts(true);
-  if (ok) {
-    showToast('✅ Telegram 동기화됨');
-    // PAT에 actions:write 있으면 즉시 Actions 실행
+  const ok1 = await autoSyncWatchlistFile();
+  const ok2 = await autoSyncAlerts(true);
+  if (ok1 && ok2) {
+    showToast('✅ 동기화됨 (관심+알림)');
     const triggered = await triggerActionsRun();
     if (triggered) {
       setTimeout(() => showToast('🚀 즉시 알림 체크 중 (1~3분)', 3000), 2400);
     }
+  } else if (ok1 || ok2) {
+    showToast('⚠️ 일부만 동기화됨', 3000);
   } else {
     showToast('⚠️ 동기화 실패 - ⚙️에서 Token 확인', 4000);
   }
-  return ok;
+  return ok1 || ok2;
 }
 
 function openStockModal(code) {
