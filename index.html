@@ -1196,7 +1196,9 @@ function renderDonut(items, top = 5, dataAttr = 'theme-no') {
   const colors = ['#dc2626', '#e94545', '#f06b6b', '#f48e8e', '#f7afaf'];
   const cx = 110, cy = 110, r = 95, ir = 62;
   let cum = 0;
-  const slices = positives.map((t, i) => {
+  const slices = [];
+  const labels = [];
+  positives.forEach((t, i) => {
     const angle = (t.change / total) * 360;
     const startA = cum;
     const endA = cum + (angle === 360 ? 359.99 : angle);
@@ -1209,8 +1211,25 @@ function renderDonut(items, top = 5, dataAttr = 'theme-no') {
     const x4 = cx + ir * Math.cos(sR), y4 = cy + ir * Math.sin(sR);
     const large = (endA - startA) > 180 ? 1 : 0;
     const path = `M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} L ${x3} ${y3} A ${ir} ${ir} 0 ${large} 0 ${x4} ${y4} Z`;
-    return `<path d="${path}" fill="${colors[i % colors.length]}" data-${dataAttr}="${t.no}"><title>${t.name} +${t.change.toFixed(2)}%</title></path>`;
-  }).join('');
+    slices.push(`<path d="${path}" fill="${colors[i % colors.length]}" data-${dataAttr}="${t.no}"><title>${t.name} +${t.change.toFixed(2)}%</title></path>`);
+
+    // 슬라이스 안에 테마 이름 표시 (각도 ≥ 18°일 때만, 너무 좁으면 생략)
+    if (angle >= 18) {
+      const midA = (startA + endA) / 2;
+      const labelR = (r + ir) / 2;
+      const lr = (midA - 90) * Math.PI / 180;
+      const lx = cx + labelR * Math.cos(lr);
+      const ly = cy + labelR * Math.sin(lr);
+      let displayName = t.name;
+      const maxLen = angle >= 40 ? 7 : 5;
+      if (displayName.length > maxLen) displayName = displayName.slice(0, maxLen - 1) + '…';
+      // 진한 슬라이스(1-3위)는 흰색, 옅은 슬라이스(4-5위)는 검은색
+      const textColor = i < 3 ? '#ffffff' : '#1a1a1a';
+      const fontSize = angle >= 60 ? 11 : 10;
+      labels.push(`<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="central" font-size="${fontSize}" font-weight="700" fill="${textColor}" pointer-events="none">${displayName}</text>`);
+    }
+  });
+
   const legend = positives.map((t, i) => `
     <div class="legend-item" data-${dataAttr}="${t.no}">
       <span class="legend-dot" style="background:${colors[i % colors.length]}"></span>
@@ -1220,7 +1239,10 @@ function renderDonut(items, top = 5, dataAttr = 'theme-no') {
     </div>`).join('');
   return `<div class="donut-container">
     <div class="donut-chart-wrap">
-      <svg class="donut-svg" viewBox="0 0 220 220">${slices}</svg>
+      <svg class="donut-svg" viewBox="0 0 220 220">
+        ${slices.join('')}
+        ${labels.join('')}
+      </svg>
       <div class="donut-center">
         <div class="donut-center-label">강세 TOP ${positives.length}</div>
         <div class="donut-center-value">+${total.toFixed(2)}%</div>
