@@ -251,7 +251,7 @@ def enrich_top_themes_with_stocks(themes, top_n=10):
 
 
 def send_telegram(bot_token, chat_id, text):
-    """Telegram 봇으로 메시지 전송."""
+    """Telegram 봇으로 메시지 전송. 성공/실패 + 응답 메시지 반환."""
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
     try:
         r = requests.post(
@@ -259,10 +259,16 @@ def send_telegram(bot_token, chat_id, text):
             json={"chat_id": chat_id, "text": text, "parse_mode": "Markdown", "disable_web_page_preview": True},
             timeout=10,
         )
-        return r.status_code == 200
+        if r.status_code == 200:
+            return True, "OK"
+        # 실패 시 Telegram 에러 메시지 반환
+        try:
+            err = r.json().get("description", r.text[:200])
+        except Exception:
+            err = r.text[:200]
+        return False, f"HTTP {r.status_code}: {err}"
     except Exception as e:
-        print(f"  telegram send failed: {e}")
-        return False
+        return False, f"Exception: {e}"
 
 
 def check_alerts_and_notify(stocks):
@@ -314,8 +320,6 @@ def check_alerts_and_notify(stocks):
         )
         if not is_hit:
             continue
-        triggered.add(alert_key)
-        new_count += 1
         sign = "+" if stock["change"] > 0 else ""
         dir_text = "↑ 돌파" if direction == "above" else "↓ 하락"
         msg = (
@@ -325,8 +329,13 @@ def check_alerts_and_notify(stocks):
             f"거래량: {stock.get('volume', 0):,}\n\n"
             f"종목코드: `{code}` ({stock.get('market', '')})"
         )
-        ok = send_telegram(bot_token, chat_id, msg)
-        print(f"  alert {'✓' if ok else '✗'}: {stock['name']} {target:,}원 {direction}")
+        ok, info = send_telegram(bot_token, chat_id, msg)
+        if ok:
+            triggered.add(alert_key)
+            new_count += 1
+            print(f"  alert ✓ SENT: {stock['name']} {target:,}원 {direction}")
+        else:
+            print(f"  alert ✗ FAILED: {stock['name']} {target:,}원 {direction} | {info}")
 
     if new_count > 0:
         triggered_path.write_text(
@@ -334,6 +343,8 @@ def check_alerts_and_notify(stocks):
             encoding="utf-8",
         )
         print(f"  saved {len(triggered)} triggered alerts ({new_count} new)")
+    else:
+        print(f"  no new alerts triggered (already sent: {len(triggered)})")
 
 
 def fetch_company_description(code):
