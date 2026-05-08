@@ -513,38 +513,103 @@ def update_volume_data(stocks):
     return surges
 
 
-def fetch_investor_top():
-    """외국인/기관 매매 상위 (KOSPI + KOSDAQ)."""
-    out = {"foreign": {"KOSPI": [], "KOSDAQ": []}, "institution": {"KOSPI": [], "KOSDAQ": []}}
-    for inv_name, inv_no in [("foreign", "9000"), ("institution", "1000")]:
-        for market_name, sosok in [("KOSPI", "01"), ("KOSDAQ", "02")]:
-            url = f"https://finance.naver.com/sise/sise_deal_rank.naver?sosok={sosok}&investor_gubun={inv_no}"
+def _fetch_stock_frgn(code):
+    """종목별 frgn.naver에서 최신 외국인/기관 순매매 주식수."""
+    url = f"https://finance.naver.com/item/frgn.naver?code={code}"
+    try:
+        r = requests.get(url, headers=HEADERS, timeout=8)
+        r.encoding = "euc-kr"
+        tables = re.findall(r'<table[^>]*class="[^"]*type2[^"]*"[^>]*>(.*?)</table>', r.text, re.S)
+        if len(tables) < 2:
+            return code, None
+        rows = re.findall(r'<tr[^>]*>(.*?)</tr>', tables[1], re.S)
+        for row in rows:
+            tds = re.findall(r'<td[^>]*>(.*?)</td>', row, re.S)
+            cleaned = [re.sub(r'<[^>]+>', ' ', td).strip() for td in tds]
+            cleaned = [re.sub(r'\s+', ' ', c) for c in cleaned if c.strip()]
+            if len(cleaned) < 7:
+                continue
+            if not re.match(r'\d{4}\.\d{2}\.\d{2}', cleaned[0]):
+                continue
             try:
-                r = requests.get(url, headers=HEADERS, timeout=15)
-                r.encoding = "euc-kr"
-                tables = re.findall(r'<table[^>]*class="type_r1"[^>]*>(.*?)</table>', r.text, re.S)
-                stocks = []
-                # 두번째 테이블이 보통 순매수 상위
-                target_table = tables[1] if len(tables) >= 2 else (tables[0] if tables else "")
-                rows = re.findall(r'<tr[^>]*>(.*?)</tr>', target_table, re.S)
-                for row in rows:
-                    nm = re.search(r'item/main\.naver\?code=(\d+)[^>]*class="company"[^>]*>([^<]+)</a>', row)
-                    if not nm:
-                        continue
-                    code = nm.group(1).zfill(6)
-                    name = nm.group(2).strip()
-                    # 가격 추출
-                    price_m = re.search(r'<td class="number">([\d,]+)</td>', row)
-                    price = int(price_m.group(1).replace(",", "")) if price_m else 0
-                    stocks.append({"code": code, "name": name, "price": price, "market": market_name})
-                    if len(stocks) >= 10:
-                        break
-                out[inv_name][market_name] = stocks
-            except Exception as e:
-                print(f"  investor {inv_name} {market_name} failed: {e}")
-            time.sleep(0.1)
-    print(f"  investor top: F-K={len(out['foreign']['KOSPI'])}, F-Q={len(out['foreign']['KOSDAQ'])}, I-K={len(out['institution']['KOSPI'])}, I-Q={len(out['institution']['KOSDAQ'])}")
-    return out
+                inst = int(cleaned[5].replace(",", "").replace("+", ""))
+                foreign = int(cleaned[6].replace(",", "").replace("+", ""))
+                return code, {"institution_net": inst, "foreign_net": foreign, "date": cleaned[0]}
+            except (ValueError, IndexError):
+                continue
+        return code, None
+    except Exception:
+        return code, None
+
+
+def compute_investor_rankings(stocks, top_n_traded=80, top_n_per_list=15):
+    """거래대금 상위 종목 frgn 데이터 수집 → 외국인/기관 순매수/순매도 ranking."""
+    import concurrent.futures
+    top_kospi, top_kosdaq = [], []
+    for code, s in stocks.items():
+        if s.get("volume", 0) < 1000 or s.get("price", 0) < 100:
+            continue
+        tv = s["price"] * s["volume"]
+        if s.get("market") == "KOSPI":
+            top_kospi.append((code, tv))
+        elif s.get("market") == "KOSDAQ":
+            top_kosdaq.append((code, tv))
+    top_kospi.sort(key=lambda x: x[1], reverse=True)
+    top_kosdaq.sort(key=lambda x: x[1], reverse=True)
+    candidate_codes = (
+        [c for c, _ in top_kospi[:top_n_traded]] +
+        [c for c, _ in top_kosdaq[:top_n_traded]]
+    )
+    print(f"  fetching frgn data for {len(candidate_codes)} stocks (top traded)...")
+
+    investor_data = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=15) as ex:
+        futures = {ex.submit(_fetch_stock_frgn, c): c for c in candidate_codes}
+        for f in concurrent.futures.as_completed(futures):
+            code, data = f.result()
+            if data:
+                investor_data[code] = data
+    print(f"  fetched {len(investor_data)} frgn records")
+
+    rankings = {
+        "foreign": {"KOSPI": {"buy": [], "sell": []}, "KOSDAQ": {"buy": [], "sell": []}},
+        "institution": {"KOSPI": {"buy": [], "sell": []}, "KOSDAQ": {"buy": [], "sell": []}},
+    }
+    for code, inv in investor_data.items():
+        s = stocks.get(code)
+        if not s:
+            continue
+        market = s.get("market")
+        if market not in ("KOSPI", "KOSDAQ"):
+            continue
+        base = {
+            "code": code, "name": s["name"], "market": market,
+            "price": s["price"], "change": s["change"], "volume": s["volume"],
+        }
+        f_shares = inv["foreign_net"]
+        f_amount = f_shares * s["price"]
+        if f_amount != 0:
+            target = "buy" if f_amount > 0 else "sell"
+            rankings["foreign"][market][target].append({
+                **base, "shares": f_shares, "amount": f_amount,
+            })
+        i_shares = inv["institution_net"]
+        i_amount = i_shares * s["price"]
+        if i_amount != 0:
+            target = "buy" if i_amount > 0 else "sell"
+            rankings["institution"][market][target].append({
+                **base, "shares": i_shares, "amount": i_amount,
+            })
+
+    for inv_type in rankings:
+        for market in rankings[inv_type]:
+            buy_list = rankings[inv_type][market]["buy"]
+            buy_list.sort(key=lambda x: x["amount"], reverse=True)
+            rankings[inv_type][market]["buy"] = buy_list[:top_n_per_list]
+            sell_list = rankings[inv_type][market]["sell"]
+            sell_list.sort(key=lambda x: x["amount"])
+            rankings[inv_type][market]["sell"] = sell_list[:top_n_per_list]
+    return rankings
 
 
 def fetch_watchlist_stock_history(days=7):
@@ -730,8 +795,8 @@ def main():
     print("Computing volume surges...")
     volume_surges = update_volume_data(stocks)
 
-    print("Fetching investor top...")
-    investor_top = fetch_investor_top()
+    print("Computing investor rankings (real net buy/sell amounts)...")
+    investor_top = compute_investor_rankings(stocks, top_n_traded=80, top_n_per_list=15)
 
     print("Fetching watchlist stock history...")
     watchlist_history = fetch_watchlist_stock_history(7)

@@ -1706,12 +1706,11 @@ function renderInvestorView() {
   const inv = MARKET.investor_top || {};
   const mf = state.marketFilter || 'all';
   let html = '';
-  // 거래소 필터
   html += `<div class="strength-section">
     <div class="strength-header">
       <div>
-        <div class="strength-title">💵 투자자 매매 상위</div>
-        <div class="strength-meta">네이버 금융 기준 · 행 클릭 시 종목 상세</div>
+        <div class="strength-title">💵 외국인/기관 순매매</div>
+        <div class="strength-meta">거래대금 상위 ~160 종목 기준 · 실제 순매매 금액 · 행 클릭 시 상세</div>
       </div>
     </div>
     <div class="market-filter">
@@ -1721,35 +1720,45 @@ function renderInvestorView() {
     </div>
   </div>`;
 
-  const renderInvSection = (title, list) => {
-    if (!list || list.length === 0) return '';
+  const renderRanking = (title, list, isBuy) => {
+    if (!list || list.length === 0) {
+      return `<div class="strength-section">
+        <div class="strength-title" style="margin-bottom:8px">${title}</div>
+        <div class="strength-loading">데이터 없음</div>
+      </div>`;
+    }
+    const sideLabel = isBuy ? '순매수' : '순매도';
+    const cls = isBuy ? 'up' : 'down';
     let h = `<div class="strength-section">`;
     h += `<div class="strength-title" style="margin-bottom:8px">${title}</div>`;
-    h += '<table class="strength-table"><thead><tr><th>#</th><th>종목</th><th class="num">등락</th><th class="num">거래대금</th></tr></thead><tbody>';
+    h += `<table class="strength-table"><thead><tr><th>#</th><th>종목</th><th class="num">등락</th><th class="num">${sideLabel} 금액</th></tr></thead><tbody>`;
     list.forEach((s, i) => {
-      const stock = MARKET.stocks[s.code];
-      const cls = stock ? (stock.change > 0 ? 'up' : stock.change < 0 ? 'down' : 'flat') : 'flat';
-      const chgStr = stock ? fmtPct(stock.change) : '—';
-      const tradeValue = (stock && stock.price && stock.volume) ? stock.price * stock.volume : 0;
+      const chgCls = s.change > 0 ? 'up' : s.change < 0 ? 'down' : 'flat';
+      const amount = Math.abs(s.amount);
       h += `<tr class="strength-row" data-code="${s.code}">
         <td>${i + 1}</td>
-        <td>${s.name}<div class="company-code" style="display:block;font-size:10px;margin-top:2px">${s.code}${stock ? ` · ${stock.market}` : ''}</div></td>
-        <td class="num ${cls}">${chgStr}</td>
-        <td class="num">${tradeValue ? fmtMoney(tradeValue) : '—'}</td>
+        <td>${s.name}<div class="company-code" style="display:block;font-size:10px;margin-top:2px">${s.code} · ${s.market}</div></td>
+        <td class="num ${chgCls}">${fmtPct(s.change)}</td>
+        <td class="num ${cls}">${fmtMoney(amount)}</td>
       </tr>`;
     });
     h += '</tbody></table></div>';
     return h;
   };
 
-  if (mf === 'all' || mf === 'KOSPI') {
-    html += renderInvSection('🌐 외국인 매매 상위 KOSPI', (inv.foreign && inv.foreign.KOSPI) || []);
-    html += renderInvSection('🏛 기관 매매 상위 KOSPI', (inv.institution && inv.institution.KOSPI) || []);
-  }
-  if (mf === 'all' || mf === 'KOSDAQ') {
-    html += renderInvSection('🌐 외국인 매매 상위 KOSDAQ', (inv.foreign && inv.foreign.KOSDAQ) || []);
-    html += renderInvSection('🏛 기관 매매 상위 KOSDAQ', (inv.institution && inv.institution.KOSDAQ) || []);
-  }
+  const renderMarketSection = (market) => {
+    const f = (inv.foreign && inv.foreign[market]) || {buy:[], sell:[]};
+    const i = (inv.institution && inv.institution[market]) || {buy:[], sell:[]};
+    let h = '';
+    h += renderRanking(`🌐 외국인 ${market} 순매수 TOP`, f.buy, true);
+    h += renderRanking(`🌐 외국인 ${market} 순매도 TOP`, f.sell, false);
+    h += renderRanking(`🏛 기관 ${market} 순매수 TOP`, i.buy, true);
+    h += renderRanking(`🏛 기관 ${market} 순매도 TOP`, i.sell, false);
+    return h;
+  };
+
+  if (mf === 'all' || mf === 'KOSPI') html += renderMarketSection('KOSPI');
+  if (mf === 'all' || mf === 'KOSDAQ') html += renderMarketSection('KOSDAQ');
   el.innerHTML = html;
   el.querySelectorAll('.strength-row[data-code]').forEach(row => {
     row.onclick = () => openStockModal(row.dataset.code);
