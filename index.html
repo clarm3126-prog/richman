@@ -183,7 +183,16 @@
     margin-left: auto;
     font-variant-numeric: tabular-nums;
   }
-  .description { font-size: 13px; color: #4b5563; margin: 6px 0 10px; }
+  .description { font-size: 13px; color: #4b5563; margin: 6px 0 10px; line-height: 1.55; }
+  .description-wrap { cursor: pointer; margin: 6px 0 10px; -webkit-tap-highlight-color: transparent; }
+  .description-wrap .description { margin: 0 0 4px; }
+  .desc-toggle {
+    font-size: 11px;
+    color: #2563eb;
+    font-weight: 600;
+    user-select: none;
+  }
+  .description-wrap.expanded .desc-toggle { color: #6b7280; }
   .links { display: flex; gap: 6px; flex-wrap: wrap; }
   .link-btn {
     font-size: 12px;
@@ -352,6 +361,8 @@
     .history-reset:active { background: #3a414f; }
     .history-badge { background: #3a1818; color: #fca5a5; }
     .pie-svg path { stroke: #1a1d23; }
+    .desc-toggle { color: #93c5fd; }
+    .description-wrap.expanded .desc-toggle { color: #9ca3af; }
   }
 </style>
 </head>
@@ -1162,8 +1173,37 @@ const STOCK_DESC = (() => {
   return map;
 })();
 
+let STOCK_DESC_FNGUIDE = {};
+
+async function loadDescriptions() {
+  try {
+    const r = await fetch('data/descriptions.json?t=' + Date.now());
+    if (!r.ok) return;
+    STOCK_DESC_FNGUIDE = await r.json();
+  } catch {}
+}
+
 function getStockDescription(code, fallback) {
-  return STOCK_DESC[code] || fallback || '';
+  return STOCK_DESC[code] || STOCK_DESC_FNGUIDE[code] || fallback || '';
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function toggleDesc(wrap) {
+  const desc = wrap.querySelector('.description-text');
+  const toggle = wrap.querySelector('.desc-toggle');
+  const full = wrap.dataset.full;
+  if (wrap.classList.contains('expanded')) {
+    desc.textContent = full.length > 100 ? full.slice(0, 100) + '…' : full;
+    wrap.classList.remove('expanded');
+    if (toggle) toggle.textContent = '▼ 더보기';
+  } else {
+    desc.textContent = full;
+    wrap.classList.add('expanded');
+    if (toggle) toggle.textContent = '▲ 접기';
+  }
 }
 
 function getAllThemes() {
@@ -1287,6 +1327,22 @@ function renderContent() {
           <span class="volume-info">거래량 ${fmtVolume(sd.volume)}</span>
         </div>`;
       }
+      const fullDesc = (typeof STOCK_DESC_FNGUIDE !== 'undefined' && STOCK_DESC_FNGUIDE[c.code])
+        ? STOCK_DESC_FNGUIDE[c.code]
+        : (c.description || '');
+      let descBlock = '';
+      if (fullDesc) {
+        if (fullDesc.length > 100) {
+          const escaped = escapeHtml(fullDesc);
+          const preview = escapeHtml(fullDesc.slice(0, 100)) + '…';
+          descBlock = `<div class="description-wrap" data-full="${escaped}" onclick="toggleDesc(this)">
+            <div class="description description-text">${preview}</div>
+            <div class="desc-toggle">▼ 더보기</div>
+          </div>`;
+        } else {
+          descBlock = `<div class="description">${escapeHtml(fullDesc)}</div>`;
+        }
+      }
       html += `<div class="card">
         <div class="card-top">
           <div class="name-block">
@@ -1297,7 +1353,7 @@ function renderContent() {
           <span class="role ${roleClass}">${c.role}</span>
         </div>
         ${priceRow}
-        <div class="description">${c.description}</div>
+        ${descBlock}
         <div class="links">
           <a class="link-btn" target="_blank" rel="noopener" href="https://finance.naver.com/item/main.naver?code=${c.code}">네이버 증권</a>
           <a class="link-btn" target="_blank" rel="noopener" href="https://m.stock.naver.com/domestic/stock/${c.code}/total">모바일 시세</a>
@@ -1721,6 +1777,7 @@ async function initMarket() {
   el.innerHTML = `<div class="strength-section"><div class="strength-loading">⏳ 시장 데이터 불러오는 중...</div></div>`;
   try {
     MARKET = await loadMarket();
+    await loadDescriptions();
     renderMarket(MARKET);
     render();
     loadAndRenderMovements();

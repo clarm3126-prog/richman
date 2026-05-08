@@ -249,6 +249,72 @@ def enrich_top_themes_with_stocks(themes, top_n=10):
     print(f"  enriched {top_n} themes with member stocks")
 
 
+def fetch_company_description(code):
+    """fnguide에서 기업 개요(bizSummaryContent) 가져오기."""
+    url = f"https://comp.fnguide.com/SVO2/asp/SVD_Main.asp?gicode=A{code}&NewMenuID=Y&pGB=1&stkGb=701"
+    try:
+        r = requests.get(url, headers=HEADERS, timeout=10)
+        html = r.text
+        m = re.search(r'<ul[^>]*id="bizSummaryContent"[^>]*>(.*?)</ul>', html, re.S)
+        if not m:
+            return None
+        items = re.findall(r'<li[^>]*>(.*?)</li>', m.group(1), re.S)
+        texts = []
+        for item in items:
+            t = re.sub(r'&nbsp;', ' ', item)
+            t = re.sub(r'<[^>]+>', '', t).strip()
+            if t:
+                texts.append(t)
+        return ' '.join(texts) if texts else None
+    except Exception:
+        return None
+
+
+def update_descriptions(themes, industries):
+    """캐시되지 않은 종목들의 설명을 fnguide에서 수집해 data/descriptions.json에 저장."""
+    import concurrent.futures
+    desc_path = Path("data/descriptions.json")
+    desc_path.parent.mkdir(parents=True, exist_ok=True)
+    descriptions = {}
+    if desc_path.exists():
+        try:
+            descriptions = json.loads(desc_path.read_text(encoding="utf-8"))
+        except Exception:
+            descriptions = {}
+
+    needed = set()
+    for t in themes[:10]:
+        for s in t.get("stocks", []):
+            code = s.get("code")
+            if code and code not in descriptions:
+                needed.add(code)
+    for i in industries[:10]:
+        for s in i.get("stocks", []):
+            code = s.get("code")
+            if code and code not in descriptions:
+                needed.add(code)
+
+    if not needed:
+        print(f"  descriptions: 0 new (total cached: {len(descriptions)})")
+        return
+
+    print(f"  fetching {len(needed)} company descriptions...")
+    def fetch(code):
+        return code, fetch_company_description(code)
+    success = 0
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as ex:
+        for code, desc in ex.map(fetch, needed):
+            if desc:
+                descriptions[code] = desc
+                success += 1
+
+    desc_path.write_text(
+        json.dumps(descriptions, ensure_ascii=False, separators=(",", ":")),
+        encoding="utf-8",
+    )
+    print(f"  descriptions: +{success} new, total cached: {len(descriptions)}")
+
+
 def save_history(themes, trading_day):
     """일별 테마 강도 데이터를 data/history/{YYYYMMDD}.json 으로 저장하고 index 갱신."""
     if not trading_day or not themes:
@@ -410,6 +476,8 @@ def main():
 
     naver_industries = fetch_naver_industries()
     enrich_top_industries_with_stocks(naver_industries, top_n=10)
+
+    update_descriptions(naver_themes, naver_industries)
 
     day_str = datetime.now(KST).strftime("%Y%m%d")
     save_history(naver_themes, day_str)
