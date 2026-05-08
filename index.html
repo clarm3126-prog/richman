@@ -1771,10 +1771,10 @@ function renderVolumeView() {
   if (!MARKET) { el.innerHTML = '<div class="strength-section"><div class="strength-loading">시세 로딩 중...</div></div>'; return; }
   const surges = MARKET.volume_surges || [];
   const mf = state.marketFilter || 'all';
-  const filtered = surges.filter(s => mf === 'all' || s.market === mf);
+  const filtered = surges.filter(s => mf === 'all' || s.market === mf).slice(0, 20);
   let html = '';
   html += `<div class="strength-section">
-    <div class="strength-title">🔥 거래량 급증 종목</div>
+    <div class="strength-title">🔥 거래량 급증 TOP 20</div>
     <div class="strength-meta">전일 거래량 1.5배 이상 · 배수 높은 순 · 행 클릭 시 종목 상세</div>
     <div class="market-filter" style="margin-top:8px">
       <button class="${mf==='all'?'active':''}" onclick="setMarketFilter('all')">전체</button>
