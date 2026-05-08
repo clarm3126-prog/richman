@@ -29,22 +29,19 @@
   h1 { font-size: 18px; font-weight: 700; margin-bottom: 12px; }
   .top-nav {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(3, 1fr);
     gap: 6px;
     margin-bottom: 12px;
   }
-  .nav-btn-wide { grid-column: 1 / -1; }
   @media (min-width: 600px) {
-    .top-nav { grid-template-columns: repeat(5, 1fr); }
-    .nav-btn-wide { grid-column: auto; }
+    .top-nav { grid-template-columns: repeat(6, 1fr); }
   }
   .nav-btn {
-    flex: 1;
-    padding: 10px 6px;
+    padding: 10px 4px;
     background: #f3f4f6;
     border: 1px solid #e5e7eb;
     border-radius: 8px;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
     cursor: pointer;
     color: #374151;
@@ -54,7 +51,7 @@
     -webkit-tap-highlight-color: transparent;
   }
   .nav-btn:active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
-  #section-strength, #section-industry, #section-movers, #section-newhighs, #content { scroll-margin-top: 300px; }
+  #section-strength, #section-industry, #section-movements, #section-movers, #section-newhighs, #content { scroll-margin-top: 320px; }
   .search-box {
     width: 100%;
     padding: 10px 14px;
@@ -345,11 +342,12 @@
 
 <header>
   <div class="top-nav">
-    <button class="nav-btn" onclick="scrollToSection('section-strength')">🔥 강도 TOP10</button>
-    <button class="nav-btn" onclick="scrollToSection('section-industry')">🏭 업종 TOP10</button>
-    <button class="nav-btn" onclick="scrollToSection('content')">🏷️ 테마별 종목</button>
-    <button class="nav-btn" onclick="scrollToSection('section-movers')">📈 TOP10 주식</button>
-    <button class="nav-btn nav-btn-wide" onclick="scrollToSection('section-newhighs')">🚀 52주 신고가</button>
+    <button class="nav-btn" onclick="scrollToSection('section-strength')">🔥 강도</button>
+    <button class="nav-btn" onclick="scrollToSection('section-industry')">🏭 업종</button>
+    <button class="nav-btn" onclick="scrollToSection('section-movements')">💰 자금흐름</button>
+    <button class="nav-btn" onclick="scrollToSection('content')">🏷️ 테마별</button>
+    <button class="nav-btn" onclick="scrollToSection('section-movers')">📈 주식</button>
+    <button class="nav-btn" onclick="scrollToSection('section-newhighs')">🚀 신고가</button>
   </div>
   <input type="text" class="search-box" id="search" placeholder="회사명·종목코드·키워드 검색">
   <button class="tabs-toggle" id="tabsToggle" onclick="toggleTabs()">
@@ -361,6 +359,7 @@
 
 <main>
   <div id="strength"></div>
+  <div id="movements-section"></div>
   <div id="content"></div>
 </main>
 
@@ -1470,6 +1469,137 @@ function renderMarket(market) {
   });
 }
 
+async function loadHistoryRange(maxDays = 7) {
+  let dates = [];
+  try {
+    const r = await fetch('data/history/index.json?t=' + Date.now());
+    if (!r.ok) return null;
+    const idx = await r.json();
+    dates = (idx.dates || []).slice(0, maxDays);
+  } catch { return null; }
+  if (dates.length === 0) return null;
+  const history = {};
+  await Promise.all(dates.map(async (date) => {
+    try {
+      const r = await fetch(`data/history/${date}.json?t=` + Date.now());
+      if (r.ok) {
+        const d = await r.json();
+        history[date] = d.themes || [];
+      }
+    } catch {}
+  }));
+  return { dates, history };
+}
+
+function computeMovements(loaded) {
+  if (!loaded || !loaded.dates.length) return null;
+  const dates = loaded.dates;
+  const todayDate = dates[0];
+  const todayThemes = loaded.history[todayDate] || [];
+  if (todayThemes.length === 0) return null;
+  const ranks = {};
+  const changes = {};
+  for (const date of dates) {
+    const themes = loaded.history[date] || [];
+    ranks[date] = {};
+    changes[date] = {};
+    themes.forEach((t, i) => {
+      ranks[date][t.no] = i + 1;
+      changes[date][t.no] = t.change;
+    });
+  }
+  const yesterdayDate = dates[1];
+  return todayThemes.map((t, i) => {
+    const todayRank = i + 1;
+    const ydayRank = yesterdayDate != null ? ranks[yesterdayDate][t.no] : null;
+    const rankChange = (ydayRank != null) ? ydayRank - todayRank : null;
+    const cum3 = dates.slice(0, 3).reduce((s, d) => s + (changes[d][t.no] || 0), 0);
+    const cum7 = dates.slice(0, 7).reduce((s, d) => s + (changes[d][t.no] || 0), 0);
+    return { no: t.no, name: t.name, todayRank, ydayRank, rankChange, todayChange: t.change, cum3, cum7 };
+  });
+}
+
+function renderMovements(movements, daysAvailable) {
+  const el = document.getElementById('movements-section');
+  if (!el) return;
+  if (daysAvailable < 2 || !movements) {
+    el.innerHTML = `<div class="strength-section" id="section-movements"><div class="strength-loading">
+      💰 자금 흐름 추적 데이터 누적 중<br>
+      <span style="font-size:11px;line-height:1.6">현재 ${daysAvailable}일치 보유 · 최소 2일 필요<br>매 영업일 자동으로 데이터가 쌓입니다</span>
+    </div></div>`;
+    return;
+  }
+  const climbed = movements.filter(m => m.rankChange != null && m.rankChange > 0)
+    .sort((a, b) => b.rankChange - a.rankChange).slice(0, 10);
+  const fallen = movements.filter(m => m.rankChange != null && m.rankChange < 0)
+    .sort((a, b) => a.rankChange - b.rankChange).slice(0, 10);
+  const cumDays = Math.min(7, daysAvailable);
+  const useCum7 = daysAvailable >= 7;
+  let html = `<div class="strength-section" id="section-movements">`;
+  html += `<div class="strength-title" style="margin-bottom:8px">💰 자금 흐름 추적</div>`;
+  html += `<div class="strength-meta" style="margin-bottom:6px">최근 ${daysAvailable}일 데이터 기준 · 행 클릭 시 멤버 종목 보기</div>`;
+
+  html += `<div class="strength-bottom-title">🔥 자금 유입 (순위 급부상)</div>`;
+  if (climbed.length === 0) {
+    html += `<div class="strength-loading" style="padding:8px">변동 없음</div>`;
+  } else {
+    html += `<table class="strength-table"><thead><tr><th>현재</th><th>변동</th><th>테마</th><th class="num">오늘</th><th class="num">${cumDays}일</th></tr></thead><tbody>`;
+    climbed.forEach(m => {
+      const cum = useCum7 ? m.cum7 : m.cum3;
+      html += `<tr class="strength-row" data-theme-no="${m.no}">
+        <td>${m.todayRank}위</td>
+        <td><span class="up">↑${m.rankChange}</span></td>
+        <td>${m.name}</td>
+        <td class="num ${colorClass(m.todayChange)}">${fmtPct(m.todayChange)}</td>
+        <td class="num ${colorClass(cum)}">${fmtPct(cum)}</td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+  }
+
+  html += `<div class="strength-bottom-title">📉 자금 이탈 (순위 급락)</div>`;
+  if (fallen.length === 0) {
+    html += `<div class="strength-loading" style="padding:8px">변동 없음</div>`;
+  } else {
+    html += '<table class="strength-table"><tbody>';
+    fallen.forEach(m => {
+      const cum = useCum7 ? m.cum7 : m.cum3;
+      html += `<tr class="strength-row" data-theme-no="${m.no}">
+        <td>${m.todayRank}위</td>
+        <td><span class="down">↓${Math.abs(m.rankChange)}</span></td>
+        <td>${m.name}</td>
+        <td class="num ${colorClass(m.todayChange)}">${fmtPct(m.todayChange)}</td>
+        <td class="num ${colorClass(cum)}">${fmtPct(cum)}</td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+  }
+  html += `</div>`;
+  el.innerHTML = html;
+
+  el.querySelectorAll('.strength-row[data-theme-no]').forEach(row => {
+    row.onclick = () => {
+      const no = row.dataset.themeNo;
+      const t = (MARKET && MARKET.naver_themes) ? MARKET.naver_themes.find(x => x.no === no) : null;
+      if (t && t.stocks && t.stocks.length > 0) {
+        selectTheme(`📊 ${t.name}`, { scroll: true });
+      } else {
+        window.open(`https://finance.naver.com/sise/sise_group_detail.naver?type=theme&no=${no}`, '_blank');
+      }
+    };
+  });
+}
+
+async function loadAndRenderMovements() {
+  const loaded = await loadHistoryRange(7);
+  if (!loaded) {
+    renderMovements(null, 0);
+    return;
+  }
+  const movements = computeMovements(loaded);
+  renderMovements(movements, loaded.dates.length);
+}
+
 async function initMarket() {
   const el = document.getElementById('strength');
   el.innerHTML = `<div class="strength-section"><div class="strength-loading">⏳ 시장 데이터 불러오는 중...</div></div>`;
@@ -1477,6 +1607,7 @@ async function initMarket() {
     MARKET = await loadMarket();
     renderMarket(MARKET);
     render();
+    loadAndRenderMovements();
   } catch (e) {
     el.innerHTML = `<div class="strength-section"><div class="strength-loading">
       ⚠️ 시장 데이터를 아직 불러올 수 없습니다.<br>
