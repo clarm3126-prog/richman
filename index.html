@@ -763,7 +763,9 @@
         1. <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" style="color:#2563eb">새 Fine-grained Token 발급 페이지 열기</a><br>
         2. <b>Token name</b>: <code>richman alerts</code><br>
         3. <b>Repository access</b> → "Only select repositories" → <b>richman</b> 선택<br>
-        4. <b>Repository permissions</b> 펼치기 → <b>Contents</b> → <b>Read and write</b><br>
+        4. <b>Repository permissions</b> 펼치기:<br>
+        &nbsp;&nbsp;• <b>Contents</b> → <b>Read and write</b> (필수)<br>
+        &nbsp;&nbsp;• <b>Actions</b> → <b>Read and write</b> (선택, 즉시 알림용 ✨)<br>
         5. 하단 <b>Generate token</b> → 생성된 토큰 복사 → 위 입력란에 붙여넣기<br><br>
         ⚠️ Token은 본인 핸드폰/PC에만 저장됩니다 (서버 X). 분실 우려 있으면 GitHub에서 언제든 revoke 가능.
       </div>
@@ -1843,11 +1845,36 @@ async function onSyncButtonClick() {
   }
 }
 
+async function triggerActionsRun() {
+  const pat = getPat();
+  if (!pat) return false;
+  try {
+    const r = await fetch('https://api.github.com/repos/clarm3126-prog/richman/actions/workflows/fetch-prices.yml/dispatches', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${pat}`,
+        'Accept': 'application/vnd.github+json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ ref: 'main' }),
+    });
+    return r.status === 204;
+  } catch { return false; }
+}
+
 async function autoSyncIfPossible() {
   if (!getPat()) return false;
   const ok = await autoSyncAlerts(true);
-  if (ok) showToast('✅ Telegram 동기화됨');
-  else showToast('⚠️ 동기화 실패 - ⚙️에서 Token 확인', 4000);
+  if (ok) {
+    showToast('✅ Telegram 동기화됨');
+    // PAT에 actions:write 있으면 즉시 Actions 실행
+    const triggered = await triggerActionsRun();
+    if (triggered) {
+      setTimeout(() => showToast('🚀 즉시 알림 체크 중 (1~3분)', 3000), 2400);
+    }
+  } else {
+    showToast('⚠️ 동기화 실패 - ⚙️에서 Token 확인', 4000);
+  }
   return ok;
 }
 
