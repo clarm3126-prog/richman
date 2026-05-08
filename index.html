@@ -51,6 +51,15 @@
     -webkit-tap-highlight-color: transparent;
   }
   .nav-btn:active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+  .nav-btn.active {
+    background: #1a1a1a;
+    color: #fff;
+    border-color: #1a1a1a;
+  }
+  /* 검색창과 테마탭은 '테마별' 뷰에서만 표시 */
+  body:not(.view-themes) .search-box { display: none; }
+  body:not(.view-themes) .tabs-toggle { display: none; }
+  body:not(.view-themes) .tabs { display: none; }
   #section-strength, #section-industry, #section-movements, #section-movers, #section-newhighs, #content { scroll-margin-top: 320px; }
   .search-box {
     width: 100%;
@@ -460,12 +469,12 @@
 
 <header>
   <div class="top-nav">
-    <button class="nav-btn" onclick="scrollToSection('section-strength')">🔥 강도</button>
-    <button class="nav-btn" onclick="scrollToSection('section-industry')">🏭 업종</button>
-    <button class="nav-btn" onclick="scrollToSection('section-movements')">💰 자금흐름</button>
-    <button class="nav-btn" onclick="scrollToSection('content')">🏷️ 테마별</button>
-    <button class="nav-btn" onclick="scrollToSection('section-movers')">📈 주식</button>
-    <button class="nav-btn" onclick="scrollToSection('section-newhighs')">🚀 신고가</button>
+    <button class="nav-btn active" data-view="strength" onclick="setView('strength')">🔥 강도</button>
+    <button class="nav-btn" data-view="industry" onclick="setView('industry')">🏭 업종</button>
+    <button class="nav-btn" data-view="movements" onclick="setView('movements')">💰 자금흐름</button>
+    <button class="nav-btn" data-view="themes" onclick="setView('themes')">🏷️ 테마별</button>
+    <button class="nav-btn" data-view="movers" onclick="setView('movers')">📈 주식</button>
+    <button class="nav-btn" data-view="newhighs" onclick="setView('newhighs')">🚀 신고가</button>
   </div>
   <input type="text" class="search-box" id="search" placeholder="회사명·종목코드·키워드 검색">
   <button class="tabs-toggle" id="tabsToggle" onclick="toggleTabs()">
@@ -1117,8 +1126,24 @@ const DATA = {
   ]
 };
 
-const state = { activeTheme: "전체", query: "", historyDate: null, historyThemes: null };
+const state = { activeTheme: "전체", query: "", historyDate: null, historyThemes: null, currentView: "strength" };
 let MARKET = null;
+let HISTORY_LOADED = null;
+
+function setView(viewName) {
+  state.currentView = viewName;
+  document.querySelectorAll('.nav-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.view === viewName));
+  document.body.className = 'view-' + viewName;
+  if (MARKET) renderMarket(MARKET);
+  renderContent();
+  if (viewName === 'movements') loadAndRenderMovements();
+  else {
+    const ms = document.getElementById('movements-section');
+    if (ms) ms.innerHTML = '';
+  }
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}
 
 function fmtDateStr(yyyymmdd) {
   if (!yyyymmdd || yyyymmdd.length !== 8) return '';
@@ -1163,20 +1188,15 @@ function selectTheme(name, opts) {
   opts = opts || {};
   state.activeTheme = name;
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.textContent === name));
-  renderContent();
   const label = document.getElementById('tabsToggleLabel');
   if (label) label.textContent = `테마: ${name}`;
-  // 선택 후 자동 접기
   const tabs = document.getElementById('tabs');
   const arrow = document.getElementById('tabsToggleArrow');
   if (tabs && !tabs.classList.contains('collapsed')) {
     tabs.classList.add('collapsed');
     if (arrow) arrow.textContent = '▼';
   }
-  if (opts.scroll) {
-    const c = document.getElementById('content');
-    if (c) c.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
+  setView('themes');
 }
 
 function scrollToSection(id) {
@@ -1379,6 +1399,11 @@ function render() {
 
 function renderContent() {
   const contentEl = document.getElementById('content');
+  if (!contentEl) return;
+  if (state.currentView !== 'themes') {
+    contentEl.innerHTML = '';
+    return;
+  }
   const q = state.query.trim().toLowerCase();
   const allThemes = getAllThemes();
   const themes = state.activeTheme === "전체"
@@ -1524,11 +1549,18 @@ const fmtNum = v => v.toLocaleString('ko-KR');
 
 function renderMarket(market) {
   const el = document.getElementById('strength');
-  const strengths = calcStrength(market);
+  if (!el) return;
+  const view = state.currentView || 'strength';
+  // strength/industry/movers/newhighs 뷰만 이 영역 사용
+  if (!['strength', 'industry', 'movers', 'newhighs'].includes(view)) {
+    el.innerHTML = '';
+    return;
+  }
   const movers = getTopMovers(market, 10);
-
   let html = '';
 
+  // ===== STRENGTH 뷰 =====
+  if (view === 'strength') {
   // --- 시장 오버뷰 카드 ---
   html += `<div class="strength-section">`;
   html += `<div class="strength-header">
@@ -1603,7 +1635,10 @@ function renderMarket(market) {
     }
   }
   html += `</div>`;
+  } // end strength view
 
+  // ===== INDUSTRY 뷰 =====
+  if (view === 'industry') {
   // --- 업종 강도 카드 ---
   html += `<div class="strength-section" id="section-industry">`;
   html += `<div class="strength-title" style="margin-bottom:8px">🏭 업종 강도 TOP 10</div>`;
@@ -1643,7 +1678,10 @@ function renderMarket(market) {
     }
   }
   html += `</div>`;
+  } // end industry view
 
+  // ===== MOVERS 뷰 =====
+  if (view === 'movers') {
   // --- 전체 시장 상승 TOP 10 ---
   html += `<div class="strength-section" id="section-movers">`;
   html += `<div class="strength-title" style="margin-bottom:8px">📈 전체 시장 상승 TOP 10</div>`;
@@ -1672,7 +1710,10 @@ function renderMarket(market) {
   });
   html += '</tbody></table>';
   html += `</div>`;
+  } // end movers view
 
+  // ===== NEWHIGHS 뷰 =====
+  if (view === 'newhighs') {
   // --- 52주 신고가 ---
   html += `<div class="strength-section" id="section-newhighs">`;
   html += `<div class="strength-title" style="margin-bottom:8px">🚀 52주 신고가</div>`;
@@ -1701,6 +1742,7 @@ function renderMarket(market) {
     }
   }
   html += `</div>`;
+  } // end newhighs view
 
   el.innerHTML = html;
 
@@ -1862,13 +1904,19 @@ function renderMovements(movements, daysAvailable) {
 }
 
 async function loadAndRenderMovements() {
-  const loaded = await loadHistoryRange(7);
-  if (!loaded) {
+  if (state.currentView !== 'movements') return;
+  const el = document.getElementById('movements-section');
+  if (!el) return;
+  if (!HISTORY_LOADED) {
+    el.innerHTML = `<div class="strength-section"><div class="strength-loading">⏳ 자금 흐름 데이터 로드 중...</div></div>`;
+    HISTORY_LOADED = await loadHistoryRange(7);
+  }
+  if (!HISTORY_LOADED) {
     renderMovements(null, 0);
     return;
   }
-  const movements = computeMovements(loaded);
-  renderMovements(movements, loaded.dates.length);
+  const movements = computeMovements(HISTORY_LOADED);
+  renderMovements(movements, HISTORY_LOADED.dates.length);
 }
 
 async function initMarket() {
@@ -1877,9 +1925,8 @@ async function initMarket() {
   try {
     MARKET = await loadMarket();
     await loadDescriptions();
-    renderMarket(MARKET);
     render();
-    loadAndRenderMovements();
+    setView('strength');
   } catch (e) {
     el.innerHTML = `<div class="strength-section"><div class="strength-loading">
       ⚠️ 시장 데이터를 아직 불러올 수 없습니다.<br>
