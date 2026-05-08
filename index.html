@@ -34,7 +34,7 @@
     margin-bottom: 12px;
   }
   @media (min-width: 600px) {
-    .top-nav { grid-template-columns: repeat(6, 1fr); }
+    .top-nav { grid-template-columns: repeat(9, 1fr); }
   }
   .nav-btn {
     padding: 10px 4px;
@@ -705,7 +705,9 @@
     <button class="nav-btn" data-view="themes" onclick="setView('themes')">🏷️ 테마별</button>
     <button class="nav-btn" data-view="movers" onclick="setView('movers')">📈 주식</button>
     <button class="nav-btn" data-view="newhighs" onclick="setView('newhighs')">🚀 신고가</button>
-    <button class="nav-btn nav-btn-watchlist" data-view="watchlist" onclick="setView('watchlist')">⭐ 관심</button>
+    <button class="nav-btn" data-view="investor" onclick="setView('investor')">💵 매매</button>
+    <button class="nav-btn" data-view="volume" onclick="setView('volume')">🔥 거래량</button>
+    <button class="nav-btn" data-view="watchlist" onclick="setView('watchlist')">⭐ 관심</button>
   </div>
   <input type="text" class="search-box" id="search" placeholder="회사명·종목코드·키워드 검색">
   <button class="tabs-toggle" id="tabsToggle" onclick="toggleTabs()">
@@ -1450,19 +1452,21 @@ function setView(viewName) {
   document.querySelectorAll('.nav-btn').forEach(b =>
     b.classList.toggle('active', b.dataset.view === viewName));
   document.body.className = 'view-' + viewName;
+  const ms = document.getElementById('movements-section');
+  if (ms) ms.innerHTML = '';
   if (viewName === 'watchlist') {
     renderWatchlistView();
-    const ms = document.getElementById('movements-section');
-    if (ms) ms.innerHTML = '';
+    document.getElementById('content').innerHTML = '';
+  } else if (viewName === 'investor') {
+    renderInvestorView();
+    document.getElementById('content').innerHTML = '';
+  } else if (viewName === 'volume') {
+    renderVolumeView();
     document.getElementById('content').innerHTML = '';
   } else {
     if (MARKET) renderMarket(MARKET);
     renderContent();
     if (viewName === 'movements') loadAndRenderMovements();
-    else {
-      const ms = document.getElementById('movements-section');
-      if (ms) ms.innerHTML = '';
-    }
   }
   window.scrollTo({ top: 0, behavior: 'instant' });
 }
@@ -1693,6 +1697,104 @@ function confirmRemoveWatchlist(code) {
     renderWatchlistView();
     if (hadAlert) autoSyncIfPossible();
   }
+}
+
+function renderInvestorView() {
+  const el = document.getElementById('strength');
+  if (!el) return;
+  if (!MARKET) { el.innerHTML = '<div class="strength-section"><div class="strength-loading">시세 로딩 중...</div></div>'; return; }
+  const inv = MARKET.investor_top || {};
+  const mf = state.marketFilter || 'all';
+  let html = '';
+  // 거래소 필터
+  html += `<div class="strength-section">
+    <div class="strength-header">
+      <div>
+        <div class="strength-title">💵 투자자 매매 상위</div>
+        <div class="strength-meta">네이버 금융 기준 · 행 클릭 시 종목 상세</div>
+      </div>
+    </div>
+    <div class="market-filter">
+      <button class="${mf==='all'?'active':''}" onclick="setMarketFilter('all')">전체</button>
+      <button class="${mf==='KOSPI'?'active':''}" onclick="setMarketFilter('KOSPI')">KOSPI</button>
+      <button class="${mf==='KOSDAQ'?'active':''}" onclick="setMarketFilter('KOSDAQ')">KOSDAQ</button>
+    </div>
+  </div>`;
+
+  const renderInvSection = (title, list) => {
+    if (!list || list.length === 0) return '';
+    let h = `<div class="strength-section">`;
+    h += `<div class="strength-title" style="margin-bottom:8px">${title}</div>`;
+    h += '<table class="strength-table"><thead><tr><th>#</th><th>종목</th><th class="num">등락</th><th class="num">거래대금</th></tr></thead><tbody>';
+    list.forEach((s, i) => {
+      const stock = MARKET.stocks[s.code];
+      const cls = stock ? (stock.change > 0 ? 'up' : stock.change < 0 ? 'down' : 'flat') : 'flat';
+      const chgStr = stock ? fmtPct(stock.change) : '—';
+      const tradeValue = (stock && stock.price && stock.volume) ? stock.price * stock.volume : 0;
+      h += `<tr class="strength-row" data-code="${s.code}">
+        <td>${i + 1}</td>
+        <td>${s.name}<div class="company-code" style="display:block;font-size:10px;margin-top:2px">${s.code}${stock ? ` · ${stock.market}` : ''}</div></td>
+        <td class="num ${cls}">${chgStr}</td>
+        <td class="num">${tradeValue ? fmtMoney(tradeValue) : '—'}</td>
+      </tr>`;
+    });
+    h += '</tbody></table></div>';
+    return h;
+  };
+
+  if (mf === 'all' || mf === 'KOSPI') {
+    html += renderInvSection('🌐 외국인 매매 상위 KOSPI', (inv.foreign && inv.foreign.KOSPI) || []);
+    html += renderInvSection('🏛 기관 매매 상위 KOSPI', (inv.institution && inv.institution.KOSPI) || []);
+  }
+  if (mf === 'all' || mf === 'KOSDAQ') {
+    html += renderInvSection('🌐 외국인 매매 상위 KOSDAQ', (inv.foreign && inv.foreign.KOSDAQ) || []);
+    html += renderInvSection('🏛 기관 매매 상위 KOSDAQ', (inv.institution && inv.institution.KOSDAQ) || []);
+  }
+  el.innerHTML = html;
+  el.querySelectorAll('.strength-row[data-code]').forEach(row => {
+    row.onclick = () => openStockModal(row.dataset.code);
+  });
+}
+
+function renderVolumeView() {
+  const el = document.getElementById('strength');
+  if (!el) return;
+  if (!MARKET) { el.innerHTML = '<div class="strength-section"><div class="strength-loading">시세 로딩 중...</div></div>'; return; }
+  const surges = MARKET.volume_surges || [];
+  const mf = state.marketFilter || 'all';
+  const filtered = surges.filter(s => mf === 'all' || s.market === mf);
+  let html = '';
+  html += `<div class="strength-section">
+    <div class="strength-title">🔥 거래량 급증 종목</div>
+    <div class="strength-meta">전일 거래량 1.5배 이상 · 배수 높은 순 · 행 클릭 시 종목 상세</div>
+    <div class="market-filter" style="margin-top:8px">
+      <button class="${mf==='all'?'active':''}" onclick="setMarketFilter('all')">전체</button>
+      <button class="${mf==='KOSPI'?'active':''}" onclick="setMarketFilter('KOSPI')">KOSPI</button>
+      <button class="${mf==='KOSDAQ'?'active':''}" onclick="setMarketFilter('KOSDAQ')">KOSDAQ</button>
+    </div>
+  </div>`;
+  if (filtered.length === 0) {
+    html += `<div class="strength-section"><div class="strength-loading">전일 거래량 데이터 누적 중입니다.<br><span style="font-size:11px">하루 이상 데이터 쌓이면 자동 표시 (장 마감 후 다음날 정상 표시)</span></div></div>`;
+  } else {
+    html += `<div class="strength-section">`;
+    html += '<table class="strength-table"><thead><tr><th>#</th><th>종목</th><th class="num">배수</th><th class="num">등락</th><th class="num">거래대금</th></tr></thead><tbody>';
+    filtered.forEach((s, i) => {
+      const cls = s.change > 0 ? 'up' : s.change < 0 ? 'down' : 'flat';
+      const tradeValue = (s.price && s.volume) ? s.price * s.volume : 0;
+      html += `<tr class="strength-row" data-code="${s.code}">
+        <td>${i + 1}</td>
+        <td>${s.name}<div class="company-code" style="display:block;font-size:10px;margin-top:2px">${s.code} · ${s.market}</div></td>
+        <td class="num up">${s.ratio}x</td>
+        <td class="num ${cls}">${fmtPct(s.change)}</td>
+        <td class="num">${tradeValue ? fmtMoney(tradeValue) : '—'}</td>
+      </tr>`;
+    });
+    html += '</tbody></table></div>';
+  }
+  el.innerHTML = html;
+  el.querySelectorAll('.strength-row[data-code]').forEach(row => {
+    row.onclick = () => openStockModal(row.dataset.code);
+  });
 }
 
 function renderWatchlistView() {
@@ -2315,6 +2417,14 @@ function fmtVolume(v) {
   return v.toLocaleString('ko-KR');
 }
 
+function fmtMoney(won) {
+  if (!won) return '0';
+  if (won >= 1000000000000) return (won / 1000000000000).toFixed(2) + '조';
+  if (won >= 100000000) return Math.floor(won / 100000000).toLocaleString('ko-KR') + '억';
+  if (won >= 10000) return Math.floor(won / 10000).toLocaleString('ko-KR') + '만';
+  return won.toLocaleString('ko-KR');
+}
+
 // 우리 DATA에서 회사 설명 lookup 빌드 (한 번만 계산)
 const STOCK_DESC = (() => {
   const map = {};
@@ -2747,13 +2857,15 @@ function renderMarket(market) {
   // --- 전체 시장 상승 TOP 10 ---
   html += `<div class="strength-section" id="section-movers">`;
   html += `<div class="strength-title" style="margin-bottom:8px">📈 전체 시장 상승 TOP 10</div>`;
-  html += `<div class="strength-meta" style="margin-bottom:6px">KOSPI + KOSDAQ 전 종목 · 행 클릭 시 네이버 시세</div>`;
-  html += '<table class="strength-table"><tbody>';
+  html += `<div class="strength-meta" style="margin-bottom:6px">KOSPI + KOSDAQ 전 종목 · 행 클릭 시 종목 상세</div>`;
+  html += '<table class="strength-table"><thead><tr><th>#</th><th>종목</th><th class="num">등락</th><th class="num">거래대금</th></tr></thead><tbody>';
   movers.gainers.forEach((s, i) => {
+    const tv = (s.price && s.volume) ? s.price * s.volume : 0;
     html += `<tr class="strength-row" data-code="${s.code}">
       <td>${i + 1}</td>
       <td>${s.name}<div class="company-code" style="display:block;font-size:10px;margin-top:2px">${s.code} · ${s.market}</div></td>
       <td class="num up">${fmtPct(s.change)}</td>
+      <td class="num">${tv ? fmtMoney(tv) : '—'}</td>
     </tr>`;
   });
   html += '</tbody></table>';
@@ -2762,72 +2874,18 @@ function renderMarket(market) {
   // --- 전체 시장 하락 TOP 10 ---
   html += `<div class="strength-section">`;
   html += `<div class="strength-title" style="margin-bottom:8px">📉 전체 시장 하락 TOP 10</div>`;
-  html += '<table class="strength-table"><tbody>';
+  html += '<table class="strength-table"><thead><tr><th>#</th><th>종목</th><th class="num">등락</th><th class="num">거래대금</th></tr></thead><tbody>';
   movers.losers.forEach((s, i) => {
+    const tv = (s.price && s.volume) ? s.price * s.volume : 0;
     html += `<tr class="strength-row" data-code="${s.code}">
       <td>${i + 1}</td>
       <td>${s.name}<div class="company-code" style="display:block;font-size:10px;margin-top:2px">${s.code} · ${s.market}</div></td>
       <td class="num down">${fmtPct(s.change)}</td>
+      <td class="num">${tv ? fmtMoney(tv) : '—'}</td>
     </tr>`;
   });
   html += '</tbody></table>';
   html += `</div>`;
-
-  // --- 거래량 급증 ---
-  const surges = market.volume_surges || [];
-  html += `<div class="strength-section">`;
-  html += `<div class="strength-title" style="margin-bottom:8px">🔥 거래량 급증 (전일 대비)</div>`;
-  if (surges.length === 0) {
-    html += `<div class="strength-loading">전일 거래량 데이터를 누적 중입니다.<br><span style="font-size:11px">하루 이상 데이터 쌓이면 자동 표시</span></div>`;
-  } else {
-    html += `<div class="strength-meta" style="margin-bottom:6px">상위 ${surges.length}종목 · 전일 거래량 1.5배 이상</div>`;
-    html += '<table class="strength-table"><thead><tr><th>#</th><th>종목</th><th class="num">배수</th><th class="num">등락</th></tr></thead><tbody>';
-    surges.filter(s => filterByMarket(s)).slice(0, 20).forEach((s, i) => {
-      const cls = s.change > 0 ? 'up' : s.change < 0 ? 'down' : 'flat';
-      html += `<tr class="strength-row" data-code="${s.code}">
-        <td>${i + 1}</td>
-        <td>${s.name}<div class="company-code" style="display:block;font-size:10px;margin-top:2px">${s.code} · ${s.market}</div></td>
-        <td class="num up">${s.ratio}x</td>
-        <td class="num ${cls}">${fmtPct(s.change)}</td>
-      </tr>`;
-    });
-    html += '</tbody></table>';
-  }
-  html += `</div>`;
-
-  // --- 외국인/기관 매매 ---
-  const inv = market.investor_top || {};
-  if (inv.foreign || inv.institution) {
-    html += `<div class="strength-section">`;
-    html += `<div class="strength-title" style="margin-bottom:8px">🌐 투자자별 매매 상위</div>`;
-    html += `<div class="strength-meta" style="margin-bottom:6px">네이버 금융 기준 · 행 클릭 시 상세</div>`;
-    const renderInvTable = (title, list) => {
-      if (!list || list.length === 0) return '';
-      let h = `<div class="strength-bottom-title" style="margin-top:10px">${title}</div>`;
-      h += '<table class="strength-table"><tbody>';
-      list.forEach((s, i) => {
-        const stockData = MARKET.stocks[s.code];
-        const cls = stockData ? (stockData.change > 0 ? 'up' : stockData.change < 0 ? 'down' : 'flat') : 'flat';
-        const chgStr = stockData ? fmtPct(stockData.change) : '';
-        h += `<tr class="strength-row" data-code="${s.code}">
-          <td>${i + 1}</td>
-          <td>${s.name}<div class="company-code" style="display:block;font-size:10px;margin-top:2px">${s.code}</div></td>
-          <td class="num ${cls}">${chgStr}</td>
-        </tr>`;
-      });
-      h += '</tbody></table>';
-      return h;
-    };
-    if (marketFilter === 'all' || marketFilter === 'KOSPI') {
-      html += renderInvTable('🌐 외국인 KOSPI', (inv.foreign && inv.foreign.KOSPI) || []);
-      html += renderInvTable('🏛 기관 KOSPI', (inv.institution && inv.institution.KOSPI) || []);
-    }
-    if (marketFilter === 'all' || marketFilter === 'KOSDAQ') {
-      html += renderInvTable('🌐 외국인 KOSDAQ', (inv.foreign && inv.foreign.KOSDAQ) || []);
-      html += renderInvTable('🏛 기관 KOSDAQ', (inv.institution && inv.institution.KOSDAQ) || []);
-    }
-    html += `</div>`;
-  }
   } // end movers view
 
   // ===== NEWHIGHS 뷰 =====
@@ -2892,11 +2950,9 @@ function renderMarket(market) {
   el.querySelectorAll('[data-industry-no]').forEach(row => {
     row.onclick = () => onIndustryClick(row.dataset.industryNo);
   });
-  // 종목 행 → 네이버 시세 새 탭
+  // 종목 행 → 종목 상세 모달
   el.querySelectorAll('.strength-row[data-code]').forEach(row => {
-    row.onclick = () => {
-      window.open(`https://m.stock.naver.com/domestic/stock/${row.dataset.code}/total`, '_blank');
-    };
+    row.onclick = () => openStockModal(row.dataset.code);
   });
 }
 
