@@ -159,6 +159,88 @@
   .modal-btn-clear { background: transparent; color: #6b7280; border-color: #e5e7eb; margin-right: auto; }
   .modal-btn-save { background: #1a1a1a; color: #fff; }
   .modal-note { font-size: 11px; color: #9ca3af; margin-top: 12px; }
+  .candle-chart {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid #f3f4f6;
+  }
+  .candle-chart + .candle-chart { margin-top: 10px; }
+  .candle-header {
+    display: flex; gap: 10px; align-items: baseline; margin-bottom: 6px;
+  }
+  .candle-label { font-size: 13px; font-weight: 700; color: #1a1a1a; }
+  .candle-price {
+    font-size: 14px; font-weight: 600; color: #4b5563;
+    font-variant-numeric: tabular-nums;
+  }
+  .candle-change { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .candle-change.up { color: #dc2626; }
+  .candle-change.down { color: #2563eb; }
+  .candle-change.flat { color: #6b7280; }
+  .candle-svg {
+    width: 100%; height: auto; display: block;
+  }
+  .chart-label { fill: #6b7280; font-variant-numeric: tabular-nums; }
+  .chart-label-date { fill: #9ca3af; }
+  .chart-grid { stroke: #e5e7eb; stroke-width: 0.5; }
+  /* 종목 상세 모달 */
+  .detail-modal-content { max-width: 480px; }
+  .detail-section { margin-top: 14px; padding-top: 12px; border-top: 1px solid #f3f4f6; }
+  .detail-section:first-child { margin-top: 0; padding-top: 0; border-top: none; }
+  .detail-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; }
+  .detail-row .label { color: #6b7280; }
+  .detail-row .value { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .detail-actions { display: flex; gap: 6px; margin-top: 14px; }
+  .detail-actions a, .detail-actions button {
+    flex: 1; text-align: center; text-decoration: none;
+    padding: 10px; background: #f3f4f6; color: #374151;
+    border: 1px solid #e5e7eb; border-radius: 8px;
+    font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+  }
+  /* KOSPI/KOSDAQ 필터 토글 */
+  .market-filter {
+    display: flex; gap: 6px; margin-bottom: 10px;
+  }
+  .market-filter button {
+    flex: 1; padding: 7px;
+    background: #f3f4f6; border: 1px solid #e5e7eb;
+    border-radius: 6px; font-size: 12px; font-weight: 600;
+    cursor: pointer; color: #6b7280; font-family: inherit;
+  }
+  .market-filter button.active {
+    background: #1a1a1a; color: #fff; border-color: #1a1a1a;
+  }
+  /* 캘린더 히트맵 */
+  .heatmap-container {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+    margin-top: 10px;
+  }
+  .heatmap-day {
+    aspect-ratio: 1;
+    border-radius: 3px;
+    background: #f3f4f6;
+    cursor: pointer;
+    position: relative;
+    font-size: 9px;
+    color: #6b7280;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    padding: 2px;
+  }
+  .heatmap-day.has-data { color: white; font-weight: 700; }
+  .heatmap-day.empty { background: transparent; }
+  .heatmap-day:hover { transform: scale(1.1); z-index: 1; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+  .heatmap-legend {
+    display: flex; align-items: center; gap: 4px;
+    font-size: 10px; color: #6b7280; margin-top: 8px; justify-content: flex-end;
+  }
+  .heatmap-legend-box { width: 12px; height: 12px; border-radius: 2px; }
+  .heatmap-day-header {
+    text-align: center; font-size: 10px; font-weight: 600; color: #9ca3af; padding: 2px;
+  }
   .app-toast {
     position: fixed;
     bottom: 24px;
@@ -595,6 +677,19 @@
     .modal-btn-clear { border-color: #3a414f; color: #9ca3af; }
     .modal-btn-save { background: #e5e7eb; color: #0f1115; }
     .modal-note { color: #6b7280; }
+    .candle-chart { border-top-color: #2a2f3a; }
+    .candle-label { color: #e5e7eb; }
+    .candle-price { color: #d1d5db; }
+    .chart-label { fill: #9ca3af; }
+    .chart-label-date { fill: #6b7280; }
+    .chart-grid { stroke: #2a2f3a; }
+    .detail-section { border-top-color: #2a2f3a; }
+    .detail-row .label { color: #9ca3af; }
+    .detail-actions a, .detail-actions button { background: #2a2f3a; color: #d1d5db; border-color: #3a414f; }
+    .market-filter button { background: #2a2f3a; border-color: #3a414f; color: #9ca3af; }
+    .market-filter button.active { background: #e5e7eb; color: #0f1115; border-color: #e5e7eb; }
+    .heatmap-day { background: #2a2f3a; color: #6b7280; }
+    .heatmap-day.empty { background: transparent; }
   }
 </style>
 </head>
@@ -643,6 +738,16 @@
       <button class="modal-btn modal-btn-save" onclick="saveAlertModal()">저장</button>
     </div>
     <div class="modal-note">앱 알림은 앱이 열려있을 때만. Telegram 알림은 항상 동작 (동기화 필요).</div>
+  </div>
+</div>
+
+<div id="stockModal" class="modal-overlay" onclick="if(event.target===this) closeStockModal()">
+  <div class="modal detail-modal-content">
+    <div class="modal-title" id="stockModalTitle">종목 상세</div>
+    <div id="stockModalBody"></div>
+    <div class="modal-actions">
+      <button class="modal-btn modal-btn-cancel" onclick="closeStockModal()">닫기</button>
+    </div>
   </div>
 </div>
 
@@ -1746,6 +1851,63 @@ async function autoSyncIfPossible() {
   return ok;
 }
 
+function openStockModal(code) {
+  const s = MARKET ? MARKET.stocks[code] : null;
+  const desc = STOCK_DESC[code] || (STOCK_DESC_FNGUIDE && STOCK_DESC_FNGUIDE[code]) || '';
+  const watched = isWatched(code);
+  const w = WATCHLIST[code];
+  const modal = document.getElementById('stockModal');
+  if (!s) {
+    modal.querySelector('#stockModalTitle').textContent = `종목 상세 (${code})`;
+    modal.querySelector('#stockModalBody').innerHTML = '<div class="modal-current">시세 데이터가 없는 종목입니다.</div>';
+    modal.classList.add('show');
+    return;
+  }
+  const cls = s.change > 0 ? 'up' : s.change < 0 ? 'down' : 'flat';
+  const sign = s.change > 0 ? '+' : '';
+  const changeWon = s.change !== 0 ? Math.round(s.price * s.change / (100 + s.change)) : 0;
+  const arrow = s.change > 0 ? '▲' : s.change < 0 ? '▼' : '─';
+  const wonStr = changeWon === 0 ? '0' : Math.abs(changeWon).toLocaleString('ko-KR');
+  modal.querySelector('#stockModalTitle').textContent = `${s.name} (${code})`;
+  let html = '';
+  // 가격 섹션
+  html += `<div class="detail-section">
+    <div class="detail-row"><span class="label">현재가</span><span class="value">${s.price.toLocaleString('ko-KR')}원</span></div>
+    <div class="detail-row"><span class="label">전일비</span><span class="value ${cls}">${arrow} ${wonStr} (${sign}${s.change.toFixed(2)}%)</span></div>
+    <div class="detail-row"><span class="label">거래량</span><span class="value">${s.volume.toLocaleString('ko-KR')}주 (${fmtVolume(s.volume)})</span></div>
+    <div class="detail-row"><span class="label">거래소</span><span class="value">${s.market}</span></div>
+  </div>`;
+  // 알림 섹션
+  if (watched && w.target) {
+    const dirText = w.direction === 'above' ? '↑ 돌파 시' : '↓ 하락 시';
+    const triggered = TRIGGERED.has(code);
+    html += `<div class="detail-section">
+      <div class="detail-row"><span class="label">관심 종목</span><span class="value">⭐ 등록됨</span></div>
+      <div class="detail-row"><span class="label">알림 가격</span><span class="value">${w.target.toLocaleString('ko-KR')}원 ${dirText}</span></div>
+      ${triggered ? '<div class="detail-row"><span class="label">상태</span><span class="value up">🚨 도달!</span></div>' : ''}
+    </div>`;
+  }
+  // 회사 설명
+  if (desc) {
+    html += `<div class="detail-section">
+      <div class="label" style="font-size:11px;color:#6b7280;margin-bottom:6px">📝 기업 개요</div>
+      <div style="font-size:13px;line-height:1.6;color:#4b5563">${escapeHtml(desc)}</div>
+    </div>`;
+  }
+  // 액션 버튼
+  html += `<div class="detail-actions">
+    <button onclick="toggleWatchlist('${code}','${(s.name).replace(/'/g, "\\'")}')">${watched ? '⭐ 관심 해제' : '☆ 관심 추가'}</button>
+    ${watched ? `<button onclick="closeStockModal();openAlertModal('${code}')">🔔 ${w.target ? '알림 수정' : '알림 설정'}</button>` : ''}
+    <a href="https://m.stock.naver.com/domestic/stock/${code}/total" target="_blank" rel="noopener">네이버 시세</a>
+  </div>`;
+  modal.querySelector('#stockModalBody').innerHTML = html;
+  modal.classList.add('show');
+}
+
+function closeStockModal() {
+  document.getElementById('stockModal').classList.remove('show');
+}
+
 function showToast(msg, duration) {
   duration = duration || 2200;
   let toast = document.getElementById('appToast');
@@ -1915,6 +2077,68 @@ function renderDonut(items, top = 5, dataAttr = 'theme-no') {
       </div>
     </div>
     <div class="donut-legend">${legend}</div>
+  </div>`;
+}
+
+function renderCandleChart(history, label, change) {
+  if (!history || history.length === 0) return '';
+  const sorted = [...history].sort((a, b) => a.date.localeCompare(b.date));
+  const recent = sorted.slice(-30);
+  const w = 600, h = 180;
+  const pad = { top: 8, right: 50, bottom: 22, left: 8 };
+  const chartW = w - pad.left - pad.right;
+  const chartH = h - pad.top - pad.bottom;
+  const candleW = chartW / recent.length;
+  const allPrices = recent.flatMap(d => [d.high, d.low]);
+  const min = Math.min(...allPrices);
+  const max = Math.max(...allPrices);
+  const range = max - min || 1;
+  const yScale = (price) => pad.top + chartH * (1 - (price - min) / range);
+  const xPos = (i) => pad.left + i * candleW + candleW / 2;
+  const candles = recent.map((d, i) => {
+    const x = xPos(i);
+    const wickTop = yScale(d.high);
+    const wickBot = yScale(d.low);
+    const bodyTop = yScale(Math.max(d.open, d.close));
+    const bodyBot = yScale(Math.min(d.open, d.close));
+    const isUp = d.close >= d.open;
+    const color = isUp ? '#dc2626' : '#2563eb';
+    const bw = Math.max(2, candleW - 2);
+    const bodyHeight = Math.max(1, bodyBot - bodyTop);
+    return `<line x1="${x}" y1="${wickTop}" x2="${x}" y2="${wickBot}" stroke="${color}" stroke-width="1"/>
+      <rect x="${x - bw/2}" y="${bodyTop}" width="${bw}" height="${bodyHeight}" fill="${color}"/>`;
+  }).join('');
+  const yLabels = [max, (max + min) / 2, min].map((p, i) => {
+    const y = pad.top + (chartH * i) / 2;
+    return `<text x="${w - pad.right + 4}" y="${y + 3}" font-size="10" class="chart-label">${p.toFixed(2)}</text>`;
+  }).join('');
+  const dateIdx = [0, Math.floor(recent.length/2), recent.length - 1];
+  const dateLabels = dateIdx.map((idx, i) => {
+    const d = recent[idx].date;
+    const x = pad.left + ((chartW * i) / 2);
+    const fmtDate = `${d.slice(2,4)}/${d.slice(4,6)}/${d.slice(6,8)}`;
+    const anchor = i === 0 ? 'start' : i === 1 ? 'middle' : 'end';
+    return `<text x="${x}" y="${h - 6}" font-size="9" class="chart-label-date" text-anchor="${anchor}">${fmtDate}</text>`;
+  }).join('');
+  const grids = [0, 1, 2].map(i => {
+    const y = pad.top + (chartH * i) / 2;
+    return `<line x1="${pad.left}" y1="${y}" x2="${w - pad.right}" y2="${y}" class="chart-grid"/>`;
+  }).join('');
+  const last = recent[recent.length - 1];
+  const cls = change > 0 ? 'up' : change < 0 ? 'down' : 'flat';
+  const sign = change > 0 ? '+' : '';
+  return `<div class="candle-chart">
+    <div class="candle-header">
+      <span class="candle-label">${label}</span>
+      <span class="candle-price">${last.close.toLocaleString('ko-KR', {maximumFractionDigits: 2})}</span>
+      <span class="candle-change ${cls}">${sign}${change.toFixed(2)}%</span>
+    </div>
+    <svg viewBox="0 0 ${w} ${h}" class="candle-svg">
+      ${grids}
+      ${candles}
+      ${yLabels}
+      ${dateLabels}
+    </svg>
   </div>`;
 }
 
@@ -2105,7 +2329,7 @@ function renderContent() {
         if (fullDesc.length > 100) {
           const escaped = escapeHtml(fullDesc);
           const preview = escapeHtml(fullDesc.slice(0, 100)) + '…';
-          descBlock = `<div class="description-wrap" data-full="${escaped}" onclick="toggleDesc(this)">
+          descBlock = `<div class="description-wrap" data-full="${escaped}" onclick="event.stopPropagation();toggleDesc(this)">
             <div class="description description-text">${preview}</div>
             <div class="desc-toggle">▼ 더보기</div>
           </div>`;
@@ -2115,7 +2339,7 @@ function renderContent() {
       }
       const watched = isWatched(c.code);
       const starBtn = `<button class="star-btn ${watched ? 'starred' : ''}" data-star-code="${c.code}" onclick="event.stopPropagation();toggleWatchlist('${c.code}','${c.name.replace(/'/g, "\\'")}')" title="관심 종목">${watched ? '★' : '☆'}</button>`;
-      html += `<div class="card">
+      html += `<div class="card" onclick="openStockModal('${c.code}')" style="cursor:pointer">
         <div class="card-top">
           <div class="name-block">
             ${starBtn}
@@ -2127,7 +2351,7 @@ function renderContent() {
         </div>
         ${priceRow}
         ${descBlock}
-        <div class="links">
+        <div class="links" onclick="event.stopPropagation()">
           <a class="link-btn" target="_blank" rel="noopener" href="https://finance.naver.com/item/main.naver?code=${c.code}">네이버 증권</a>
           <a class="link-btn" target="_blank" rel="noopener" href="https://m.stock.naver.com/domestic/stock/${c.code}/total">모바일 시세</a>
         </div>
@@ -2182,14 +2406,20 @@ function calcStrength(market) {
   }).filter(t => t.avg !== null).sort((a, b) => b.avg - a.avg);
 }
 
-function getTopMovers(market, n) {
+function getTopMovers(market, n, extraFilter) {
   const arr = Object.entries(market.stocks)
     .map(([code, s]) => ({ code, ...s }))
-    .filter(s => s.volume > 10000 && s.price > 0);
+    .filter(s => s.volume > 10000 && s.price > 0)
+    .filter(s => extraFilter ? extraFilter(s) : true);
   return {
     gainers: [...arr].sort((a, b) => b.change - a.change).slice(0, n),
     losers: [...arr].sort((a, b) => a.change - b.change).slice(0, n),
   };
+}
+
+function setMarketFilter(filter) {
+  state.marketFilter = filter;
+  if (MARKET) renderMarket(MARKET);
 }
 
 const colorClass = v => v > 0 ? 'up' : v < 0 ? 'down' : 'flat';
@@ -2205,7 +2435,9 @@ function renderMarket(market) {
     el.innerHTML = '';
     return;
   }
-  const movers = getTopMovers(market, 10);
+  const marketFilter = state.marketFilter || 'all';
+  const filterByMarket = (s) => marketFilter === 'all' || s.market === marketFilter;
+  const movers = getTopMovers(market, 10, filterByMarket);
   let html = '';
 
   // ===== STRENGTH 뷰 =====
@@ -2230,6 +2462,13 @@ function renderMarket(market) {
       html += `<div class="idx"><span class="idx-name">KOSDAQ</span> <span class="num">${q.value.toFixed(2)}</span> <span class="num ${colorClass(q.change)}">${fmtPct(q.change)}</span></div>`;
     }
     html += `</div>`;
+  }
+  // 캔들 차트
+  if (market.indices?.kospi?.history?.length) {
+    html += renderCandleChart(market.indices.kospi.history, 'KOSPI', market.indices.kospi.change);
+  }
+  if (market.indices?.kosdaq?.history?.length) {
+    html += renderCandleChart(market.indices.kosdaq.history, 'KOSDAQ', market.indices.kosdaq.change);
   }
   html += `</div>`;
 
@@ -2331,6 +2570,14 @@ function renderMarket(market) {
 
   // ===== MOVERS 뷰 =====
   if (view === 'movers') {
+  const mf = state.marketFilter || 'all';
+  html += `<div class="strength-section">
+    <div class="market-filter">
+      <button class="${mf==='all'?'active':''}" onclick="setMarketFilter('all')">전체</button>
+      <button class="${mf==='KOSPI'?'active':''}" onclick="setMarketFilter('KOSPI')">KOSPI</button>
+      <button class="${mf==='KOSDAQ'?'active':''}" onclick="setMarketFilter('KOSDAQ')">KOSDAQ</button>
+    </div>
+  </div>`;
   // --- 전체 시장 상승 TOP 10 ---
   html += `<div class="strength-section" id="section-movers">`;
   html += `<div class="strength-title" style="margin-bottom:8px">📈 전체 시장 상승 TOP 10</div>`;
@@ -2558,7 +2805,7 @@ async function loadAndRenderMovements() {
   if (!el) return;
   if (!HISTORY_LOADED) {
     el.innerHTML = `<div class="strength-section"><div class="strength-loading">⏳ 자금 흐름 데이터 로드 중...</div></div>`;
-    HISTORY_LOADED = await loadHistoryRange(7);
+    HISTORY_LOADED = await loadHistoryRange(60);
   }
   if (!HISTORY_LOADED) {
     renderMovements(null, 0);
@@ -2566,6 +2813,113 @@ async function loadAndRenderMovements() {
   }
   const movements = computeMovements(HISTORY_LOADED);
   renderMovements(movements, HISTORY_LOADED.dates.length);
+  // 캘린더 히트맵 추가
+  el.insertAdjacentHTML('beforeend', renderHeatmap(HISTORY_LOADED));
+  // Heatmap day click → date picker로 그날 데이터 보기
+  el.querySelectorAll('.heatmap-day[data-date]').forEach(d => {
+    d.onclick = () => {
+      const date = d.dataset.date;
+      // 강도 뷰의 historyDate로 설정 후 이동
+      state.historyDate = date;
+      const themes = HISTORY_LOADED.history[date];
+      if (themes) {
+        state.historyThemes = themes;
+        setView('strength');
+      }
+    };
+  });
+}
+
+function renderHeatmap(loaded) {
+  const dates = loaded.dates || [];
+  if (dates.length === 0) return '';
+  // 각 날짜의 평균 등락률 (TOP 10 평균)
+  const dayStats = {};
+  dates.forEach(date => {
+    const themes = loaded.history[date] || [];
+    if (themes.length === 0) return;
+    // 상위 10개 테마 평균 등락률
+    const top10 = themes.slice(0, 10);
+    const avg = top10.reduce((s, t) => s + t.change, 0) / top10.length;
+    dayStats[date] = avg;
+  });
+  // Build calendar (last ~5 weeks)
+  const sortedDates = Object.keys(dayStats).sort();
+  if (sortedDates.length === 0) return '';
+  const lastDate = parseDate(sortedDates[sortedDates.length - 1]);
+  const firstDate = parseDate(sortedDates[0]);
+  // Show last 5 weeks (35 days)
+  const today = lastDate;
+  const start = new Date(today);
+  start.setDate(start.getDate() - 34);
+  // Adjust start to a Sunday for clean week alignment
+  const dayOfWeek = start.getDay();
+  start.setDate(start.getDate() - dayOfWeek);
+  const cells = [];
+  const weekHeaders = ['일','월','화','수','목','금','토'];
+  let html = '';
+  html += `<div class="strength-section">`;
+  html += `<div class="strength-title" style="margin-bottom:8px">📅 강도 캘린더</div>`;
+  html += `<div class="strength-meta" style="margin-bottom:6px">최근 5주간 상위 10개 테마 평균 등락률 · 클릭해 그날 데이터 보기</div>`;
+  html += `<div class="heatmap-container">`;
+  weekHeaders.forEach(h => {
+    html += `<div class="heatmap-day-header">${h}</div>`;
+  });
+  for (let i = 0; i < 35; i++) {
+    const d = new Date(start);
+    d.setDate(d.getDate() + i);
+    if (d > today) {
+      html += `<div class="heatmap-day empty"></div>`;
+      continue;
+    }
+    const dateStr = formatDate(d);
+    const stat = dayStats[dateStr];
+    if (stat === undefined) {
+      html += `<div class="heatmap-day" title="${dateStr} (데이터 없음)">${d.getDate()}</div>`;
+    } else {
+      const color = heatmapColor(stat);
+      html += `<div class="heatmap-day has-data" data-date="${dateStr}" title="${dateStr} 평균 ${stat>0?'+':''}${stat.toFixed(2)}%" style="background:${color}">${d.getDate()}</div>`;
+    }
+  }
+  html += `</div>`;
+  // Legend
+  html += `<div class="heatmap-legend">
+    <span>약</span>
+    <span class="heatmap-legend-box" style="background:${heatmapColor(-3)}"></span>
+    <span class="heatmap-legend-box" style="background:${heatmapColor(-1)}"></span>
+    <span class="heatmap-legend-box" style="background:${heatmapColor(0)}"></span>
+    <span class="heatmap-legend-box" style="background:${heatmapColor(1)}"></span>
+    <span class="heatmap-legend-box" style="background:${heatmapColor(3)}"></span>
+    <span>강</span>
+  </div>`;
+  html += `</div>`;
+  return html;
+}
+
+function parseDate(yyyymmdd) {
+  return new Date(
+    parseInt(yyyymmdd.slice(0,4)),
+    parseInt(yyyymmdd.slice(4,6)) - 1,
+    parseInt(yyyymmdd.slice(6,8))
+  );
+}
+
+function formatDate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}${m}${day}`;
+}
+
+function heatmapColor(pct) {
+  // -3% ~ +3% 스케일을 파랑~회색~빨강 그라데이션
+  if (pct >= 3) return '#dc2626';
+  if (pct >= 1.5) return '#ef4444';
+  if (pct >= 0.5) return '#f87171';
+  if (pct > -0.5) return '#9ca3af';
+  if (pct > -1.5) return '#60a5fa';
+  if (pct > -3) return '#3b82f6';
+  return '#2563eb';
 }
 
 async function initMarket() {

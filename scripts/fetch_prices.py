@@ -111,6 +111,37 @@ def fetch_market(sosok):
     return out
 
 
+def fetch_index_history(code, count=60):
+    """네이버 지수 일봉 OHLC. code: KOSPI 또는 KOSDAQ"""
+    url = f"https://api.stock.naver.com/chart/domestic/index/{code}?periodType=dayCandle&count={count}"
+    headers = {**HEADERS, "Referer": "https://stock.naver.com/"}
+    try:
+        r = requests.get(url, headers=headers, timeout=10)
+        if r.status_code != 200:
+            return []
+        data = r.json()
+        out = []
+        for p in data.get("priceInfos", []):
+            d = p.get("localDate")
+            if not d:
+                continue
+            try:
+                out.append({
+                    "date": str(d),
+                    "open": float(p.get("openPrice", 0)),
+                    "high": float(p.get("highPrice", 0)),
+                    "low": float(p.get("lowPrice", 0)),
+                    "close": float(p.get("closePrice", 0)),
+                })
+            except (ValueError, TypeError):
+                continue
+        out.sort(key=lambda x: x["date"])
+        return out
+    except Exception as e:
+        print(f"  index_history {code} failed: {e}")
+        return []
+
+
 def fetch_index(code):
     """code='KOSPI' or 'KOSDAQ'. 지수 현재값과 등락률."""
     url = f"https://finance.naver.com/sise/sise_index.naver?code={code}"
@@ -566,6 +597,13 @@ def main():
         "kosdaq": fetch_index("KOSDAQ"),
     }
     print(f"Indices: {indices}")
+    kospi_hist = fetch_index_history("KOSPI", 60)
+    kosdaq_hist = fetch_index_history("KOSDAQ", 60)
+    if indices.get("kospi") and kospi_hist:
+        indices["kospi"]["history"] = kospi_hist
+    if indices.get("kosdaq") and kosdaq_hist:
+        indices["kosdaq"]["history"] = kosdaq_hist
+    print(f"  index history: KOSPI={len(kospi_hist)}, KOSDAQ={len(kosdaq_hist)}")
 
     print("Checking price alerts...")
     check_alerts_and_notify(stocks)
