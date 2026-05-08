@@ -243,6 +243,18 @@
   .heatmap-day-header {
     text-align: center; font-size: 10px; font-weight: 600; color: #9ca3af; padding: 2px;
   }
+  .heatmap-day.day-off {
+    background: transparent !important;
+    cursor: default;
+  }
+  .heatmap-day.day-off:hover {
+    transform: none;
+    box-shadow: none;
+  }
+  .heatmap-day.day-red,
+  .heatmap-day-header.day-red { color: #dc2626; font-weight: 600; }
+  .heatmap-day.day-blue,
+  .heatmap-day-header.day-blue { color: #2563eb; font-weight: 600; }
   .app-toast {
     position: fixed;
     bottom: 24px;
@@ -692,6 +704,10 @@
     .market-filter button.active { background: #e5e7eb; color: #0f1115; border-color: #e5e7eb; }
     .heatmap-day { background: #2a2f3a; color: #6b7280; }
     .heatmap-day.empty { background: transparent; }
+    .heatmap-day.day-red,
+    .heatmap-day-header.day-red { color: #fca5a5; }
+    .heatmap-day.day-blue,
+    .heatmap-day-header.day-blue { color: #93c5fd; }
   }
 </style>
 </head>
@@ -2977,6 +2993,29 @@ function renderMarket(market) {
   bindHeatmapClicks(el);
 }
 
+// 한국 공휴일 (2025~2027)
+const KR_HOLIDAYS = new Set([
+  // 2025
+  '20250101', '20250127', '20250128', '20250129', '20250130',
+  '20250301', '20250303', '20250505', '20250506', '20250606',
+  '20250815', '20251003', '20251006', '20251007', '20251008',
+  '20251009', '20251225',
+  // 2026
+  '20260101', '20260216', '20260217', '20260218', '20260301',
+  '20260302', '20260505', '20260524', '20260525', '20260606',
+  '20260815', '20260817', '20260924', '20260925', '20260926',
+  '20260928', '20261003', '20261005', '20261009', '20261225',
+  // 2027
+  '20270101', '20270205', '20270206', '20270207', '20270208',
+  '20270301', '20270505', '20270514', '20270607', '20270815',
+  '20270816', '20270914', '20270915', '20270916', '20271004',
+  '20271005', '20271011', '20271225',
+]);
+
+function isHoliday(dateStr) {
+  return KR_HOLIDAYS.has(dateStr);
+}
+
 // 테마/업종 번호 기반 안정적 색상 (golden angle 분포)
 function themeColor(no) {
   const n = parseInt(no) || 0;
@@ -3154,8 +3193,9 @@ function renderHeatmap(loaded, type) {
   html += `<div class="strength-title" style="margin-bottom:8px">📅 ${label} 강도 캘린더</div>`;
   html += `<div class="strength-meta" style="margin-bottom:6px">최근 5주 · 1위 ${label} 색상 · 칸 클릭 시 그날 TOP 10</div>`;
   html += `<div class="heatmap-container">`;
-  weekHeaders.forEach(h => {
-    html += `<div class="heatmap-day-header">${h}</div>`;
+  weekHeaders.forEach((h, idx) => {
+    const cls = idx === 0 ? 'day-red' : idx === 6 ? 'day-blue' : '';
+    html += `<div class="heatmap-day-header ${cls}">${h}</div>`;
   });
   for (let i = 0; i < 35; i++) {
     const d = new Date(start);
@@ -3165,6 +3205,20 @@ function renderHeatmap(loaded, type) {
       continue;
     }
     const dateStr = formatDate(d);
+    const dow = d.getDay();
+    const isHoli = isHoliday(dateStr);
+    const isSat = dow === 6;
+    const isSun = dow === 0;
+    const isOff = isSat || isSun || isHoli;
+
+    if (isOff) {
+      // 주말·공휴일: 배경색 없이 날짜만 (일요일/공휴일=빨강, 토요일=파랑)
+      const colorCls = (isSun || isHoli) ? 'day-red' : 'day-blue';
+      const tooltip = isHoli ? `${dateStr} (공휴일)` : isSun ? `${dateStr} (일요일)` : `${dateStr} (토요일)`;
+      html += `<div class="heatmap-day day-off ${colorCls}" title="${tooltip}">${d.getDate()}</div>`;
+      continue;
+    }
+
     const list = dayInfo[dateStr];
     if (!list) {
       html += `<div class="heatmap-day" title="${dateStr} (데이터 없음)">${d.getDate()}</div>`;
@@ -3177,7 +3231,7 @@ function renderHeatmap(loaded, type) {
     }
   }
   html += `</div>`;
-  html += `<div class="strength-meta" style="margin-top:8px;text-align:center;font-size:11px">색깔이 다르면 그날 1위 ${label}가 다르다는 뜻 · 같은 색 연속 = 같은 ${label} 강세</div>`;
+  html += `<div class="strength-meta" style="margin-top:8px;text-align:center;font-size:11px">색깔 = 그날 1위 ${label} · 같은 색 연속 = 강세 지속 · 빨강 날짜 = 휴장일</div>`;
   html += `</div>`;
   return html;
 }
