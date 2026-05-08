@@ -159,6 +159,25 @@
   .modal-btn-clear { background: transparent; color: #6b7280; border-color: #e5e7eb; margin-right: auto; }
   .modal-btn-save { background: #1a1a1a; color: #fff; }
   .modal-note { font-size: 11px; color: #9ca3af; margin-top: 12px; }
+  .app-toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.88);
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    z-index: 2000;
+    opacity: 0;
+    transition: opacity 0.25s, transform 0.25s;
+    pointer-events: none;
+    max-width: 90%;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  }
+  .app-toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
   #section-strength, #section-industry, #section-movements, #section-movers, #section-newhighs, #content { scroll-margin-top: 320px; }
   .search-box {
     width: 100%;
@@ -1479,27 +1498,29 @@ async function saveAlertModal() {
   const direction = modal.querySelector('#alertDirection').value;
   if (!target || target <= 0) { alert('올바른 가격을 입력하세요'); return; }
   setAlert(code, target, direction);
-  const granted = await requestNotificationPermission();
-  if (!granted) {
-    alert('⚠️ 알림 권한이 거부되었습니다.\n브라우저 설정에서 알림 권한을 허용해주세요.\n(권한 없이도 가격 도달 시 화면에 빨간 표시는 보입니다)');
-  }
+  await requestNotificationPermission();
   closeAlertModal();
   if (state.currentView === 'watchlist') renderWatchlistView();
+  autoSyncIfPossible();
 }
 
 function clearAlertModal() {
   const code = document.getElementById('alertModal').dataset.code;
+  const hadAlert = WATCHLIST[code] && WATCHLIST[code].target;
   clearAlert(code);
   closeAlertModal();
   if (state.currentView === 'watchlist') renderWatchlistView();
+  if (hadAlert) autoSyncIfPossible();
 }
 
 function confirmRemoveWatchlist(code) {
   if (confirm('관심 종목에서 삭제하시겠습니까?')) {
+    const hadAlert = WATCHLIST[code] && WATCHLIST[code].target;
     delete WATCHLIST[code];
     TRIGGERED.delete(code);
     saveWatchlist();
     renderWatchlistView();
+    if (hadAlert) autoSyncIfPossible();
   }
 }
 
@@ -1715,6 +1736,29 @@ async function onSyncButtonClick() {
   } else {
     openTelegramSyncModal();
   }
+}
+
+async function autoSyncIfPossible() {
+  if (!getPat()) return false;
+  const ok = await autoSyncAlerts(true);
+  if (ok) showToast('✅ Telegram 동기화됨');
+  else showToast('⚠️ 동기화 실패 - ⚙️에서 Token 확인', 4000);
+  return ok;
+}
+
+function showToast(msg, duration) {
+  duration = duration || 2200;
+  let toast = document.getElementById('appToast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'appToast';
+    toast.className = 'app-toast';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => toast.classList.remove('show'), duration);
 }
 
 function openTelegramSyncModal() {
