@@ -627,6 +627,31 @@
   </div>
 </div>
 
+<div id="settingsModal" class="modal-overlay" onclick="if(event.target===this) closeSettingsModal()">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-title">⚙️ 자동 동기화 설정</div>
+    <div class="modal-current" id="patStatus"></div>
+    <div class="modal-form">
+      <label class="modal-label">GitHub Personal Access Token</label>
+      <input type="password" id="patInput" class="modal-input" placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxx" autocomplete="off">
+      <div style="font-size:11px;color:#9ca3af;margin-top:8px;line-height:1.7">
+        <b>📋 발급 방법:</b><br>
+        1. <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" style="color:#2563eb">새 Fine-grained Token 발급 페이지 열기</a><br>
+        2. <b>Token name</b>: <code>richman alerts</code><br>
+        3. <b>Repository access</b> → "Only select repositories" → <b>richman</b> 선택<br>
+        4. <b>Repository permissions</b> 펼치기 → <b>Contents</b> → <b>Read and write</b><br>
+        5. 하단 <b>Generate token</b> → 생성된 토큰 복사 → 위 입력란에 붙여넣기<br><br>
+        ⚠️ Token은 본인 핸드폰/PC에만 저장됩니다 (서버 X). 분실 우려 있으면 GitHub에서 언제든 revoke 가능.
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn modal-btn-clear" onclick="clearPatFromModal()">삭제</button>
+      <button class="modal-btn modal-btn-cancel" onclick="closeSettingsModal()">취소</button>
+      <button class="modal-btn modal-btn-save" onclick="savePatFromModal()">저장</button>
+    </div>
+  </div>
+</div>
+
 <div id="telegramModal" class="modal-overlay" onclick="if(event.target===this) closeTelegramSyncModal()">
   <div class="modal" style="max-width:480px">
     <div class="modal-title">📤 Telegram 알림 동기화</div>
@@ -1487,12 +1512,16 @@ function renderWatchlistView() {
   let html = '';
   // 관심 종목 카드
   html += `<div class="strength-section">`;
+  const hasPat = !!getPat();
   html += `<div class="strength-header">
     <div>
       <div class="strength-title">⭐ 관심 종목 ${codes.length > 0 ? `(${codes.length})` : ''}</div>
-      <div class="strength-meta">★ 종목 추가 · 가격 도달 시 Telegram 알림</div>
+      <div class="strength-meta">★ 종목 추가 · 가격 도달 시 Telegram 알림 ${hasPat ? '🚀' : ''}</div>
     </div>
-    ${alertCodes.length > 0 ? `<button class="refresh-btn" onclick="openTelegramSyncModal()">📤 Telegram 동기화</button>` : ''}
+    <div style="display:flex;gap:6px">
+      ${alertCodes.length > 0 ? `<button class="refresh-btn" onclick="onSyncButtonClick()">${hasPat ? '🚀 동기화' : '📤 동기화'}</button>` : ''}
+      <button class="refresh-btn" onclick="openSettingsModal()" title="자동 동기화 설정">⚙️</button>
+    </div>
   </div>`;
   if (codes.length === 0) {
     html += `<div class="strength-loading">관심 종목이 없습니다.<br>
@@ -1598,7 +1627,11 @@ function addFromSearch(code, name) {
   if (search) onWatchlistSearch(search.value);
 }
 
-function openTelegramSyncModal() {
+const PAT_KEY = 'github_pat_v1';
+function getPat() { return localStorage.getItem(PAT_KEY) || ''; }
+function savePat(p) { if (p) localStorage.setItem(PAT_KEY, p); else localStorage.removeItem(PAT_KEY); }
+
+function buildAlertsJson() {
   const alerts = [];
   for (const code in WATCHLIST) {
     const w = WATCHLIST[code];
@@ -1606,11 +1639,90 @@ function openTelegramSyncModal() {
       alerts.push({ code, name: w.name, target: w.target, direction: w.direction || 'above' });
     }
   }
-  const config = { alerts };
+  return { alerts };
+}
+
+async function autoSyncAlerts(silent) {
+  const pat = getPat();
+  if (!pat) {
+    if (!silent) alert('GitHub Token이 등록되어 있지 않습니다.\n"⚙️ 설정"에서 먼저 등록하세요.');
+    return false;
+  }
+  const config = buildAlertsJson();
+  const newContent = JSON.stringify(config, null, 2) + '\n';
+  const apiBase = 'https://api.github.com/repos/clarm3126-prog/richman/contents/data/alerts_config.json';
+  const headers = {
+    'Authorization': `Bearer ${pat}`,
+    'Accept': 'application/vnd.github+json',
+    'Content-Type': 'application/json',
+  };
+  try {
+    const getRes = await fetch(apiBase, { headers });
+    if (!getRes.ok) throw new Error(`파일 조회 실패 (${getRes.status})`);
+    const fileData = await getRes.json();
+    const sha = fileData.sha;
+    const base64 = btoa(unescape(encodeURIComponent(newContent)));
+    const putRes = await fetch(apiBase, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify({
+        message: `Update alerts (${config.alerts.length}개)`,
+        content: base64,
+        sha,
+        branch: 'main',
+      }),
+    });
+    if (!putRes.ok) {
+      const errTxt = await putRes.text();
+      throw new Error(`업데이트 실패 (${putRes.status})\n${errTxt.slice(0, 200)}`);
+    }
+    if (!silent) alert(`✅ 동기화 완료!\n${config.alerts.length}개 알림이 GitHub에 저장되었습니다.\n다음 GitHub Actions 실행(최대 5분 후) 시 적용됩니다.`);
+    return true;
+  } catch (e) {
+    if (!silent) alert(`❌ 동기화 실패\n${e.message}\n\nToken이 올바른지 확인해주세요.`);
+    return false;
+  }
+}
+
+function openSettingsModal() {
+  const modal = document.getElementById('settingsModal');
+  modal.querySelector('#patInput').value = getPat();
+  const status = modal.querySelector('#patStatus');
+  status.textContent = getPat() ? '✅ Token 등록됨 (자동 동기화 활성)' : '⚠️ Token 미등록 (수동 동기화만 가능)';
+  modal.classList.add('show');
+}
+function closeSettingsModal() { document.getElementById('settingsModal').classList.remove('show'); }
+function savePatFromModal() {
+  const v = document.getElementById('patInput').value.trim();
+  savePat(v);
+  closeSettingsModal();
+  alert(v ? '✅ Token이 저장되었습니다. 이제 자동 동기화가 가능합니다.' : 'Token이 삭제되었습니다.');
+  if (state.currentView === 'watchlist') renderWatchlistView();
+}
+function clearPatFromModal() {
+  if (confirm('GitHub Token을 삭제하시겠습니까?\n(자동 동기화가 비활성화됩니다)')) {
+    savePat('');
+    document.getElementById('patInput').value = '';
+    closeSettingsModal();
+    if (state.currentView === 'watchlist') renderWatchlistView();
+  }
+}
+
+async function onSyncButtonClick() {
+  if (getPat()) {
+    const ok = await autoSyncAlerts(false);
+    if (ok && state.currentView === 'watchlist') renderWatchlistView();
+  } else {
+    openTelegramSyncModal();
+  }
+}
+
+function openTelegramSyncModal() {
+  const config = buildAlertsJson();
   const json = JSON.stringify(config, null, 2);
   const editUrl = 'https://github.com/clarm3126-prog/richman/edit/main/data/alerts_config.json';
   const modal = document.getElementById('telegramModal');
-  modal.querySelector('.modal-title').textContent = `📤 Telegram 알림 동기화 (${alerts.length}개)`;
+  modal.querySelector('.modal-title').textContent = `📤 수동 동기화 (${config.alerts.length}개)`;
   modal.querySelector('#syncJsonContent').value = json;
   modal.querySelector('#syncEditLink').href = editUrl;
   modal.classList.add('show');
