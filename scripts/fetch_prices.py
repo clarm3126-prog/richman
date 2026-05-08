@@ -466,6 +466,125 @@ def save_history(themes, trading_day):
     print(f"  history saved: {today_file.name} (total {len(dates)} days)")
 
 
+def update_volume_data(stocks):
+    """전일 대비 거래량 급증 종목 계산 + 다음날 비교용 데이터 저장."""
+    prev_path = Path("data/prev_day_volumes.json")
+    today_str = datetime.now(KST).strftime("%Y%m%d")
+    surges = []
+    if prev_path.exists():
+        try:
+            prev_data = json.loads(prev_path.read_text(encoding="utf-8"))
+            prev_date = prev_data.get("date")
+            prev_volumes = prev_data.get("volumes", {})
+            if prev_date and prev_date < today_str:
+                # 어제 데이터로 오늘 surge 계산
+                for code, s in stocks.items():
+                    pv = prev_volumes.get(code, 0)
+                    if pv < 10000:
+                        continue
+                    cv = s.get("volume", 0)
+                    if cv < pv * 1.5:
+                        continue
+                    surges.append({
+                        "code": code,
+                        "name": s["name"],
+                        "market": s.get("market", ""),
+                        "price": s["price"],
+                        "change": s["change"],
+                        "volume": cv,
+                        "prev_volume": pv,
+                        "ratio": round(cv / pv, 2),
+                    })
+                surges.sort(key=lambda x: x["ratio"], reverse=True)
+                surges = surges[:30]
+        except Exception as e:
+            print(f"  vol prev read err: {e}")
+
+    # 장 마감 이후 (KST 16시 이후)에만 다음날용 스냅샷 저장
+    now = datetime.now(KST)
+    if now.hour >= 16:
+        snapshot = {c: s.get("volume", 0) for c, s in stocks.items() if s.get("volume", 0) > 0}
+        prev_path.write_text(
+            json.dumps({"date": today_str, "volumes": snapshot}, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        print(f"  saved {len(snapshot)} prev day volumes")
+    print(f"  volume surges: {len(surges)}")
+    return surges
+
+
+def fetch_investor_top():
+    """외국인/기관 매매 상위 (KOSPI + KOSDAQ)."""
+    out = {"foreign": {"KOSPI": [], "KOSDAQ": []}, "institution": {"KOSPI": [], "KOSDAQ": []}}
+    for inv_name, inv_no in [("foreign", "9000"), ("institution", "1000")]:
+        for market_name, sosok in [("KOSPI", "01"), ("KOSDAQ", "02")]:
+            url = f"https://finance.naver.com/sise/sise_deal_rank.naver?sosok={sosok}&investor_gubun={inv_no}"
+            try:
+                r = requests.get(url, headers=HEADERS, timeout=15)
+                r.encoding = "euc-kr"
+                tables = re.findall(r'<table[^>]*class="type_r1"[^>]*>(.*?)</table>', r.text, re.S)
+                stocks = []
+                # 두번째 테이블이 보통 순매수 상위
+                target_table = tables[1] if len(tables) >= 2 else (tables[0] if tables else "")
+                rows = re.findall(r'<tr[^>]*>(.*?)</tr>', target_table, re.S)
+                for row in rows:
+                    nm = re.search(r'item/main\.naver\?code=(\d+)[^>]*class="company"[^>]*>([^<]+)</a>', row)
+                    if not nm:
+                        continue
+                    code = nm.group(1).zfill(6)
+                    name = nm.group(2).strip()
+                    # 가격 추출
+                    price_m = re.search(r'<td class="number">([\d,]+)</td>', row)
+                    price = int(price_m.group(1).replace(",", "")) if price_m else 0
+                    stocks.append({"code": code, "name": name, "price": price, "market": market_name})
+                    if len(stocks) >= 10:
+                        break
+                out[inv_name][market_name] = stocks
+            except Exception as e:
+                print(f"  investor {inv_name} {market_name} failed: {e}")
+            time.sleep(0.1)
+    print(f"  investor top: F-K={len(out['foreign']['KOSPI'])}, F-Q={len(out['foreign']['KOSDAQ'])}, I-K={len(out['institution']['KOSPI'])}, I-Q={len(out['institution']['KOSDAQ'])}")
+    return out
+
+
+def fetch_watchlist_stock_history(days=7):
+    """관심 종목 일봉 종가 (sparkline용)."""
+    wl_path = Path("data/watchlist.json")
+    if not wl_path.exists():
+        return {}
+    try:
+        wl = json.loads(wl_path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    codes = [item.get("code") for item in wl.get("watchlist", []) if item.get("code")]
+    if not codes:
+        return {}
+    headers = {**HEADERS, "Referer": "https://stock.naver.com/"}
+    histories = {}
+    for code in codes[:50]:  # 최대 50개
+        url = f"https://api.stock.naver.com/chart/domestic/stock/{code}?periodType=dayCandle&count={days}"
+        try:
+            r = requests.get(url, headers=headers, timeout=8)
+            if r.status_code != 200:
+                continue
+            data = r.json()
+            prices = []
+            for p in data.get("priceInfos", []):
+                cp = p.get("closePrice")
+                if cp is not None:
+                    try:
+                        prices.append(float(cp))
+                    except (ValueError, TypeError):
+                        pass
+            if len(prices) >= 2:
+                histories[code] = prices
+        except Exception:
+            pass
+        time.sleep(0.05)
+    print(f"  watchlist history: {len(histories)}/{len(codes)}")
+    return histories
+
+
 def fetch_naver_themes():
     """네이버 금융 테마 리스트 (등락률·상승/하락 종목수 포함)."""
     out = []
@@ -608,6 +727,15 @@ def main():
     print("Checking price alerts...")
     check_alerts_and_notify(stocks)
 
+    print("Computing volume surges...")
+    volume_surges = update_volume_data(stocks)
+
+    print("Fetching investor top...")
+    investor_top = fetch_investor_top()
+
+    print("Fetching watchlist stock history...")
+    watchlist_history = fetch_watchlist_stock_history(7)
+
     new_highs = find_new_highs(stocks)
 
     naver_themes = fetch_naver_themes()
@@ -629,6 +757,9 @@ def main():
         "new_highs": new_highs,
         "naver_themes": naver_themes,
         "naver_industries": naver_industries,
+        "volume_surges": volume_surges,
+        "investor_top": investor_top,
+        "watchlist_history": watchlist_history,
     }
 
     out_path = Path("data/market.json")

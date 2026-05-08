@@ -95,8 +95,10 @@
     margin-bottom: 6px;
   }
   .watchlist-price {
-    display: flex; gap: 8px; align-items: baseline; margin-bottom: 6px;
+    display: flex; gap: 8px; align-items: center; margin-bottom: 6px; flex-wrap: wrap;
   }
+  .watchlist-spark { margin-left: auto; }
+  .sparkline-svg { display: block; }
   .watchlist-alert {
     font-size: 12px; color: #6b7280; margin-bottom: 8px;
   }
@@ -1732,9 +1734,12 @@ function renderWatchlistView() {
       if (s) {
         const cls = s.change > 0 ? 'up' : s.change < 0 ? 'down' : 'flat';
         const sign = s.change > 0 ? '+' : '';
+        const sparkData = (MARKET && MARKET.watchlist_history && MARKET.watchlist_history[code]) || null;
+        const sparkHtml = sparkData ? renderSparkline(sparkData, 80, 26) : '';
         priceLine = `<div class="watchlist-price">
           <span class="price">${s.price.toLocaleString('ko-KR')}원</span>
           <span class="card-change ${cls}">${sign}${s.change.toFixed(2)}%</span>
+          ${sparkHtml ? `<span class="watchlist-spark">${sparkHtml}</span>` : ''}
         </div>`;
       }
       let alertLine = '';
@@ -2216,6 +2221,29 @@ function renderDonut(items, top = 5, dataAttr = 'theme-no') {
     </div>
     <div class="donut-legend">${legend}</div>
   </div>`;
+}
+
+function renderSparkline(prices, width, height) {
+  if (!prices || prices.length < 2) return '';
+  width = width || 80;
+  height = height || 24;
+  const min = Math.min(...prices);
+  const max = Math.max(...prices);
+  const range = max - min || 1;
+  const dx = width / (prices.length - 1);
+  const points = prices.map((p, i) => {
+    const x = i * dx;
+    const y = height - ((p - min) / range) * height;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  const isUp = prices[prices.length - 1] >= prices[0];
+  const color = isUp ? '#dc2626' : '#2563eb';
+  const lastX = (prices.length - 1) * dx;
+  const lastY = height - ((prices[prices.length - 1] - min) / range) * height;
+  return `<svg width="${width}" height="${height}" class="sparkline-svg" viewBox="0 0 ${width} ${height}">
+    <polyline points="${points}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="2" fill="${color}"/>
+  </svg>`;
 }
 
 function renderCandleChart(history, label, change) {
@@ -2744,6 +2772,62 @@ function renderMarket(market) {
   });
   html += '</tbody></table>';
   html += `</div>`;
+
+  // --- 거래량 급증 ---
+  const surges = market.volume_surges || [];
+  html += `<div class="strength-section">`;
+  html += `<div class="strength-title" style="margin-bottom:8px">🔥 거래량 급증 (전일 대비)</div>`;
+  if (surges.length === 0) {
+    html += `<div class="strength-loading">전일 거래량 데이터를 누적 중입니다.<br><span style="font-size:11px">하루 이상 데이터 쌓이면 자동 표시</span></div>`;
+  } else {
+    html += `<div class="strength-meta" style="margin-bottom:6px">상위 ${surges.length}종목 · 전일 거래량 1.5배 이상</div>`;
+    html += '<table class="strength-table"><thead><tr><th>#</th><th>종목</th><th class="num">배수</th><th class="num">등락</th></tr></thead><tbody>';
+    surges.filter(s => filterByMarket(s)).slice(0, 20).forEach((s, i) => {
+      const cls = s.change > 0 ? 'up' : s.change < 0 ? 'down' : 'flat';
+      html += `<tr class="strength-row" data-code="${s.code}">
+        <td>${i + 1}</td>
+        <td>${s.name}<div class="company-code" style="display:block;font-size:10px;margin-top:2px">${s.code} · ${s.market}</div></td>
+        <td class="num up">${s.ratio}x</td>
+        <td class="num ${cls}">${fmtPct(s.change)}</td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+  }
+  html += `</div>`;
+
+  // --- 외국인/기관 매매 ---
+  const inv = market.investor_top || {};
+  if (inv.foreign || inv.institution) {
+    html += `<div class="strength-section">`;
+    html += `<div class="strength-title" style="margin-bottom:8px">🌐 투자자별 매매 상위</div>`;
+    html += `<div class="strength-meta" style="margin-bottom:6px">네이버 금융 기준 · 행 클릭 시 상세</div>`;
+    const renderInvTable = (title, list) => {
+      if (!list || list.length === 0) return '';
+      let h = `<div class="strength-bottom-title" style="margin-top:10px">${title}</div>`;
+      h += '<table class="strength-table"><tbody>';
+      list.forEach((s, i) => {
+        const stockData = MARKET.stocks[s.code];
+        const cls = stockData ? (stockData.change > 0 ? 'up' : stockData.change < 0 ? 'down' : 'flat') : 'flat';
+        const chgStr = stockData ? fmtPct(stockData.change) : '';
+        h += `<tr class="strength-row" data-code="${s.code}">
+          <td>${i + 1}</td>
+          <td>${s.name}<div class="company-code" style="display:block;font-size:10px;margin-top:2px">${s.code}</div></td>
+          <td class="num ${cls}">${chgStr}</td>
+        </tr>`;
+      });
+      h += '</tbody></table>';
+      return h;
+    };
+    if (marketFilter === 'all' || marketFilter === 'KOSPI') {
+      html += renderInvTable('🌐 외국인 KOSPI', (inv.foreign && inv.foreign.KOSPI) || []);
+      html += renderInvTable('🏛 기관 KOSPI', (inv.institution && inv.institution.KOSPI) || []);
+    }
+    if (marketFilter === 'all' || marketFilter === 'KOSDAQ') {
+      html += renderInvTable('🌐 외국인 KOSDAQ', (inv.foreign && inv.foreign.KOSDAQ) || []);
+      html += renderInvTable('🏛 기관 KOSDAQ', (inv.institution && inv.institution.KOSDAQ) || []);
+    }
+    html += `</div>`;
+  }
   } // end movers view
 
   // ===== NEWHIGHS 뷰 =====
