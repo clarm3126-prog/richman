@@ -143,6 +143,84 @@ def fetch_index(code):
         return None
 
 
+def fetch_naver_industries():
+    """네이버 금융 업종 리스트 (등락률·상승/하락 종목수 포함)."""
+    out = []
+    url = "https://finance.naver.com/sise/sise_group.naver?type=upjong"
+    try:
+        r = requests.get(url, headers=HEADERS, timeout=15)
+        r.encoding = "euc-kr"
+    except Exception as e:
+        print(f"  industries fetch failed: {e}")
+        return out
+    m = re.search(r'<table[^>]*type_1[^>]*>(.*?)</table>', r.text, re.S)
+    if not m:
+        return out
+    rows = re.findall(r'<tr[^>]*>(.*?)</tr>', m.group(1), re.S)
+    for row in rows:
+        nm = re.search(r'no=(\d+)[^>]*>([^<]+)</a>', row)
+        if not nm:
+            continue
+        pct = re.search(r'(red01|nv01)[^>]*>\s*([+\-]?\d+\.\d+)\s*%', row, re.S)
+        if pct:
+            cls, val = pct.groups()
+            change = float(val) if cls == "red01" else -abs(float(val))
+        else:
+            change = 0.0
+        text_tds = []
+        for td_m in re.finditer(r'<td[^>]*>(.*?)</td>', row, re.S):
+            text_tds.append(re.sub(r'<[^>]+>', ' ', td_m.group(1)).strip())
+        def n(i):
+            try:
+                return int(text_tds[i].replace(",", "").replace("+", "").replace("-", "").strip())
+            except (ValueError, IndexError):
+                return 0
+        total = n(2)
+        rise = n(3)
+        flat = n(4)
+        fall = n(5)
+        out.append({
+            "no": nm.group(1),
+            "name": nm.group(2).strip(),
+            "change": change,
+            "total": total,
+            "rise": rise,
+            "flat": flat,
+            "fall": fall,
+        })
+    out.sort(key=lambda i: i["change"], reverse=True)
+    print(f"  Naver industries: {len(out)}")
+    return out
+
+
+def enrich_top_industries_with_stocks(industries, top_n=10):
+    """상위 N개 네이버 업종에 멤버 종목 리스트 추가."""
+    for ind in industries[:top_n]:
+        ind_no = ind.get("no")
+        if not ind_no:
+            continue
+        url = f"https://m.stock.naver.com/api/stocks/industry/{ind_no}?page=1&pageSize=50"
+        headers = {**HEADERS, "Referer": "https://m.stock.naver.com/"}
+        try:
+            r = requests.get(url, headers=headers, timeout=10)
+            if r.status_code != 200:
+                ind["stocks"] = []
+                continue
+            data = r.json()
+            stocks = []
+            for s in data.get("stocks", []):
+                code = s.get("itemCode")
+                name = s.get("stockName")
+                if code and name:
+                    stocks.append({"code": str(code).zfill(6), "name": name})
+            ind["stocks"] = stocks
+        except Exception as e:
+            print(f"  industry {ind_no} stocks fetch failed: {e}")
+            ind["stocks"] = []
+        time.sleep(0.1)
+    print(f"  enriched {top_n} industries with member stocks")
+
+
 def enrich_top_themes_with_stocks(themes, top_n=10):
     """상위 N개 네이버 테마에 멤버 종목 리스트 추가."""
     for theme in themes[:top_n]:
@@ -324,6 +402,10 @@ def main():
 
     naver_themes = fetch_naver_themes()
     enrich_top_themes_with_stocks(naver_themes, top_n=10)
+
+    naver_industries = fetch_naver_industries()
+    enrich_top_industries_with_stocks(naver_industries, top_n=10)
+
     day_str = datetime.now(KST).strftime("%Y%m%d")
     save_history(naver_themes, day_str)
 
@@ -334,6 +416,7 @@ def main():
         "stocks": stocks,
         "new_highs": new_highs,
         "naver_themes": naver_themes,
+        "naver_industries": naver_industries,
     }
 
     out_path = Path("data/market.json")
