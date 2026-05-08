@@ -220,7 +220,8 @@
     margin-top: 10px;
   }
   .heatmap-day {
-    min-height: 60px;
+    aspect-ratio: 1;
+    min-height: 70px;
     border-radius: 4px;
     background: #f3f4f6;
     cursor: pointer;
@@ -233,7 +234,7 @@
     overflow: hidden;
   }
   .heatmap-day.has-data { padding: 2px; cursor: pointer; }
-  .heatmap-day.empty { background: transparent; min-height: 60px; }
+  .heatmap-day.empty { background: transparent; }
   .heatmap-day:hover { z-index: 1; box-shadow: 0 2px 6px rgba(0,0,0,0.25); }
   .day-num {
     font-size: 10px;
