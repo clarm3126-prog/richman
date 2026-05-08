@@ -60,6 +60,105 @@
   body:not(.view-themes) .search-box { display: none; }
   body:not(.view-themes) .tabs-toggle { display: none; }
   body:not(.view-themes) .tabs { display: none; }
+  /* 7번째 관심 버튼은 모바일에서 마지막 행에서 가운데 또는 두번째 칸 */
+  .nav-btn-watchlist { grid-column: span 1; }
+  @media (max-width: 599px) {
+    .nav-btn-watchlist { grid-column: span 3; }
+  }
+  /* 종목 카드의 별 버튼 */
+  .star-btn {
+    border: none;
+    background: transparent;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 2px 6px;
+    color: #d1d5db;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .star-btn.starred { color: #f59e0b; }
+  .star-btn:active { transform: scale(0.9); }
+  /* 관심 종목 카드 */
+  .watchlist-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+  }
+  .watchlist-card.triggered {
+    border-color: #dc2626;
+    background: #fef2f2;
+    box-shadow: 0 0 0 1px #dc2626;
+  }
+  .watchlist-top {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    margin-bottom: 6px;
+  }
+  .watchlist-price {
+    display: flex; gap: 8px; align-items: baseline; margin-bottom: 6px;
+  }
+  .watchlist-alert {
+    font-size: 12px; color: #6b7280; margin-bottom: 8px;
+  }
+  .alert-triggered {
+    color: #dc2626; font-weight: 700; margin-left: 6px;
+  }
+  .watchlist-actions {
+    display: flex; gap: 6px;
+  }
+  .watchlist-btn-remove {
+    background: transparent; border: 1px solid #fecaca; color: #dc2626;
+    border-radius: 6px; padding: 4px 10px; font-size: 11px; cursor: pointer;
+    font-family: inherit;
+  }
+  /* 검색 결과 */
+  .search-results { margin-top: 8px; }
+  .search-result-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px;
+    margin-bottom: 6px; background: #f9fafb;
+  }
+  .search-no-result {
+    text-align: center; color: #9ca3af; padding: 16px; font-size: 13px;
+  }
+  /* 모달 */
+  .modal-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.5); z-index: 1000;
+    display: none; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: #fff; border-radius: 14px; padding: 20px;
+    width: 100%; max-width: 360px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  }
+  .modal-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+  .modal-current { font-size: 13px; color: #6b7280; margin-bottom: 14px; }
+  .modal-form { margin-bottom: 16px; }
+  .modal-label {
+    display: block; font-size: 12px; font-weight: 600;
+    color: #374151; margin: 10px 0 4px;
+  }
+  .modal-input {
+    width: 100%; padding: 10px 12px; border: 1px solid #d1d5db;
+    border-radius: 8px; font-size: 14px; font-family: inherit;
+    color: #1a1a1a; background: #fff;
+  }
+  .modal-input:focus { outline: none; border-color: #2563eb; }
+  .modal-actions {
+    display: flex; gap: 6px; justify-content: flex-end;
+  }
+  .modal-btn {
+    padding: 8px 14px; border-radius: 8px; font-size: 13px;
+    font-weight: 600; cursor: pointer; font-family: inherit;
+    border: 1px solid transparent;
+  }
+  .modal-btn-cancel { background: #f3f4f6; color: #374151; }
+  .modal-btn-clear { background: transparent; color: #6b7280; border-color: #e5e7eb; margin-right: auto; }
+  .modal-btn-save { background: #1a1a1a; color: #fff; }
+  .modal-note { font-size: 11px; color: #9ca3af; margin-top: 12px; }
   #section-strength, #section-industry, #section-movements, #section-movers, #section-newhighs, #content { scroll-margin-top: 320px; }
   .search-box {
     width: 100%;
@@ -462,6 +561,21 @@
     .legend-val { color: #fca5a5; }
     .desc-toggle { color: #93c5fd; }
     .description-wrap.expanded .desc-toggle { color: #9ca3af; }
+    .star-btn { color: #4b5563; }
+    .star-btn.starred { color: #fbbf24; }
+    .watchlist-card { background: #1a1d23; border-color: #2a2f3a; }
+    .watchlist-card.triggered { background: #2a1313; border-color: #fca5a5; box-shadow: 0 0 0 1px #fca5a5; }
+    .alert-triggered { color: #fca5a5; }
+    .watchlist-btn-remove { border-color: #5c1818; color: #fca5a5; }
+    .search-result-item { background: #2a2f3a; border-color: #3a414f; }
+    .modal { background: #1a1d23; color: #e5e7eb; }
+    .modal-current { color: #9ca3af; }
+    .modal-label { color: #d1d5db; }
+    .modal-input { background: #2a2f3a; border-color: #3a414f; color: #e5e7eb; }
+    .modal-btn-cancel { background: #2a2f3a; color: #d1d5db; }
+    .modal-btn-clear { border-color: #3a414f; color: #9ca3af; }
+    .modal-btn-save { background: #e5e7eb; color: #0f1115; }
+    .modal-note { color: #6b7280; }
   }
 </style>
 </head>
@@ -475,6 +589,7 @@
     <button class="nav-btn" data-view="themes" onclick="setView('themes')">🏷️ 테마별</button>
     <button class="nav-btn" data-view="movers" onclick="setView('movers')">📈 주식</button>
     <button class="nav-btn" data-view="newhighs" onclick="setView('newhighs')">🚀 신고가</button>
+    <button class="nav-btn nav-btn-watchlist" data-view="watchlist" onclick="setView('watchlist')">⭐ 관심</button>
   </div>
   <input type="text" class="search-box" id="search" placeholder="회사명·종목코드·키워드 검색">
   <button class="tabs-toggle" id="tabsToggle" onclick="toggleTabs()">
@@ -489,6 +604,28 @@
   <div id="movements-section"></div>
   <div id="content"></div>
 </main>
+
+<div id="alertModal" class="modal-overlay" onclick="if(event.target===this) closeAlertModal()">
+  <div class="modal">
+    <div class="modal-title">🔔 알림 설정</div>
+    <div class="modal-current"></div>
+    <div class="modal-form">
+      <label class="modal-label">목표 가격 (원)</label>
+      <input type="text" id="alertTarget" inputmode="numeric" placeholder="예: 280000" class="modal-input">
+      <label class="modal-label">조건</label>
+      <select id="alertDirection" class="modal-input">
+        <option value="above">↑ 이상 도달 시</option>
+        <option value="below">↓ 이하 하락 시</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn modal-btn-clear" onclick="clearAlertModal()">알림 끄기</button>
+      <button class="modal-btn modal-btn-cancel" onclick="closeAlertModal()">취소</button>
+      <button class="modal-btn modal-btn-save" onclick="saveAlertModal()">저장</button>
+    </div>
+    <div class="modal-note">알림은 앱이 열려있거나 백그라운드에 있을 때 작동합니다.</div>
+  </div>
+</div>
 
 <script>
 const DATA = {
@@ -1135,14 +1272,307 @@ function setView(viewName) {
   document.querySelectorAll('.nav-btn').forEach(b =>
     b.classList.toggle('active', b.dataset.view === viewName));
   document.body.className = 'view-' + viewName;
-  if (MARKET) renderMarket(MARKET);
-  renderContent();
-  if (viewName === 'movements') loadAndRenderMovements();
-  else {
+  if (viewName === 'watchlist') {
+    renderWatchlistView();
     const ms = document.getElementById('movements-section');
     if (ms) ms.innerHTML = '';
+    document.getElementById('content').innerHTML = '';
+  } else {
+    if (MARKET) renderMarket(MARKET);
+    renderContent();
+    if (viewName === 'movements') loadAndRenderMovements();
+    else {
+      const ms = document.getElementById('movements-section');
+      if (ms) ms.innerHTML = '';
+    }
   }
   window.scrollTo({ top: 0, behavior: 'instant' });
+}
+
+// === ⭐ 관심 종목 + 🔔 알림 ===
+const WATCHLIST_KEY = 'watchlist_v1';
+const TRIGGERED_KEY = 'triggered_alerts_v1';
+let WATCHLIST = {};
+let TRIGGERED = new Set();
+
+function loadWatchlist() {
+  try {
+    WATCHLIST = JSON.parse(localStorage.getItem(WATCHLIST_KEY) || '{}');
+    TRIGGERED = new Set(JSON.parse(localStorage.getItem(TRIGGERED_KEY) || '[]'));
+  } catch { WATCHLIST = {}; TRIGGERED = new Set(); }
+}
+
+function saveWatchlist() {
+  try {
+    localStorage.setItem(WATCHLIST_KEY, JSON.stringify(WATCHLIST));
+    localStorage.setItem(TRIGGERED_KEY, JSON.stringify([...TRIGGERED]));
+  } catch {}
+}
+
+function isWatched(code) { return code in WATCHLIST; }
+
+function toggleWatchlist(code, name) {
+  if (WATCHLIST[code]) {
+    delete WATCHLIST[code];
+    TRIGGERED.delete(code);
+  } else {
+    WATCHLIST[code] = { name, addedAt: Date.now() };
+  }
+  saveWatchlist();
+  if (state.currentView === 'watchlist') renderWatchlistView();
+  document.querySelectorAll(`[data-star-code="${code}"]`).forEach(btn => {
+    btn.textContent = isWatched(code) ? '★' : '☆';
+    btn.classList.toggle('starred', isWatched(code));
+  });
+}
+
+async function requestNotificationPermission() {
+  if (!('Notification' in window)) return false;
+  if (Notification.permission === 'granted') return true;
+  if (Notification.permission === 'denied') return false;
+  try {
+    const result = await Notification.requestPermission();
+    return result === 'granted';
+  } catch { return false; }
+}
+
+async function showNotification(title, body, code) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  try {
+    if ('serviceWorker' in navigator) {
+      const reg = await navigator.serviceWorker.ready;
+      reg.showNotification(title, {
+        body, icon: 'icon-192.png', badge: 'icon-192.png',
+        tag: 'alert-' + code, requireInteraction: true,
+      });
+    } else {
+      const n = new Notification(title, { body, icon: 'icon-192.png', tag: 'alert-' + code });
+      n.onclick = () => { window.focus(); setView('watchlist'); n.close(); };
+    }
+  } catch (e) { console.error(e); }
+}
+
+function checkAlerts() {
+  if (!MARKET) return;
+  for (const code in WATCHLIST) {
+    const w = WATCHLIST[code];
+    if (!w.target) continue;
+    if (TRIGGERED.has(code)) continue;
+    const stock = MARKET.stocks[code];
+    if (!stock) continue;
+    const triggered =
+      (w.direction === 'above' && stock.price >= w.target) ||
+      (w.direction === 'below' && stock.price <= w.target);
+    if (triggered) {
+      TRIGGERED.add(code);
+      saveWatchlist();
+      showNotification(
+        `🚨 ${w.name || stock.name} 알림`,
+        `${w.target.toLocaleString('ko-KR')}원 ${w.direction === 'above' ? '돌파' : '하락'} · 현재 ${stock.price.toLocaleString('ko-KR')}원`,
+        code
+      );
+    }
+  }
+}
+
+let alertCheckInterval = null;
+function startAlertChecking() {
+  if (alertCheckInterval) clearInterval(alertCheckInterval);
+  // 60초마다 market.json 재조회 + 알림 체크
+  alertCheckInterval = setInterval(async () => {
+    try {
+      const fresh = await loadMarket();
+      MARKET = fresh;
+      checkAlerts();
+      if (state.currentView === 'watchlist') renderWatchlistView();
+    } catch {}
+  }, 60000);
+}
+
+function setAlert(code, target, direction) {
+  if (!WATCHLIST[code]) return;
+  WATCHLIST[code].target = target;
+  WATCHLIST[code].direction = direction;
+  TRIGGERED.delete(code);
+  saveWatchlist();
+}
+
+function clearAlert(code) {
+  if (!WATCHLIST[code]) return;
+  delete WATCHLIST[code].target;
+  delete WATCHLIST[code].direction;
+  TRIGGERED.delete(code);
+  saveWatchlist();
+}
+
+function openAlertModal(code) {
+  const w = WATCHLIST[code];
+  if (!w) return;
+  const s = MARKET ? MARKET.stocks[code] : null;
+  const name = (s && s.name) || w.name || code;
+  const cur = s ? s.price : null;
+  const modal = document.getElementById('alertModal');
+  modal.dataset.code = code;
+  modal.querySelector('.modal-title').textContent = `🔔 ${name} 알림 설정`;
+  modal.querySelector('.modal-current').textContent = cur ? `현재 ${cur.toLocaleString('ko-KR')}원` : '시세 데이터 없음';
+  modal.querySelector('#alertTarget').value = w.target || '';
+  modal.querySelector('#alertDirection').value = w.direction || 'above';
+  modal.classList.add('show');
+  requestNotificationPermission();
+}
+
+function closeAlertModal() {
+  document.getElementById('alertModal').classList.remove('show');
+}
+
+async function saveAlertModal() {
+  const modal = document.getElementById('alertModal');
+  const code = modal.dataset.code;
+  const targetStr = modal.querySelector('#alertTarget').value.replace(/[^0-9]/g, '');
+  const target = parseInt(targetStr);
+  const direction = modal.querySelector('#alertDirection').value;
+  if (!target || target <= 0) { alert('올바른 가격을 입력하세요'); return; }
+  setAlert(code, target, direction);
+  const granted = await requestNotificationPermission();
+  if (!granted) {
+    alert('⚠️ 알림 권한이 거부되었습니다.\n브라우저 설정에서 알림 권한을 허용해주세요.\n(권한 없이도 가격 도달 시 화면에 빨간 표시는 보입니다)');
+  }
+  closeAlertModal();
+  if (state.currentView === 'watchlist') renderWatchlistView();
+}
+
+function clearAlertModal() {
+  const code = document.getElementById('alertModal').dataset.code;
+  clearAlert(code);
+  closeAlertModal();
+  if (state.currentView === 'watchlist') renderWatchlistView();
+}
+
+function confirmRemoveWatchlist(code) {
+  if (confirm('관심 종목에서 삭제하시겠습니까?')) {
+    delete WATCHLIST[code];
+    TRIGGERED.delete(code);
+    saveWatchlist();
+    renderWatchlistView();
+  }
+}
+
+function renderWatchlistView() {
+  const el = document.getElementById('strength');
+  if (!el) return;
+  if (state.currentView !== 'watchlist') return;
+  const codes = Object.keys(WATCHLIST);
+  let html = '';
+  // 관심 종목 카드
+  html += `<div class="strength-section">`;
+  html += `<div class="strength-header">
+    <div>
+      <div class="strength-title">⭐ 관심 종목 ${codes.length > 0 ? `(${codes.length})` : ''}</div>
+      <div class="strength-meta">★ 종목 추가 · 가격 도달 시 푸시 알림</div>
+    </div>
+  </div>`;
+  if (codes.length === 0) {
+    html += `<div class="strength-loading">관심 종목이 없습니다.<br>
+      <span style="font-size:11px">아래 검색에서 종목을 추가하세요</span></div>`;
+  } else {
+    const sorted = codes.sort((a, b) => {
+      const at = TRIGGERED.has(a) ? 0 : 1;
+      const bt = TRIGGERED.has(b) ? 0 : 1;
+      if (at !== bt) return at - bt;
+      return (WATCHLIST[b].addedAt || 0) - (WATCHLIST[a].addedAt || 0);
+    });
+    sorted.forEach(code => {
+      const w = WATCHLIST[code];
+      const s = MARKET ? MARKET.stocks[code] : null;
+      const triggered = TRIGGERED.has(code);
+      const name = (s && s.name) || w.name || code;
+      let priceLine = '';
+      if (s) {
+        const cls = s.change > 0 ? 'up' : s.change < 0 ? 'down' : 'flat';
+        const sign = s.change > 0 ? '+' : '';
+        priceLine = `<div class="watchlist-price">
+          <span class="price">${s.price.toLocaleString('ko-KR')}원</span>
+          <span class="card-change ${cls}">${sign}${s.change.toFixed(2)}%</span>
+        </div>`;
+      }
+      let alertLine = '';
+      if (w.target) {
+        const dirText = w.direction === 'above' ? '↑ 돌파' : '↓ 하락';
+        const status = triggered ? `<span class="alert-triggered">🚨 도달!</span>` : '';
+        alertLine = `<div class="watchlist-alert">🔔 ${w.target.toLocaleString('ko-KR')}원 ${dirText} ${status}</div>`;
+      } else {
+        alertLine = `<div class="watchlist-alert" style="color:#9ca3af">알림 미설정</div>`;
+      }
+      html += `<div class="watchlist-card ${triggered ? 'triggered' : ''}">
+        <div class="watchlist-top">
+          <div>
+            <div class="company-name">${name}</div>
+            <div class="company-code">${code}${s ? ` · ${s.market}` : ''}</div>
+          </div>
+          <button class="watchlist-btn-remove" onclick="confirmRemoveWatchlist('${code}')">삭제</button>
+        </div>
+        ${priceLine}
+        ${alertLine}
+        <div class="watchlist-actions">
+          <button class="link-btn" onclick="openAlertModal('${code}')">${w.target ? '🔔 알림 수정' : '🔔 알림 설정'}</button>
+          <a class="link-btn" target="_blank" rel="noopener" href="https://m.stock.naver.com/domestic/stock/${code}/total">시세</a>
+        </div>
+      </div>`;
+    });
+  }
+  html += `</div>`;
+  // 종목 추가 검색
+  html += `<div class="strength-section">`;
+  html += `<div class="strength-title" style="margin-bottom:8px">+ 종목 추가</div>`;
+  html += `<div class="strength-meta" style="margin-bottom:8px">전체 ${MARKET ? Object.keys(MARKET.stocks).length.toLocaleString() : '4,000+'}개 종목 검색</div>`;
+  html += `<input type="text" class="search-box" id="watchlistSearch" placeholder="회사명 또는 종목코드" oninput="onWatchlistSearch(this.value)" autocomplete="off" style="display:block">`;
+  html += `<div id="watchlistSearchResults" class="search-results"></div>`;
+  html += `</div>`;
+  el.innerHTML = html;
+}
+
+function onWatchlistSearch(query) {
+  const resultsEl = document.getElementById('watchlistSearchResults');
+  if (!resultsEl) return;
+  const q = query.trim().toLowerCase();
+  if (!q) { resultsEl.innerHTML = ''; return; }
+  if (!MARKET) { resultsEl.innerHTML = '<div class="search-no-result">시세 데이터 로딩 중...</div>'; return; }
+  const matches = [];
+  for (const [code, s] of Object.entries(MARKET.stocks)) {
+    if (matches.length >= 30) break;
+    if (code.includes(q) || s.name.toLowerCase().includes(q)) {
+      matches.push({ code, ...s });
+    }
+  }
+  if (matches.length === 0) {
+    resultsEl.innerHTML = '<div class="search-no-result">검색 결과 없음</div>';
+    return;
+  }
+  let html = '';
+  matches.forEach(s => {
+    const cls = s.change > 0 ? 'up' : s.change < 0 ? 'down' : 'flat';
+    const sign = s.change > 0 ? '+' : '';
+    const watched = isWatched(s.code);
+    html += `<div class="search-result-item">
+      <div style="flex:1;min-width:0">
+        <div class="company-name">${s.name}</div>
+        <div class="company-code">${s.code} · ${s.market} · <span class="${cls}">${sign}${s.change.toFixed(2)}%</span> · ${s.price.toLocaleString('ko-KR')}원</div>
+      </div>
+      <button class="link-btn" onclick="addFromSearch('${s.code}','${s.name.replace(/'/g, "\\'")}')">${watched ? '⭐ 추가됨' : '+ 추가'}</button>
+    </div>`;
+  });
+  resultsEl.innerHTML = html;
+}
+
+function addFromSearch(code, name) {
+  if (!WATCHLIST[code]) {
+    WATCHLIST[code] = { name, addedAt: Date.now() };
+    saveWatchlist();
+  }
+  renderWatchlistView();
+  // Re-trigger search to update buttons
+  const search = document.getElementById('watchlistSearch');
+  if (search) onWatchlistSearch(search.value);
 }
 
 function fmtDateStr(yyyymmdd) {
@@ -1467,9 +1897,12 @@ function renderContent() {
           descBlock = `<div class="description">${escapeHtml(fullDesc)}</div>`;
         }
       }
+      const watched = isWatched(c.code);
+      const starBtn = `<button class="star-btn ${watched ? 'starred' : ''}" data-star-code="${c.code}" onclick="event.stopPropagation();toggleWatchlist('${c.code}','${c.name.replace(/'/g, "\\'")}')" title="관심 종목">${watched ? '★' : '☆'}</button>`;
       html += `<div class="card">
         <div class="card-top">
           <div class="name-block">
+            ${starBtn}
             <span class="company-name">${c.name}</span>
             <span class="company-code">${c.code}</span>
             ${chgHtml}
@@ -1923,10 +2356,16 @@ async function initMarket() {
   const el = document.getElementById('strength');
   el.innerHTML = `<div class="strength-section"><div class="strength-loading">⏳ 시장 데이터 불러오는 중...</div></div>`;
   try {
+    loadWatchlist();
     MARKET = await loadMarket();
     await loadDescriptions();
     render();
     setView('strength');
+    checkAlerts();
+    startAlertChecking();
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    }
   } catch (e) {
     el.innerHTML = `<div class="strength-section"><div class="strength-loading">
       ⚠️ 시장 데이터를 아직 불러올 수 없습니다.<br>
