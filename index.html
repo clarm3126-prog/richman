@@ -2349,6 +2349,7 @@ function renderDonut(items, top = 5, dataAttr = 'theme-no') {
   const positives = items.filter(t => t.change > 0).slice(0, top);
   if (positives.length === 0) return '';
   const total = positives.reduce((s, t) => s + t.change, 0);
+  const isIndustry = dataAttr === 'industry-no';
   const cx = 110, cy = 110, r = 95, ir = 62;
   let cum = 0;
   const slices = [];
@@ -2366,7 +2367,7 @@ function renderDonut(items, top = 5, dataAttr = 'theme-no') {
     const x4 = cx + ir * Math.cos(sR), y4 = cy + ir * Math.sin(sR);
     const large = (endA - startA) > 180 ? 1 : 0;
     const path = `M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} L ${x3} ${y3} A ${ir} ${ir} 0 ${large} 0 ${x4} ${y4} Z`;
-    const color = themeColor(t.no);
+    const color = themeColor(t.no, t.name, isIndustry);
     slices.push(`<path d="${path}" fill="${color}" data-${dataAttr}="${t.no}"><title>${t.name} +${t.change.toFixed(2)}%</title></path>`);
     if (angle >= 18) {
       const midA = (startA + endA) / 2;
@@ -2383,7 +2384,7 @@ function renderDonut(items, top = 5, dataAttr = 'theme-no') {
   });
   const legend = positives.map((t, i) => `
     <div class="legend-item" data-${dataAttr}="${t.no}">
-      <span class="legend-dot" style="background:${themeColor(t.no)}"></span>
+      <span class="legend-dot" style="background:${themeColor(t.no, t.name, isIndustry)}"></span>
       <span class="legend-rank">${i + 1}</span>
       <span class="legend-name">${t.name}</span>
       <span class="legend-val">+${t.change.toFixed(2)}%</span>
@@ -3065,38 +3066,49 @@ function isHoliday(dateStr) {
   return KR_HOLIDAYS.has(dateStr);
 }
 
-// 테마/업종 번호 기반 시각적으로 잘 구분되는 색상
-// 24색 큐레이션 팔레트 + 큰 소수(17)로 곱해 인접 번호끼리 색깔 거리 확보
-const COLOR_PALETTE = [
-  '#e74c3c', // 빨강
-  '#3498db', // 파랑
-  '#2ecc71', // 초록
-  '#f39c12', // 주황
-  '#9b59b6', // 자주
-  '#1abc9c', // 청록
-  '#e91e63', // 핑크
-  '#ff5722', // 다홍
-  '#673ab7', // 진보라
-  '#00bcd4', // 시안
-  '#8bc34a', // 연두
-  '#ff9800', // 호박
-  '#03a9f4', // 하늘
-  '#cddc39', // 라임
-  '#c026d3', // 푸시아
-  '#facc15', // 노랑
-  '#536dfe', // 청보라
-  '#76ff03', // 형광초록
-  '#d500f9', // 형광자주
-  '#1de9b6', // 민트
-  '#ff6b9d', // 살구핑크
-  '#3d5afe', // 진청
-  '#ffc400', // 황금
-  '#00e676', // 형광민트
+// 업종 색상 계열 매핑 — 비슷한 업종은 같은 계열 색상
+const INDUSTRY_FAMILIES = [
+  { keywords: ['자동차', '타이어', '운송장비'], hue: 0 },          // 빨강
+  { keywords: ['반도체', '디스플레이'], hue: 220 },                // 진파랑
+  { keywords: ['전기', '전자', 'IT하드웨어'], hue: 50 },           // 황금
+  { keywords: ['IT', '소프트', '인터넷', '게임'], hue: 260 },      // 진보라
+  { keywords: ['통신', '미디어', '방송'], hue: 185 },              // 청록
+  { keywords: ['바이오', '제약', '의약', '의료'], hue: 290 },      // 자주
+  { keywords: ['음식', '식품', '주류', '음료', '담배'], hue: 110 }, // 연두
+  { keywords: ['화장품', '의류', '섬유', '신발'], hue: 320 },      // 분홍
+  { keywords: ['은행', '보험', '증권', '금융', '카드'], hue: 235 }, // 진청
+  { keywords: ['건설', '건축', '부동산', '시멘트'], hue: 30 },     // 주황
+  { keywords: ['철강', '비철금속', '금속'], hue: 15 },             // 적갈
+  { keywords: ['조선', '운수', '항공', '해상', '항만'], hue: 195 }, // 청록
+  { keywords: ['에너지', '석유', '가스', '전력', '신재생'], hue: 40 }, // 진주황
+  { keywords: ['화학', '소재', '플라스틱'], hue: 165 },            // 청민트
+  { keywords: ['기계', '장비'], hue: 85 },                        // 황녹
+  { keywords: ['서비스', '엔터', '레저', '여행'], hue: 145 },      // 청녹
+  { keywords: ['종이', '목재', '농업', '수산'], hue: 75 },         // 황녹
+  { keywords: ['유통', '소매', '도매', '백화점'], hue: 340 },      // 진분홍
+  { keywords: ['지주', '투자'], hue: 250 },                       // 보라
 ];
-function themeColor(no) {
+
+// 테마/업종 색상 생성
+// - 일반 테마: 번호 기반 100% 고유 HSL (무한 다른 색)
+// - 업종 (isIndustry=true): 이름 패턴 매칭으로 계열 색 + 번호로 채도/명도 변화
+function themeColor(no, name, isIndustry) {
   const n = parseInt(no) || 0;
-  // 큰 소수(17)로 곱해서 인접 번호도 팔레트에서 멀리 떨어진 색 선택
-  return COLOR_PALETTE[(n * 17) % COLOR_PALETTE.length];
+  if (isIndustry && name) {
+    for (const fam of INDUSTRY_FAMILIES) {
+      if (fam.keywords.some(k => name.includes(k))) {
+        // 같은 계열 내에서도 번호별로 채도/명도 다르게
+        const sat = 60 + ((n * 13) % 30); // 60-90%
+        const light = 42 + ((n * 7) % 23); // 42-65%
+        return `hsl(${fam.hue}, ${sat}%, ${light}%)`;
+      }
+    }
+  }
+  // 일반 테마 또는 미분류 업종: 3차원 hash로 100% 고유 색
+  const hue = (n * 137.508) % 360;          // golden angle for hue
+  const sat = 55 + ((n * 23) % 35);         // 55-90%
+  const light = 42 + ((n * 19) % 25);       // 42-67%
+  return `hsl(${hue.toFixed(0)}, ${sat}%, ${light}%)`;
 }
 
 async function loadHistoryRange(maxDays = 7) {
@@ -3306,7 +3318,7 @@ function renderHeatmap(loaded, type) {
       let inner = `<div class="day-num">${d.getDate()}</div>`;
       inner += `<div class="day-themes">`;
       top5.forEach(t => {
-        const color = themeColor(t.no);
+        const color = themeColor(t.no, t.name, isIndustry);
         const tSign = t.change > 0 ? '+' : '';
         const shortName = t.name.length > 7 ? t.name.slice(0, 6) + '…' : t.name;
         inner += `<div class="day-theme" style="background:${color}" title="${t.name} ${tSign}${t.change.toFixed(2)}%">
@@ -3349,7 +3361,7 @@ function showDayRankingModal(date, list, type) {
       const cls = t.change > 0 ? 'up' : t.change < 0 ? 'down' : 'flat';
       const dataAttrName = isIndustry ? 'industry-no' : 'theme-no';
       html += `<div class="legend-item" data-${dataAttrName}="${t.no}" data-modal-row="1">
-        <span class="legend-dot" style="background:${themeColor(t.no)}"></span>
+        <span class="legend-dot" style="background:${themeColor(t.no, t.name, isIndustry)}"></span>
         <span class="legend-rank">${i + 1}</span>
         <span class="legend-name">${t.name}</span>
         <span class="legend-val ${cls}">${sign}${t.change.toFixed(2)}%</span>
