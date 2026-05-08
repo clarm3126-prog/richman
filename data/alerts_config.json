@@ -1,6 +1,12 @@
 {
   "alerts": [
     {
+      "code": "356680",
+      "name": "엑스게이트",
+      "target": 15730,
+      "direction": "above"
+    },
+    {
       "code": "033100",
       "name": "제룡전기",
       "target": 87600,
