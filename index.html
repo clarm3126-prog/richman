@@ -745,6 +745,16 @@
   </div>
 </div>
 
+<div id="dayRankingModal" class="modal-overlay" onclick="if(event.target===this) closeDayRankingModal()">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-title" id="dayRankingTitle">📅 TOP 10</div>
+    <div id="dayRankingBody"></div>
+    <div class="modal-actions">
+      <button class="modal-btn modal-btn-cancel" onclick="closeDayRankingModal()">닫기</button>
+    </div>
+  </div>
+</div>
+
 <div id="stockModal" class="modal-overlay" onclick="if(event.target===this) closeStockModal()">
   <div class="modal detail-modal-content">
     <div class="modal-title" id="stockModalTitle">종목 상세</div>
@@ -2274,8 +2284,6 @@ function renderDonut(items, top = 5, dataAttr = 'theme-no') {
   const positives = items.filter(t => t.change > 0).slice(0, top);
   if (positives.length === 0) return '';
   const total = positives.reduce((s, t) => s + t.change, 0);
-  // 빨강 그라데이션 (1위가 가장 진함)
-  const colors = ['#dc2626', '#e94545', '#f06b6b', '#f48e8e', '#f7afaf'];
   const cx = 110, cy = 110, r = 95, ir = 62;
   let cum = 0;
   const slices = [];
@@ -2293,9 +2301,8 @@ function renderDonut(items, top = 5, dataAttr = 'theme-no') {
     const x4 = cx + ir * Math.cos(sR), y4 = cy + ir * Math.sin(sR);
     const large = (endA - startA) > 180 ? 1 : 0;
     const path = `M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} L ${x3} ${y3} A ${ir} ${ir} 0 ${large} 0 ${x4} ${y4} Z`;
-    slices.push(`<path d="${path}" fill="${colors[i % colors.length]}" data-${dataAttr}="${t.no}"><title>${t.name} +${t.change.toFixed(2)}%</title></path>`);
-
-    // 슬라이스 안에 테마 이름 표시 (각도 ≥ 18°일 때만, 너무 좁으면 생략)
+    const color = themeColor(t.no);
+    slices.push(`<path d="${path}" fill="${color}" data-${dataAttr}="${t.no}"><title>${t.name} +${t.change.toFixed(2)}%</title></path>`);
     if (angle >= 18) {
       const midA = (startA + endA) / 2;
       const labelR = (r + ir) / 2;
@@ -2305,16 +2312,13 @@ function renderDonut(items, top = 5, dataAttr = 'theme-no') {
       let displayName = t.name;
       const maxLen = angle >= 40 ? 7 : 5;
       if (displayName.length > maxLen) displayName = displayName.slice(0, maxLen - 1) + '…';
-      // 진한 슬라이스(1-3위)는 흰색, 옅은 슬라이스(4-5위)는 검은색
-      const textColor = i < 3 ? '#ffffff' : '#1a1a1a';
       const fontSize = angle >= 60 ? 11 : 10;
-      labels.push(`<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="central" font-size="${fontSize}" font-weight="700" fill="${textColor}" pointer-events="none">${displayName}</text>`);
+      labels.push(`<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="central" font-size="${fontSize}" font-weight="700" fill="#ffffff" stroke="rgba(0,0,0,0.3)" stroke-width="0.4" pointer-events="none">${displayName}</text>`);
     }
   });
-
   const legend = positives.map((t, i) => `
     <div class="legend-item" data-${dataAttr}="${t.no}">
-      <span class="legend-dot" style="background:${colors[i % colors.length]}"></span>
+      <span class="legend-dot" style="background:${themeColor(t.no)}"></span>
       <span class="legend-rank">${i + 1}</span>
       <span class="legend-name">${t.name}</span>
       <span class="legend-val">+${t.change.toFixed(2)}%</span>
@@ -2851,6 +2855,12 @@ function renderMarket(market) {
     }
   }
   html += `</div>`;
+  // 업종 캘린더 (HISTORY_LOADED 있을 시)
+  if (HISTORY_LOADED && HISTORY_LOADED.industries && Object.keys(HISTORY_LOADED.industries).length > 0) {
+    html += renderHeatmap(HISTORY_LOADED, 'industry');
+  } else {
+    html += `<div class="strength-section"><div class="strength-loading">📅 업종 캘린더 준비 중<br><span style="font-size:11px">데이터 누적 중 (며칠 후 표시)</span></div></div>`;
+  }
   } // end industry view
 
   // ===== MOVERS 뷰 =====
@@ -2963,6 +2973,15 @@ function renderMarket(market) {
   el.querySelectorAll('.strength-row[data-code]').forEach(row => {
     row.onclick = () => openStockModal(row.dataset.code);
   });
+  // 캘린더 클릭 → 그날 TOP 10 모달
+  bindHeatmapClicks(el);
+}
+
+// 테마/업종 번호 기반 안정적 색상 (golden angle 분포)
+function themeColor(no) {
+  const n = parseInt(no) || 0;
+  const hue = (n * 137.508) % 360;
+  return `hsl(${hue.toFixed(0)}, 70%, 55%)`;
 }
 
 async function loadHistoryRange(maxDays = 7) {
@@ -2974,17 +2993,19 @@ async function loadHistoryRange(maxDays = 7) {
     dates = (idx.dates || []).slice(0, maxDays);
   } catch { return null; }
   if (dates.length === 0) return null;
-  const history = {};
+  const history = {};   // date → themes (backward compat)
+  const industries = {}; // date → industries
   await Promise.all(dates.map(async (date) => {
     try {
       const r = await fetch(`data/history/${date}.json?t=` + Date.now());
       if (r.ok) {
         const d = await r.json();
         history[date] = d.themes || [];
+        if (d.industries) industries[date] = d.industries;
       }
     } catch {}
   }));
-  return { dates, history };
+  return { dates, history, industries };
 }
 
 function computeMovements(loaded) {
@@ -3100,54 +3121,38 @@ async function loadAndRenderMovements() {
   }
   const movements = computeMovements(HISTORY_LOADED);
   renderMovements(movements, HISTORY_LOADED.dates.length);
-  // 캘린더 히트맵 추가
-  el.insertAdjacentHTML('beforeend', renderHeatmap(HISTORY_LOADED));
-  // Heatmap day click → date picker로 그날 데이터 보기
-  el.querySelectorAll('.heatmap-day[data-date]').forEach(d => {
-    d.onclick = () => {
-      const date = d.dataset.date;
-      // 강도 뷰의 historyDate로 설정 후 이동
-      state.historyDate = date;
-      const themes = HISTORY_LOADED.history[date];
-      if (themes) {
-        state.historyThemes = themes;
-        setView('strength');
-      }
-    };
-  });
+  // 캘린더 히트맵 추가 (테마)
+  el.insertAdjacentHTML('beforeend', renderHeatmap(HISTORY_LOADED, 'theme'));
+  bindHeatmapClicks(el);
 }
 
-function renderHeatmap(loaded) {
+function renderHeatmap(loaded, type) {
+  // type: 'theme' or 'industry'
+  const isIndustry = type === 'industry';
   const dates = loaded.dates || [];
   if (dates.length === 0) return '';
-  // 각 날짜의 평균 등락률 (TOP 10 평균)
-  const dayStats = {};
+  const dataMap = isIndustry ? (loaded.industries || {}) : (loaded.history || {});
+  const dayInfo = {};
   dates.forEach(date => {
-    const themes = loaded.history[date] || [];
-    if (themes.length === 0) return;
-    // 상위 10개 테마 평균 등락률
-    const top10 = themes.slice(0, 10);
-    const avg = top10.reduce((s, t) => s + t.change, 0) / top10.length;
-    dayStats[date] = avg;
+    const list = dataMap[date] || [];
+    if (list.length === 0) return;
+    dayInfo[date] = list.slice(0, 10);
   });
-  // Build calendar (last ~5 weeks)
-  const sortedDates = Object.keys(dayStats).sort();
+  const sortedDates = Object.keys(dayInfo).sort();
   if (sortedDates.length === 0) return '';
   const lastDate = parseDate(sortedDates[sortedDates.length - 1]);
-  const firstDate = parseDate(sortedDates[0]);
-  // Show last 5 weeks (35 days)
   const today = lastDate;
   const start = new Date(today);
   start.setDate(start.getDate() - 34);
-  // Adjust start to a Sunday for clean week alignment
   const dayOfWeek = start.getDay();
   start.setDate(start.getDate() - dayOfWeek);
-  const cells = [];
   const weekHeaders = ['일','월','화','수','목','금','토'];
+  const label = isIndustry ? '업종' : '테마';
+  const dataAttr = isIndustry ? 'industry' : 'theme';
   let html = '';
   html += `<div class="strength-section">`;
-  html += `<div class="strength-title" style="margin-bottom:8px">📅 강도 캘린더</div>`;
-  html += `<div class="strength-meta" style="margin-bottom:6px">최근 5주간 상위 10개 테마 평균 등락률 · 클릭해 그날 데이터 보기</div>`;
+  html += `<div class="strength-title" style="margin-bottom:8px">📅 ${label} 강도 캘린더</div>`;
+  html += `<div class="strength-meta" style="margin-bottom:6px">최근 5주 · 1위 ${label} 색상 · 칸 클릭 시 그날 TOP 10</div>`;
   html += `<div class="heatmap-container">`;
   weekHeaders.forEach(h => {
     html += `<div class="heatmap-day-header">${h}</div>`;
@@ -3160,27 +3165,79 @@ function renderHeatmap(loaded) {
       continue;
     }
     const dateStr = formatDate(d);
-    const stat = dayStats[dateStr];
-    if (stat === undefined) {
+    const list = dayInfo[dateStr];
+    if (!list) {
       html += `<div class="heatmap-day" title="${dateStr} (데이터 없음)">${d.getDate()}</div>`;
     } else {
-      const color = heatmapColor(stat);
-      html += `<div class="heatmap-day has-data" data-date="${dateStr}" title="${dateStr} 평균 ${stat>0?'+':''}${stat.toFixed(2)}%" style="background:${color}">${d.getDate()}</div>`;
+      const top1 = list[0];
+      const color = themeColor(top1.no);
+      const sign = top1.change > 0 ? '+' : '';
+      const tooltip = `${dateStr} · 1위 ${top1.name} ${sign}${top1.change.toFixed(2)}%`;
+      html += `<div class="heatmap-day has-data" data-date="${dateStr}" data-type="${dataAttr}" title="${tooltip}" style="background:${color}">${d.getDate()}</div>`;
     }
   }
   html += `</div>`;
-  // Legend
-  html += `<div class="heatmap-legend">
-    <span>약</span>
-    <span class="heatmap-legend-box" style="background:${heatmapColor(-3)}"></span>
-    <span class="heatmap-legend-box" style="background:${heatmapColor(-1)}"></span>
-    <span class="heatmap-legend-box" style="background:${heatmapColor(0)}"></span>
-    <span class="heatmap-legend-box" style="background:${heatmapColor(1)}"></span>
-    <span class="heatmap-legend-box" style="background:${heatmapColor(3)}"></span>
-    <span>강</span>
-  </div>`;
+  html += `<div class="strength-meta" style="margin-top:8px;text-align:center;font-size:11px">색깔이 다르면 그날 1위 ${label}가 다르다는 뜻 · 같은 색 연속 = 같은 ${label} 강세</div>`;
   html += `</div>`;
   return html;
+}
+
+function bindHeatmapClicks(container) {
+  container.querySelectorAll('.heatmap-day[data-date]').forEach(d => {
+    d.onclick = () => {
+      const date = d.dataset.date;
+      const type = d.dataset.type || 'theme';
+      const list = (type === 'industry' ? (HISTORY_LOADED.industries || {})[date] : (HISTORY_LOADED.history || {})[date]) || [];
+      showDayRankingModal(date, list.slice(0, 10), type);
+    };
+  });
+}
+
+function showDayRankingModal(date, list, type) {
+  const modal = document.getElementById('dayRankingModal');
+  const isIndustry = type === 'industry';
+  const label = isIndustry ? '업종' : '테마';
+  modal.querySelector('#dayRankingTitle').textContent = `📅 ${fmtDateStr(date)} ${label} TOP 10`;
+  let html = '<div style="display:flex;flex-direction:column;gap:6px">';
+  if (list.length === 0) {
+    html += '<div class="strength-loading">데이터 없음</div>';
+  } else {
+    list.forEach((t, i) => {
+      const sign = t.change > 0 ? '+' : '';
+      const cls = t.change > 0 ? 'up' : t.change < 0 ? 'down' : 'flat';
+      const dataAttrName = isIndustry ? 'industry-no' : 'theme-no';
+      html += `<div class="legend-item" data-${dataAttrName}="${t.no}" data-modal-row="1">
+        <span class="legend-dot" style="background:${themeColor(t.no)}"></span>
+        <span class="legend-rank">${i + 1}</span>
+        <span class="legend-name">${t.name}</span>
+        <span class="legend-val ${cls}">${sign}${t.change.toFixed(2)}%</span>
+      </div>`;
+    });
+  }
+  html += '</div>';
+  modal.querySelector('#dayRankingBody').innerHTML = html;
+  modal.classList.add('show');
+  // Bind clicks for items in modal
+  modal.querySelectorAll('[data-modal-row]').forEach(row => {
+    row.onclick = () => {
+      closeDayRankingModal();
+      const themeNo = row.dataset.themeNo;
+      const indNo = row.dataset.industryNo;
+      if (themeNo) {
+        const t = (MARKET && MARKET.naver_themes) ? MARKET.naver_themes.find(x => x.no === themeNo) : null;
+        if (t && t.stocks && t.stocks.length > 0) selectTheme(`📊 ${t.name}`, { scroll: true });
+        else window.open(`https://finance.naver.com/sise/sise_group_detail.naver?type=theme&no=${themeNo}`, '_blank');
+      } else if (indNo) {
+        const ind = (MARKET && MARKET.naver_industries) ? MARKET.naver_industries.find(x => x.no === indNo) : null;
+        if (ind && ind.stocks && ind.stocks.length > 0) selectTheme(`🏭 ${ind.name}`, { scroll: true });
+        else window.open(`https://finance.naver.com/sise/sise_group_detail.naver?type=upjong&no=${indNo}`, '_blank');
+      }
+    };
+  });
+}
+
+function closeDayRankingModal() {
+  document.getElementById('dayRankingModal').classList.remove('show');
 }
 
 function parseDate(yyyymmdd) {
@@ -3217,6 +3274,8 @@ async function initMarket() {
     MARKET = await loadMarket();
     await loadDescriptions();
     await syncWatchlistFromGitHub();
+    // 캘린더 사용 가능하도록 history 미리 로드 (background)
+    loadHistoryRange(60).then(loaded => { if (loaded) HISTORY_LOADED = loaded; });
     render();
     setView('strength');
     checkAlerts();
