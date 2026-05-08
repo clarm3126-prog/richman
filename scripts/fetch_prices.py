@@ -496,7 +496,7 @@ def update_volume_data(stocks):
                         "ratio": round(cv / pv, 2),
                     })
                 surges.sort(key=lambda x: x["ratio"], reverse=True)
-                surges = surges[:30]
+                surges = surges[:60]  # KOSPI/KOSDAQ 필터 적용 후도 충분한 buffer
         except Exception as e:
             print(f"  vol prev read err: {e}")
 
