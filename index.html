@@ -254,6 +254,30 @@
   .progress-fill {
     height: 100%; background: #2563eb; transition: width 0.3s; width: 0%;
   }
+  .donut-container {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    margin: 12px 0 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .donut-svg { width: 160px; height: 160px; flex-shrink: 0; }
+  .donut-svg path { transition: opacity 0.2s; cursor: pointer; }
+  .donut-svg path:hover { opacity: 0.75; }
+  .donut-center { font-size: 11px; fill: #6b7280; }
+  .donut-center-val { font-size: 13px; font-weight: 700; fill: #dc2626; }
+  .donut-legend { flex: 1; min-width: 160px; font-size: 12px; }
+  .legend-item {
+    display: flex; align-items: center; gap: 6px; padding: 3px 0;
+    cursor: pointer; font-variant-numeric: tabular-nums;
+  }
+  .legend-item:active { opacity: 0.6; }
+  .legend-dot {
+    width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0;
+  }
+  .legend-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .legend-val { font-weight: 700; color: #dc2626; }
   .history-controls {
     display: flex; gap: 6px; align-items: center; flex-shrink: 0;
   }
@@ -335,6 +359,9 @@
     .history-reset { background: #2a2f3a; border-color: #3a414f; color: #e5e7eb; }
     .history-reset:active { background: #3a414f; }
     .history-badge { background: #3a1818; color: #fca5a5; }
+    .donut-center { fill: #9ca3af; }
+    .donut-center-val { fill: #fca5a5; }
+    .legend-val { color: #fca5a5; }
   }
 </style>
 </head>
@@ -1070,6 +1097,48 @@ function scrollToSection(id) {
   window.scrollTo({ top, behavior: 'smooth' });
 }
 
+function donutArc(cx, cy, r, ir, startA, endA) {
+  const sR = (startA - 90) * Math.PI / 180;
+  const eR = (endA - 90) * Math.PI / 180;
+  const x1 = cx + r * Math.cos(sR), y1 = cy + r * Math.sin(sR);
+  const x2 = cx + r * Math.cos(eR), y2 = cy + r * Math.sin(eR);
+  const x3 = cx + ir * Math.cos(eR), y3 = cy + ir * Math.sin(eR);
+  const x4 = cx + ir * Math.cos(sR), y4 = cy + ir * Math.sin(sR);
+  const large = (endA - startA) > 180 ? 1 : 0;
+  return `M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} L ${x3} ${y3} A ${ir} ${ir} 0 ${large} 0 ${x4} ${y4} Z`;
+}
+
+function renderDonut(items, top = 5, dataAttr = 'theme-no') {
+  const positives = items.filter(t => t.change > 0).slice(0, top);
+  if (positives.length === 0) return '';
+  const total = positives.reduce((s, t) => s + t.change, 0);
+  const colors = ['#dc2626', '#ef4444', '#f87171', '#fb923c', '#fbbf24'];
+  const cx = 100, cy = 100, r = 75, ir = 48;
+  let cum = 0;
+  const slices = positives.map((t, i) => {
+    const angle = (t.change / total) * 360;
+    const startA = cum;
+    const endA = cum + (angle === 360 ? 359.99 : angle);
+    cum = endA;
+    const path = donutArc(cx, cy, r, ir, startA, endA);
+    return `<path d="${path}" fill="${colors[i % colors.length]}" data-${dataAttr}="${t.no}"><title>${t.name} +${t.change.toFixed(2)}%</title></path>`;
+  }).join('');
+  const legend = positives.map((t, i) => `
+    <div class="legend-item" data-${dataAttr}="${t.no}">
+      <span class="legend-dot" style="background:${colors[i % colors.length]}"></span>
+      <span class="legend-name">${i + 1}. ${t.name}</span>
+      <span class="legend-val">+${t.change.toFixed(2)}%</span>
+    </div>`).join('');
+  return `<div class="donut-container">
+    <svg class="donut-svg" viewBox="0 0 200 200">
+      ${slices}
+      <text x="100" y="93" text-anchor="middle" class="donut-center">강세 TOP ${positives.length}</text>
+      <text x="100" y="113" text-anchor="middle" class="donut-center-val">+${total.toFixed(2)}%</text>
+    </svg>
+    <div class="donut-legend">${legend}</div>
+  </div>`;
+}
+
 function fmtVolume(v) {
   if (!v) return '0';
   if (v >= 100000000) return (v / 100000000).toFixed(2) + '억';
@@ -1077,11 +1146,35 @@ function fmtVolume(v) {
   return v.toLocaleString('ko-KR');
 }
 
+// 우리 DATA에서 회사 설명 lookup 빌드 (한 번만 계산)
+const STOCK_DESC = (() => {
+  const map = {};
+  DATA.themes.forEach(theme => {
+    theme.companies.forEach(c => {
+      if (!map[c.code] && c.description && !c.description.includes('네이버')) {
+        map[c.code] = c.description;
+      }
+    });
+  });
+  return map;
+})();
+
+function getStockDescription(code, fallback) {
+  return STOCK_DESC[code] || fallback || '';
+}
+
 function getAllThemes() {
   const myThemes = DATA.themes;
   const naverHot = [];
+  // dedup by no
+  const seenThemeNos = new Set();
   if (MARKET && MARKET.naver_themes) {
-    MARKET.naver_themes.slice(0, 10).forEach((nt, i) => {
+    const uniq = MARKET.naver_themes.filter(t => {
+      if (seenThemeNos.has(t.no)) return false;
+      seenThemeNos.add(t.no);
+      return true;
+    });
+    uniq.slice(0, 10).forEach((nt, i) => {
       if (nt.stocks && nt.stocks.length > 0) {
         const sign = nt.change > 0 ? '+' : '';
         naverHot.push({
@@ -1093,15 +1186,21 @@ function getAllThemes() {
             code: s.code,
             name: s.name,
             role: j < 3 ? '핵심주' : '관련주',
-            description: `네이버 [${nt.name}] 테마 멤버주`,
+            description: getStockDescription(s.code, `${nt.name} 관련주`),
           })),
         });
       }
     });
   }
   const industryHot = [];
+  const seenIndNos = new Set();
   if (MARKET && MARKET.naver_industries) {
-    MARKET.naver_industries.slice(0, 10).forEach((ni, i) => {
+    const uniq = MARKET.naver_industries.filter(t => {
+      if (seenIndNos.has(t.no)) return false;
+      seenIndNos.add(t.no);
+      return true;
+    });
+    uniq.slice(0, 10).forEach((ni, i) => {
       if (ni.stocks && ni.stocks.length > 0) {
         const sign = ni.change > 0 ? '+' : '';
         industryHot.push({
@@ -1113,7 +1212,7 @@ function getAllThemes() {
             code: s.code,
             name: s.name,
             role: j < 3 ? '핵심주' : '관련주',
-            description: `네이버 [${ni.name}] 업종 멤버주`,
+            description: getStockDescription(s.code, `${ni.name} 업종 종목`),
           })),
         });
       }
@@ -1298,7 +1397,13 @@ function renderMarket(market) {
   // --- 테마 강도 카드 (네이버 금융 기준 + 날짜 선택) ---
   html += `<div class="strength-section" id="section-strength">`;
   const isHist = !!state.historyDate;
-  const naverThemes = isHist ? (state.historyThemes || []) : (market.naver_themes || []);
+  const rawThemes = isHist ? (state.historyThemes || []) : (market.naver_themes || []);
+  const seenT = new Set();
+  const naverThemes = rawThemes.filter(t => {
+    if (seenT.has(t.no)) return false;
+    seenT.add(t.no);
+    return true;
+  });
   const histLabel = isHist ? `<span class="history-badge">📅 ${fmtDateStr(state.historyDate)}</span>` : '';
   const todayIso = new Date().toISOString().slice(0, 10);
   html += `<div class="strength-header">
@@ -1314,6 +1419,7 @@ function renderMarket(market) {
   if (naverThemes.length === 0) {
     html += '<div class="strength-loading">네이버 테마 데이터를 준비 중입니다.<br><span style="font-size:11px">GitHub Actions 다음 실행 후 표시됩니다.</span></div>';
   } else {
+    html += renderDonut(naverThemes, 5, 'theme-no');
     html += '<table class="strength-table"><thead><tr><th>#</th><th>테마</th><th class="num">등락률</th><th class="num">↑/↓</th></tr></thead><tbody>';
     naverThemes.slice(0, 10).forEach((t, i) => {
       html += `<tr class="strength-row" data-theme-no="${t.no}">
@@ -1344,10 +1450,17 @@ function renderMarket(market) {
   html += `<div class="strength-section" id="section-industry">`;
   html += `<div class="strength-title" style="margin-bottom:8px">🏭 업종 강도 TOP 10</div>`;
   html += `<div class="strength-meta" style="margin-bottom:6px">네이버 업종 분류 기준 · 행 클릭 시 멤버 종목 보기</div>`;
-  const naverInds = (market.naver_industries || []);
+  const rawInds = (market.naver_industries || []);
+  const seenI = new Set();
+  const naverInds = rawInds.filter(t => {
+    if (seenI.has(t.no)) return false;
+    seenI.add(t.no);
+    return true;
+  });
   if (naverInds.length === 0) {
     html += '<div class="strength-loading">업종 데이터를 준비 중입니다.</div>';
   } else {
+    html += renderDonut(naverInds, 5, 'industry-no');
     html += '<table class="strength-table"><thead><tr><th>#</th><th>업종</th><th class="num">등락률</th><th class="num">↑/↓</th></tr></thead><tbody>';
     naverInds.slice(0, 10).forEach((t, i) => {
       html += `<tr class="strength-row" data-industry-no="${t.no}">
@@ -1437,29 +1550,29 @@ function renderMarket(market) {
   el.querySelectorAll('.strength-row[data-theme]').forEach(row => {
     row.onclick = () => selectTheme(row.dataset.theme, { scroll: true });
   });
-  // 네이버 테마 행 → 멤버 종목이 있으면 앱 내부에서, 없으면 네이버 페이지 새 탭
-  el.querySelectorAll('.strength-row[data-theme-no]').forEach(row => {
-    row.onclick = () => {
-      const no = row.dataset.themeNo;
-      const t = (MARKET && MARKET.naver_themes) ? MARKET.naver_themes.find(x => x.no === no) : null;
-      if (t && t.stocks && t.stocks.length > 0) {
-        selectTheme(`📊 ${t.name}`, { scroll: true });
-      } else {
-        window.open(`https://finance.naver.com/sise/sise_group_detail.naver?type=theme&no=${no}`, '_blank');
-      }
-    };
+  // 네이버 테마 행/도넛/Legend → 멤버 종목이 있으면 앱 내부, 없으면 네이버 새 탭
+  const onThemeClick = (no) => {
+    const t = (MARKET && MARKET.naver_themes) ? MARKET.naver_themes.find(x => x.no === no) : null;
+    if (t && t.stocks && t.stocks.length > 0) {
+      selectTheme(`📊 ${t.name}`, { scroll: true });
+    } else {
+      window.open(`https://finance.naver.com/sise/sise_group_detail.naver?type=theme&no=${no}`, '_blank');
+    }
+  };
+  el.querySelectorAll('[data-theme-no]').forEach(row => {
+    row.onclick = () => onThemeClick(row.dataset.themeNo);
   });
-  // 네이버 업종 행 → 멤버 종목이 있으면 앱 내부에서, 없으면 네이버 페이지 새 탭
-  el.querySelectorAll('.strength-row[data-industry-no]').forEach(row => {
-    row.onclick = () => {
-      const no = row.dataset.industryNo;
-      const ind = (MARKET && MARKET.naver_industries) ? MARKET.naver_industries.find(x => x.no === no) : null;
-      if (ind && ind.stocks && ind.stocks.length > 0) {
-        selectTheme(`🏭 ${ind.name}`, { scroll: true });
-      } else {
-        window.open(`https://finance.naver.com/sise/sise_group_detail.naver?type=upjong&no=${no}`, '_blank');
-      }
-    };
+  // 네이버 업종 행/도넛/Legend
+  const onIndustryClick = (no) => {
+    const ind = (MARKET && MARKET.naver_industries) ? MARKET.naver_industries.find(x => x.no === no) : null;
+    if (ind && ind.stocks && ind.stocks.length > 0) {
+      selectTheme(`🏭 ${ind.name}`, { scroll: true });
+    } else {
+      window.open(`https://finance.naver.com/sise/sise_group_detail.naver?type=upjong&no=${no}`, '_blank');
+    }
+  };
+  el.querySelectorAll('[data-industry-no]').forEach(row => {
+    row.onclick = () => onIndustryClick(row.dataset.industryNo);
   });
   // 종목 행 → 네이버 시세 새 탭
   el.querySelectorAll('.strength-row[data-code]').forEach(row => {

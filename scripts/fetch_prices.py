@@ -274,6 +274,7 @@ def save_history(themes, trading_day):
 def fetch_naver_themes():
     """네이버 금융 테마 리스트 (등락률·상승/하락 종목수 포함)."""
     out = []
+    seen_nos = set()
     for page in range(1, 15):
         url = f"https://finance.naver.com/sise/theme.naver?page={page}"
         try:
@@ -291,6 +292,10 @@ def fetch_naver_themes():
             nm = re.search(r'no=(\d+)[^>]*>([^<]+)</a>', row)
             if not nm:
                 continue
+            theme_no = nm.group(1)
+            if theme_no in seen_nos:
+                continue
+            seen_nos.add(theme_no)
             pct = re.search(r'col_type2.*?(red01|nv01)[^>]*>\s*([+\-]?\d+\.\d+)\s*%', row, re.S)
             if pct:
                 cls, val = pct.groups()
