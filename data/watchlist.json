@@ -3,7 +3,9 @@
     {
       "code": "232140",
       "name": "와이씨",
-      "addedAt": 1778253410374
+      "addedAt": 1778253410374,
+      "target": 24000,
+      "direction": "above"
     },
     {
       "code": "356680",
