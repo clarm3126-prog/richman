@@ -1525,6 +1525,7 @@ const DATA = {
 const state = { activeTheme: "전체", query: "", historyDate: null, historyThemes: null, currentView: "strength" };
 let MARKET = null;
 let HISTORY_LOADED = null;
+let HISTORY_LOADING = null; // in-flight Promise (중복 fetch 방지)
 
 function setView(viewName) {
   state.currentView = viewName;
@@ -1697,15 +1698,18 @@ function checkAlerts() {
 let alertCheckInterval = null;
 function startAlertChecking() {
   if (alertCheckInterval) clearInterval(alertCheckInterval);
-  // 60초마다 market.json 재조회 + 알림 체크
+  // 5분마다 market.json 재조회 + 알림 체크
+  // (서버는 5분 cron이라 더 자주 fetch는 낭비, 또한 갱신 시간 같으면 작업 skip)
   alertCheckInterval = setInterval(async () => {
     try {
       const fresh = await loadMarket();
+      // 같은 스냅샷이면 작업 skip
+      if (fresh && fresh.updated && MARKET && MARKET.updated === fresh.updated) return;
       MARKET = fresh;
       checkAlerts();
       if (state.currentView === 'watchlist') renderWatchlistView();
     } catch {}
-  }, 60000);
+  }, 5 * 60 * 1000);
 }
 
 function setAlert(code, target, direction) {
@@ -2325,8 +2329,7 @@ function toggleTabs() {
   if (arrow) arrow.textContent = tabs.classList.contains('collapsed') ? '▼' : '▲';
 }
 
-function selectTheme(name, opts) {
-  opts = opts || {};
+function selectTheme(name) {
   state.activeTheme = name;
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.textContent === name));
   const label = document.getElementById('tabsToggleLabel');
@@ -2338,15 +2341,6 @@ function selectTheme(name, opts) {
     if (arrow) arrow.textContent = '▼';
   }
   setView('themes');
-}
-
-function scrollToSection(id) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  const header = document.querySelector('header');
-  const offset = header ? header.offsetHeight + 8 : 100;
-  const top = el.getBoundingClientRect().top + window.pageYOffset - offset;
-  window.scrollTo({ top, behavior: 'smooth' });
 }
 
 function renderDonut(items, top = 5, dataAttr = 'theme-no') {
@@ -2726,9 +2720,11 @@ function renderContent() {
   contentEl.innerHTML = html;
 }
 
+let _searchDebounce = null;
 document.getElementById('search').addEventListener('input', e => {
   state.query = e.target.value;
-  renderContent();
+  clearTimeout(_searchDebounce);
+  _searchDebounce = setTimeout(renderContent, 150);
 });
 
 render();
@@ -2745,25 +2741,6 @@ async function loadMarket() {
   return data;
 }
 
-function calcStrength(market) {
-  return DATA.themes.map(theme => {
-    let weighted = 0, totalWeight = 0, valid = 0;
-    for (const c of theme.companies) {
-      const s = market.stocks[c.code];
-      if (!s) continue;
-      const weight = c.role === '핵심주' ? 2 : 1;
-      weighted += s.change * weight;
-      totalWeight += weight;
-      valid++;
-    }
-    return {
-      name: theme.name,
-      avg: totalWeight > 0 ? weighted / totalWeight : null,
-      valid,
-      total: theme.companies.length,
-    };
-  }).filter(t => t.avg !== null).sort((a, b) => b.avg - a.avg);
-}
 
 function getTopMovers(market, n, extraFilter) {
   const arr = Object.entries(market.stocks)
@@ -2783,8 +2760,6 @@ function setMarketFilter(filter) {
 
 const colorClass = v => v > 0 ? 'up' : v < 0 ? 'down' : 'flat';
 const fmtPct = v => (v > 0 ? '+' : '') + v.toFixed(2) + '%';
-const fmtNum = v => v.toLocaleString('ko-KR');
-
 function renderMarket(market) {
   const el = document.getElementById('strength');
   if (!el) return;
@@ -2796,7 +2771,6 @@ function renderMarket(market) {
   }
   const marketFilter = state.marketFilter || 'all';
   const filterByMarket = (s) => marketFilter === 'all' || s.market === marketFilter;
-  const movers = getTopMovers(market, 10, filterByMarket);
   let html = '';
 
   // ===== STRENGTH 뷰 =====
@@ -2935,7 +2909,8 @@ function renderMarket(market) {
 
   // ===== MOVERS 뷰 =====
   if (view === 'movers') {
-  const mf = state.marketFilter || 'all';
+  const movers = getTopMovers(market, 10, filterByMarket);
+  const mf = marketFilter;
   html += `<div class="strength-section">
     <div class="market-filter">
       <button class="${mf==='all'?'active':''}" onclick="setMarketFilter('all')">전체</button>
@@ -3013,13 +2988,13 @@ function renderMarket(market) {
 
   // 내부 테마 행 (있을 시) → 해당 테마로 필터링
   el.querySelectorAll('.strength-row[data-theme]').forEach(row => {
-    row.onclick = () => selectTheme(row.dataset.theme, { scroll: true });
+    row.onclick = () => selectTheme(row.dataset.theme);
   });
   // 네이버 테마 행/도넛/Legend → 멤버 종목이 있으면 앱 내부, 없으면 네이버 새 탭
   const onThemeClick = (no) => {
     const t = (MARKET && MARKET.naver_themes) ? MARKET.naver_themes.find(x => x.no === no) : null;
     if (t && t.stocks && t.stocks.length > 0) {
-      selectTheme(`📊 ${t.name}`, { scroll: true });
+      selectTheme(`📊 ${t.name}`);
     } else {
       window.open(`https://finance.naver.com/sise/sise_group_detail.naver?type=theme&no=${no}`, '_blank');
     }
@@ -3031,7 +3006,7 @@ function renderMarket(market) {
   const onIndustryClick = (no) => {
     const ind = (MARKET && MARKET.naver_industries) ? MARKET.naver_industries.find(x => x.no === no) : null;
     if (ind && ind.stocks && ind.stocks.length > 0) {
-      selectTheme(`🏭 ${ind.name}`, { scroll: true });
+      selectTheme(`🏭 ${ind.name}`);
     } else {
       window.open(`https://finance.naver.com/sise/sise_group_detail.naver?type=upjong&no=${no}`, '_blank');
     }
@@ -3230,7 +3205,7 @@ function renderMovements(movements, daysAvailable) {
       const no = row.dataset.themeNo;
       const t = (MARKET && MARKET.naver_themes) ? MARKET.naver_themes.find(x => x.no === no) : null;
       if (t && t.stocks && t.stocks.length > 0) {
-        selectTheme(`📊 ${t.name}`, { scroll: true });
+        selectTheme(`📊 ${t.name}`);
       } else {
         window.open(`https://finance.naver.com/sise/sise_group_detail.naver?type=theme&no=${no}`, '_blank');
       }
@@ -3244,7 +3219,9 @@ async function loadAndRenderMovements() {
   if (!el) return;
   if (!HISTORY_LOADED) {
     el.innerHTML = `<div class="strength-section"><div class="strength-loading">⏳ 자금 흐름 데이터 로드 중...</div></div>`;
-    HISTORY_LOADED = await loadHistoryRange(60);
+    // 백그라운드에서 이미 로딩 중이면 그 Promise 대기 (중복 fetch 방지)
+    HISTORY_LOADING = HISTORY_LOADING || loadHistoryRange(60);
+    HISTORY_LOADED = await HISTORY_LOADING;
   }
   if (!HISTORY_LOADED) {
     renderMovements(null, 0);
@@ -3383,11 +3360,11 @@ function showDayRankingModal(date, list, type) {
       const indNo = row.dataset.industryNo;
       if (themeNo) {
         const t = (MARKET && MARKET.naver_themes) ? MARKET.naver_themes.find(x => x.no === themeNo) : null;
-        if (t && t.stocks && t.stocks.length > 0) selectTheme(`📊 ${t.name}`, { scroll: true });
+        if (t && t.stocks && t.stocks.length > 0) selectTheme(`📊 ${t.name}`);
         else window.open(`https://finance.naver.com/sise/sise_group_detail.naver?type=theme&no=${themeNo}`, '_blank');
       } else if (indNo) {
         const ind = (MARKET && MARKET.naver_industries) ? MARKET.naver_industries.find(x => x.no === indNo) : null;
-        if (ind && ind.stocks && ind.stocks.length > 0) selectTheme(`🏭 ${ind.name}`, { scroll: true });
+        if (ind && ind.stocks && ind.stocks.length > 0) selectTheme(`🏭 ${ind.name}`);
         else window.open(`https://finance.naver.com/sise/sise_group_detail.naver?type=upjong&no=${indNo}`, '_blank');
       }
     };
@@ -3413,17 +3390,6 @@ function formatDate(d) {
   return `${y}${m}${day}`;
 }
 
-function heatmapColor(pct) {
-  // -3% ~ +3% 스케일을 파랑~회색~빨강 그라데이션
-  if (pct >= 3) return '#dc2626';
-  if (pct >= 1.5) return '#ef4444';
-  if (pct >= 0.5) return '#f87171';
-  if (pct > -0.5) return '#9ca3af';
-  if (pct > -1.5) return '#60a5fa';
-  if (pct > -3) return '#3b82f6';
-  return '#2563eb';
-}
-
 async function initMarket() {
   const el = document.getElementById('strength');
   el.innerHTML = `<div class="strength-section"><div class="strength-loading">⏳ 시장 데이터 불러오는 중...</div></div>`;
@@ -3432,8 +3398,9 @@ async function initMarket() {
     MARKET = await loadMarket();
     await loadDescriptions();
     await syncWatchlistFromGitHub();
-    // 캘린더 사용 가능하도록 history 미리 로드 (background)
-    loadHistoryRange(60).then(loaded => { if (loaded) HISTORY_LOADED = loaded; });
+    // 캘린더 사용 가능하도록 history 미리 로드 (background, 중복 방지)
+    HISTORY_LOADING = loadHistoryRange(60);
+    HISTORY_LOADING.then(loaded => { if (loaded) HISTORY_LOADED = loaded; });
     render();
     setView('strength');
     checkAlerts();

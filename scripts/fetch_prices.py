@@ -62,7 +62,7 @@ def fetch_market(sosok):
     out = {}
     page = 1
     empty_pages = 0
-    while page <= 60:
+    while page <= 50:  # KOSPI ~30, KOSDAQ ~40 페이지 (early-exit 가드 별도)
         url = f"https://finance.naver.com/sise/sise_market_sum.naver?sosok={sosok}&page={page}"
         try:
             r = requests.get(url, headers=HEADERS, timeout=15)
@@ -225,60 +225,39 @@ def fetch_naver_industries():
     return out
 
 
-def enrich_top_industries_with_stocks(industries, top_n=10):
-    """상위 N개 네이버 업종에 멤버 종목 리스트 추가."""
-    for ind in industries[:top_n]:
-        ind_no = ind.get("no")
-        if not ind_no:
+def _enrich_with_stocks(items, kind, top_n=10):
+    """공통: 상위 N개 항목에 멤버 종목 리스트 추가. kind in {'theme','industry'}"""
+    base = "industry" if kind == "industry" else "theme"
+    headers = {**HEADERS, "Referer": "https://m.stock.naver.com/"}
+    for item in items[:top_n]:
+        no = item.get("no")
+        if not no:
             continue
-        url = f"https://m.stock.naver.com/api/stocks/industry/{ind_no}?page=1&pageSize=50"
-        headers = {**HEADERS, "Referer": "https://m.stock.naver.com/"}
+        url = f"https://m.stock.naver.com/api/stocks/{base}/{no}?page=1&pageSize=50"
         try:
             r = requests.get(url, headers=headers, timeout=10)
             if r.status_code != 200:
-                ind["stocks"] = []
+                item["stocks"] = []
                 continue
             data = r.json()
-            stocks = []
-            for s in data.get("stocks", []):
-                code = s.get("itemCode")
-                name = s.get("stockName")
-                if code and name:
-                    stocks.append({"code": str(code).zfill(6), "name": name})
-            ind["stocks"] = stocks
+            item["stocks"] = [
+                {"code": str(s.get("itemCode")).zfill(6), "name": s.get("stockName")}
+                for s in data.get("stocks", [])
+                if s.get("itemCode") and s.get("stockName")
+            ]
         except Exception as e:
-            print(f"  industry {ind_no} stocks fetch failed: {e}")
-            ind["stocks"] = []
+            print(f"  {kind} {no} stocks fetch failed: {e}")
+            item["stocks"] = []
         time.sleep(0.1)
-    print(f"  enriched {top_n} industries with member stocks")
+    print(f"  enriched {top_n} {kind}s with member stocks")
+
+
+def enrich_top_industries_with_stocks(industries, top_n=10):
+    _enrich_with_stocks(industries, "industry", top_n)
 
 
 def enrich_top_themes_with_stocks(themes, top_n=10):
-    """상위 N개 네이버 테마에 멤버 종목 리스트 추가."""
-    for theme in themes[:top_n]:
-        theme_no = theme.get("no")
-        if not theme_no:
-            continue
-        url = f"https://m.stock.naver.com/api/stocks/theme/{theme_no}?page=1&pageSize=50"
-        headers = {**HEADERS, "Referer": "https://m.stock.naver.com/"}
-        try:
-            r = requests.get(url, headers=headers, timeout=10)
-            if r.status_code != 200:
-                theme["stocks"] = []
-                continue
-            data = r.json()
-            stocks = []
-            for s in data.get("stocks", []):
-                code = s.get("itemCode")
-                name = s.get("stockName")
-                if code and name:
-                    stocks.append({"code": str(code).zfill(6), "name": name})
-            theme["stocks"] = stocks
-        except Exception as e:
-            print(f"  theme {theme_no} stocks fetch failed: {e}")
-            theme["stocks"] = []
-        time.sleep(0.1)
-    print(f"  enriched {top_n} themes with member stocks")
+    _enrich_with_stocks(themes, "theme", top_n)
 
 
 def send_telegram(bot_token, chat_id, text):
@@ -741,13 +720,40 @@ def fetch_52w_high_for_stock(code):
 
 
 def find_new_highs(stocks):
-    """52주 신고가 종목 찾기. 모바일 API 병렬 호출 후 오늘 고가가 52주 최고가에 도달한 종목 추출."""
+    """52주 신고가 종목 찾기. 캐시된 52w high 활용 + 후보 필터로 호출 절감.
+    캐시 구조: data/52w_cache.json = {date: 'YYYYMMDD', high: {code: int}}
+    하루 1번만 전체 갱신, 그 외엔 캐시 사용 + 가격이 캐시 ≈90% 이상인 종목만 재확인.
+    """
     import concurrent.futures
-    candidates = [
-        code for code, s in stocks.items()
-        if s.get("volume", 0) > 5000 and s.get("price", 0) > 0
-    ]
-    print(f"  Checking {len(candidates)} candidates for 52w high...")
+    cache_path = Path("data/52w_cache.json")
+    today_str = datetime.now(KST).strftime("%Y%m%d")
+    cache = {"date": "", "high": {}}
+    if cache_path.exists():
+        try:
+            cache = json.loads(cache_path.read_text(encoding="utf-8"))
+        except Exception:
+            cache = {"date": "", "high": {}}
+
+    is_full_refresh = cache.get("date") != today_str
+    cached_high = cache.get("high", {})
+
+    if is_full_refresh:
+        # 하루 첫 실행: 전체 종목 대상
+        candidates = [
+            code for code, s in stocks.items()
+            if s.get("volume", 0) > 5000 and s.get("price", 0) > 0
+        ]
+        print(f"  [FULL] checking {len(candidates)} candidates for 52w high (1회/일)...")
+    else:
+        # 캐시 있음: 오늘 가격이 캐시값의 90% 이상인 종목만 재확인 (가능성 있는 것만)
+        candidates = []
+        for code, s in stocks.items():
+            if s.get("volume", 0) <= 5000 or s.get("price", 0) <= 0:
+                continue
+            ch = cached_high.get(code, 0)
+            if ch == 0 or s["price"] >= ch * 0.95:
+                candidates.append(code)
+        print(f"  [INCREMENTAL] checking {len(candidates)} stocks near 52w high (rest cached)...")
 
     new_highs = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=15) as ex:
@@ -758,10 +764,28 @@ def find_new_highs(stocks):
             done += 1
             if done % 500 == 0:
                 print(f"    ...{done}/{len(candidates)} checked")
+            if high_52w:
+                cached_high[code] = high_52w
             if high_52w and today_high and today_high >= high_52w:
                 new_highs.append(code)
-    new_highs.sort(key=lambda c: stocks[c].get("change", 0), reverse=True)
-    print(f"  Found {len(new_highs)} stocks at 52w high")
+
+    # incremental 모드: 캐시에 있는 다른 종목들 중 오늘 가격 >= 캐시의 52w high인 것도 포함
+    if not is_full_refresh:
+        for code, ch in cached_high.items():
+            if code in new_highs:
+                continue
+            s = stocks.get(code)
+            if not s or s.get("price", 0) < ch:
+                continue
+            new_highs.append(code)
+
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    cache_path.write_text(
+        json.dumps({"date": today_str, "high": cached_high}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    new_highs.sort(key=lambda c: stocks[c].get("change", 0) if c in stocks else 0, reverse=True)
+    print(f"  Found {len(new_highs)} stocks at 52w high (cache: {len(cached_high)})")
     return new_highs
 
 
