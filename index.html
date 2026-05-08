@@ -3016,11 +3016,38 @@ function isHoliday(dateStr) {
   return KR_HOLIDAYS.has(dateStr);
 }
 
-// 테마/업종 번호 기반 안정적 색상 (golden angle 분포)
+// 테마/업종 번호 기반 시각적으로 잘 구분되는 색상
+// 24색 큐레이션 팔레트 + 큰 소수(17)로 곱해 인접 번호끼리 색깔 거리 확보
+const COLOR_PALETTE = [
+  '#e74c3c', // 빨강
+  '#3498db', // 파랑
+  '#2ecc71', // 초록
+  '#f39c12', // 주황
+  '#9b59b6', // 자주
+  '#1abc9c', // 청록
+  '#e91e63', // 핑크
+  '#ff5722', // 다홍
+  '#673ab7', // 진보라
+  '#00bcd4', // 시안
+  '#8bc34a', // 연두
+  '#ff9800', // 호박
+  '#03a9f4', // 하늘
+  '#cddc39', // 라임
+  '#c026d3', // 푸시아
+  '#facc15', // 노랑
+  '#536dfe', // 청보라
+  '#76ff03', // 형광초록
+  '#d500f9', // 형광자주
+  '#1de9b6', // 민트
+  '#ff6b9d', // 살구핑크
+  '#3d5afe', // 진청
+  '#ffc400', // 황금
+  '#00e676', // 형광민트
+];
 function themeColor(no) {
   const n = parseInt(no) || 0;
-  const hue = (n * 137.508) % 360;
-  return `hsl(${hue.toFixed(0)}, 70%, 55%)`;
+  // 큰 소수(17)로 곱해서 인접 번호도 팔레트에서 멀리 떨어진 색 선택
+  return COLOR_PALETTE[(n * 17) % COLOR_PALETTE.length];
 }
 
 async function loadHistoryRange(maxDays = 7) {
