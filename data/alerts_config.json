@@ -1,3 +1,10 @@
 {
-  "alerts": []
+  "alerts": [
+    {
+      "code": "033100",
+      "name": "제룡전기",
+      "target": 87600,
+      "direction": "above"
+    }
+  ]
 }
