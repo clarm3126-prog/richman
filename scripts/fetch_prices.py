@@ -444,18 +444,22 @@ def update_descriptions(themes, industries):
     print(f"  descriptions: +{success} new, total cached: {len(descriptions)}")
 
 
-def save_history(themes, trading_day):
-    """일별 테마 강도 데이터를 data/history/{YYYYMMDD}.json 으로 저장하고 index 갱신."""
-    if not trading_day or not themes:
+def save_history(themes, industries, trading_day):
+    """일별 테마/업종 강도 데이터를 data/history/{YYYYMMDD}.json 으로 저장."""
+    if not trading_day or (not themes and not industries):
         return
     hist_dir = Path("data/history")
     hist_dir.mkdir(parents=True, exist_ok=True)
+    # 멤버 stocks 필드 제외 (히스토리 파일 크기 절약)
+    def lite(items):
+        return [{k: v for k, v in it.items() if k != "stocks"} for it in (items or [])]
     today_file = hist_dir / f"{trading_day}.json"
     with open(today_file, "w", encoding="utf-8") as f:
         json.dump({
             "updated": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
             "trading_day": trading_day,
-            "themes": themes,
+            "themes": lite(themes),
+            "industries": lite(industries),
         }, f, ensure_ascii=False, separators=(",", ":"))
     dates = sorted(
         [f.stem for f in hist_dir.glob("*.json") if f.stem != "index"],
@@ -463,7 +467,7 @@ def save_history(themes, trading_day):
     )
     with open(hist_dir / "index.json", "w", encoding="utf-8") as f:
         json.dump({"dates": dates}, f)
-    print(f"  history saved: {today_file.name} (total {len(dates)} days)")
+    print(f"  history saved: {today_file.name} (themes={len(themes or [])}, industries={len(industries or [])})")
 
 
 def update_volume_data(stocks):
@@ -812,7 +816,7 @@ def main():
     update_descriptions(naver_themes, naver_industries)
 
     day_str = datetime.now(KST).strftime("%Y%m%d")
-    save_history(naver_themes, day_str)
+    save_history(naver_themes, naver_industries, day_str)
 
     out = {
         "updated": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
