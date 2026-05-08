@@ -623,7 +623,28 @@
       <button class="modal-btn modal-btn-cancel" onclick="closeAlertModal()">취소</button>
       <button class="modal-btn modal-btn-save" onclick="saveAlertModal()">저장</button>
     </div>
-    <div class="modal-note">알림은 앱이 열려있거나 백그라운드에 있을 때 작동합니다.</div>
+    <div class="modal-note">앱 알림은 앱이 열려있을 때만. Telegram 알림은 항상 동작 (동기화 필요).</div>
+  </div>
+</div>
+
+<div id="telegramModal" class="modal-overlay" onclick="if(event.target===this) closeTelegramSyncModal()">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-title">📤 Telegram 알림 동기화</div>
+    <div class="modal-current">아래 JSON을 복사 → GitHub 파일에 붙여넣기 → 커밋하면 5분 내 적용</div>
+    <div class="modal-form">
+      <label class="modal-label">1️⃣ JSON 내용 복사</label>
+      <textarea id="syncJsonContent" class="modal-input" rows="8" style="font-family:ui-monospace,monospace;font-size:11px;resize:vertical" readonly></textarea>
+      <button id="copyJsonBtn" class="modal-btn modal-btn-cancel" style="width:100%;margin-top:6px" onclick="copyTelegramJson()">📋 클립보드에 복사</button>
+      <label class="modal-label">2️⃣ GitHub에서 파일 편집</label>
+      <a id="syncEditLink" href="#" target="_blank" class="modal-btn modal-btn-save" style="display:block;text-align:center;text-decoration:none;width:100%">🔗 alerts_config.json 편집 페이지 열기</a>
+      <div style="font-size:11px;color:#9ca3af;margin-top:8px;line-height:1.6">
+        편집 페이지에서: 기존 내용 전체 삭제 → 복사한 내용 붙여넣기 → 하단 "Commit changes" 클릭
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn modal-btn-cancel" onclick="closeTelegramSyncModal()">닫기</button>
+    </div>
+    <div class="modal-note">⚙️ TELEGRAM_BOT_TOKEN/CHAT_ID는 GitHub Secrets에 등록되어 있어야 동작합니다</div>
   </div>
 </div>
 
@@ -1462,14 +1483,16 @@ function renderWatchlistView() {
   if (!el) return;
   if (state.currentView !== 'watchlist') return;
   const codes = Object.keys(WATCHLIST);
+  const alertCodes = codes.filter(c => WATCHLIST[c].target);
   let html = '';
   // 관심 종목 카드
   html += `<div class="strength-section">`;
   html += `<div class="strength-header">
     <div>
       <div class="strength-title">⭐ 관심 종목 ${codes.length > 0 ? `(${codes.length})` : ''}</div>
-      <div class="strength-meta">★ 종목 추가 · 가격 도달 시 푸시 알림</div>
+      <div class="strength-meta">★ 종목 추가 · 가격 도달 시 Telegram 알림</div>
     </div>
+    ${alertCodes.length > 0 ? `<button class="refresh-btn" onclick="openTelegramSyncModal()">📤 Telegram 동기화</button>` : ''}
   </div>`;
   if (codes.length === 0) {
     html += `<div class="strength-loading">관심 종목이 없습니다.<br>
@@ -1573,6 +1596,43 @@ function addFromSearch(code, name) {
   // Re-trigger search to update buttons
   const search = document.getElementById('watchlistSearch');
   if (search) onWatchlistSearch(search.value);
+}
+
+function openTelegramSyncModal() {
+  const alerts = [];
+  for (const code in WATCHLIST) {
+    const w = WATCHLIST[code];
+    if (w.target) {
+      alerts.push({ code, name: w.name, target: w.target, direction: w.direction || 'above' });
+    }
+  }
+  const config = { alerts };
+  const json = JSON.stringify(config, null, 2);
+  const editUrl = 'https://github.com/clarm3126-prog/richman/edit/main/data/alerts_config.json';
+  const modal = document.getElementById('telegramModal');
+  modal.querySelector('.modal-title').textContent = `📤 Telegram 알림 동기화 (${alerts.length}개)`;
+  modal.querySelector('#syncJsonContent').value = json;
+  modal.querySelector('#syncEditLink').href = editUrl;
+  modal.classList.add('show');
+}
+
+function closeTelegramSyncModal() {
+  document.getElementById('telegramModal').classList.remove('show');
+}
+
+async function copyTelegramJson() {
+  const ta = document.getElementById('syncJsonContent');
+  ta.select();
+  try {
+    await navigator.clipboard.writeText(ta.value);
+    const btn = document.getElementById('copyJsonBtn');
+    const orig = btn.textContent;
+    btn.textContent = '✓ 복사됨';
+    setTimeout(() => { btn.textContent = orig; }, 1500);
+  } catch {
+    document.execCommand('copy');
+    alert('복사됨!');
+  }
 }
 
 function fmtDateStr(yyyymmdd) {

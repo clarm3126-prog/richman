@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """네이버 금융에서 KOSPI/KOSDAQ 전 종목 시세를 수집해 data/market.json으로 저장."""
 import json
+import os
 import re
 import sys
 import time
@@ -249,6 +250,92 @@ def enrich_top_themes_with_stocks(themes, top_n=10):
     print(f"  enriched {top_n} themes with member stocks")
 
 
+def send_telegram(bot_token, chat_id, text):
+    """Telegram 봇으로 메시지 전송."""
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+    try:
+        r = requests.post(
+            url,
+            json={"chat_id": chat_id, "text": text, "parse_mode": "Markdown", "disable_web_page_preview": True},
+            timeout=10,
+        )
+        return r.status_code == 200
+    except Exception as e:
+        print(f"  telegram send failed: {e}")
+        return False
+
+
+def check_alerts_and_notify(stocks):
+    """data/alerts_config.json 읽고 도달한 알림에 대해 Telegram 발송."""
+    config_path = Path("data/alerts_config.json")
+    if not config_path.exists():
+        print("  no alerts_config.json (skip alerts)")
+        return
+    bot_token = os.environ.get("TELEGRAM_BOT_TOKEN")
+    chat_id = os.environ.get("TELEGRAM_CHAT_ID")
+    if not bot_token or not chat_id:
+        print("  TELEGRAM_BOT_TOKEN/CHAT_ID env not set (skip alerts)")
+        return
+    try:
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+    except Exception as e:
+        print(f"  alerts_config parse failed: {e}")
+        return
+    alerts = config.get("alerts", [])
+    if not alerts:
+        print("  alerts_config has 0 alerts")
+        return
+
+    triggered_path = Path("data/triggered_alerts.json")
+    triggered = set()
+    if triggered_path.exists():
+        try:
+            triggered = set(json.loads(triggered_path.read_text(encoding="utf-8")))
+        except Exception:
+            triggered = set()
+
+    new_count = 0
+    for alert in alerts:
+        code = str(alert.get("code", "")).zfill(6)
+        target = alert.get("target")
+        direction = alert.get("direction", "above")
+        if not code or not target:
+            continue
+        alert_key = f"{code}_{target}_{direction}"
+        if alert_key in triggered:
+            continue
+        stock = stocks.get(code)
+        if not stock:
+            continue
+        price = stock.get("price", 0)
+        is_hit = (
+            (direction == "above" and price >= target) or
+            (direction == "below" and price <= target)
+        )
+        if not is_hit:
+            continue
+        triggered.add(alert_key)
+        new_count += 1
+        sign = "+" if stock["change"] > 0 else ""
+        dir_text = "↑ 돌파" if direction == "above" else "↓ 하락"
+        msg = (
+            f"🚨 *{stock['name']}* 알림 도달\n\n"
+            f"목표: `{target:,}원` {dir_text}\n"
+            f"현재: *{price:,}원* ({sign}{stock['change']:.2f}%)\n"
+            f"거래량: {stock.get('volume', 0):,}\n\n"
+            f"종목코드: `{code}` ({stock.get('market', '')})"
+        )
+        ok = send_telegram(bot_token, chat_id, msg)
+        print(f"  alert {'✓' if ok else '✗'}: {stock['name']} {target:,}원 {direction}")
+
+    if new_count > 0:
+        triggered_path.write_text(
+            json.dumps(sorted(triggered), ensure_ascii=False),
+            encoding="utf-8",
+        )
+        print(f"  saved {len(triggered)} triggered alerts ({new_count} new)")
+
+
 def fetch_company_description(code):
     """fnguide에서 기업 개요(bizSummaryContent) 가져오기."""
     url = f"https://comp.fnguide.com/SVO2/asp/SVD_Main.asp?gicode=A{code}&NewMenuID=Y&pGB=1&stkGb=701"
@@ -468,6 +555,9 @@ def main():
         "kosdaq": fetch_index("KOSDAQ"),
     }
     print(f"Indices: {indices}")
+
+    print("Checking price alerts...")
+    check_alerts_and_notify(stocks)
 
     new_highs = find_new_highs(stocks)
 
