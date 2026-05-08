@@ -254,30 +254,22 @@
   .progress-fill {
     height: 100%; background: #2563eb; transition: width 0.3s; width: 0%;
   }
-  .donut-container {
+  .pie-container {
     display: flex;
-    gap: 14px;
-    align-items: center;
-    margin: 12px 0 10px;
-    flex-wrap: wrap;
     justify-content: center;
+    margin: 14px 0 10px;
   }
-  .donut-svg { width: 160px; height: 160px; flex-shrink: 0; }
-  .donut-svg path { transition: opacity 0.2s; cursor: pointer; }
-  .donut-svg path:hover { opacity: 0.75; }
-  .donut-center { font-size: 11px; fill: #6b7280; }
-  .donut-center-val { font-size: 13px; font-weight: 700; fill: #dc2626; }
-  .donut-legend { flex: 1; min-width: 160px; font-size: 12px; }
-  .legend-item {
-    display: flex; align-items: center; gap: 6px; padding: 3px 0;
-    cursor: pointer; font-variant-numeric: tabular-nums;
+  .pie-svg {
+    width: 100%;
+    max-width: 320px;
+    height: auto;
+    display: block;
   }
-  .legend-item:active { opacity: 0.6; }
-  .legend-dot {
-    width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0;
+  .pie-svg path {
+    transition: opacity 0.2s;
+    cursor: pointer;
   }
-  .legend-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .legend-val { font-weight: 700; color: #dc2626; }
+  .pie-svg path:hover { opacity: 0.82; }
   .history-controls {
     display: flex; gap: 6px; align-items: center; flex-shrink: 0;
   }
@@ -359,9 +351,7 @@
     .history-reset { background: #2a2f3a; border-color: #3a414f; color: #e5e7eb; }
     .history-reset:active { background: #3a414f; }
     .history-badge { background: #3a1818; color: #fca5a5; }
-    .donut-center { fill: #9ca3af; }
-    .donut-center-val { fill: #fca5a5; }
-    .legend-val { color: #fca5a5; }
+    .pie-svg path { stroke: #1a1d23; }
   }
 </style>
 </head>
@@ -1097,45 +1087,58 @@ function scrollToSection(id) {
   window.scrollTo({ top, behavior: 'smooth' });
 }
 
-function donutArc(cx, cy, r, ir, startA, endA) {
-  const sR = (startA - 90) * Math.PI / 180;
-  const eR = (endA - 90) * Math.PI / 180;
-  const x1 = cx + r * Math.cos(sR), y1 = cy + r * Math.sin(sR);
-  const x2 = cx + r * Math.cos(eR), y2 = cy + r * Math.sin(eR);
-  const x3 = cx + ir * Math.cos(eR), y3 = cy + ir * Math.sin(eR);
-  const x4 = cx + ir * Math.cos(sR), y4 = cy + ir * Math.sin(sR);
-  const large = (endA - startA) > 180 ? 1 : 0;
-  return `M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} L ${x3} ${y3} A ${ir} ${ir} 0 ${large} 0 ${x4} ${y4} Z`;
-}
-
 function renderDonut(items, top = 5, dataAttr = 'theme-no') {
   const positives = items.filter(t => t.change > 0).slice(0, top);
   if (positives.length === 0) return '';
   const total = positives.reduce((s, t) => s + t.change, 0);
-  const colors = ['#dc2626', '#ef4444', '#f87171', '#fb923c', '#fbbf24'];
-  const cx = 100, cy = 100, r = 75, ir = 48;
+  // 다채로운 파스텔 팔레트 (예시 이미지 스타일)
+  const colors = ['#a3d977', '#e4496e', '#f5d76e', '#5dbcd2', '#e89855'];
+  const cx = 150, cy = 150, r = 135;
   let cum = 0;
-  const slices = positives.map((t, i) => {
+  const slices = [];
+  const labels = [];
+  positives.forEach((t, i) => {
     const angle = (t.change / total) * 360;
     const startA = cum;
     const endA = cum + (angle === 360 ? 359.99 : angle);
     cum = endA;
-    const path = donutArc(cx, cy, r, ir, startA, endA);
-    return `<path d="${path}" fill="${colors[i % colors.length]}" data-${dataAttr}="${t.no}"><title>${t.name} +${t.change.toFixed(2)}%</title></path>`;
-  }).join('');
-  const legend = positives.map((t, i) => `
-    <div class="legend-item" data-${dataAttr}="${t.no}">
-      <span class="legend-dot" style="background:${colors[i % colors.length]}"></span>
-      <span class="legend-name">${i + 1}. ${t.name}</span>
-      <span class="legend-val">+${t.change.toFixed(2)}%</span>
-    </div>`).join('');
-  return `<div class="donut-container">
-    <svg class="donut-svg" viewBox="0 0 200 200">
-      ${slices}
-      <text x="100" y="93" text-anchor="middle" class="donut-center">강세 TOP ${positives.length}</text>
-      <text x="100" y="113" text-anchor="middle" class="donut-center-val">+${total.toFixed(2)}%</text>
+    // 솔리드 파이 슬라이스 (중심에서 호까지)
+    const sR = (startA - 90) * Math.PI / 180;
+    const eR = (endA - 90) * Math.PI / 180;
+    const x1 = cx + r * Math.cos(sR), y1 = cy + r * Math.sin(sR);
+    const x2 = cx + r * Math.cos(eR), y2 = cy + r * Math.sin(eR);
+    const large = (endA - startA) > 180 ? 1 : 0;
+    const path = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`;
+    slices.push(`<path d="${path}" fill="${colors[i % colors.length]}" stroke="#fff" stroke-width="2.5" data-${dataAttr}="${t.no}"><title>${t.name} +${t.change.toFixed(2)}%</title></path>`);
+
+    // 슬라이스 안에 라벨 배치
+    const midA = (startA + endA) / 2;
+    const labelR = r * 0.62;
+    const lr = (midA - 90) * Math.PI / 180;
+    const lx = cx + labelR * Math.cos(lr);
+    const ly = cy + labelR * Math.sin(lr);
+    let displayName = t.name;
+    if (displayName.length > 8) displayName = displayName.slice(0, 7) + '…';
+    if (angle >= 8) {
+      labels.push(`
+        <text x="${lx}" y="${ly - 5}" text-anchor="middle" font-size="12" font-weight="600" fill="#1a1a1a" pointer-events="none">${displayName}</text>
+        <text x="${lx}" y="${ly + 12}" text-anchor="middle" font-size="14" font-weight="700" fill="#1a1a1a" pointer-events="none">+${t.change.toFixed(2)}%</text>
+      `);
+    } else {
+      // 너무 작은 슬라이스: 외부에 작게 표시
+      const outR = r + 14;
+      const olr = (midA - 90) * Math.PI / 180;
+      const ox = cx + outR * Math.cos(olr);
+      const oy = cy + outR * Math.sin(olr);
+      labels.push(`<text x="${ox}" y="${oy + 3}" text-anchor="middle" font-size="10" fill="#374151" pointer-events="none">${displayName} +${t.change.toFixed(1)}%</text>`);
+    }
+  });
+
+  return `<div class="pie-container">
+    <svg class="pie-svg" viewBox="0 0 300 300">
+      ${slices.join('')}
+      ${labels.join('')}
     </svg>
-    <div class="donut-legend">${legend}</div>
   </div>`;
 }
 
