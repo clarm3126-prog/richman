@@ -1474,6 +1474,39 @@ function loadWatchlist() {
   } catch { WATCHLIST = {}; TRIGGERED = new Set(); }
 }
 
+async function syncWatchlistFromGitHub() {
+  // GitHub의 alerts_config.json에서 알림이 설정된 종목들을 자동 복원
+  // (다른 기기에서 추가한 알림이 이 기기에도 보이게)
+  try {
+    const r = await fetch('data/alerts_config.json?t=' + Date.now());
+    if (!r.ok) return;
+    const cfg = await r.json();
+    let changed = false;
+    for (const a of (cfg.alerts || [])) {
+      const code = String(a.code).padStart(6, '0');
+      if (!WATCHLIST[code]) {
+        // 이 기기에 없는 종목이면 새로 추가 (알림 포함)
+        WATCHLIST[code] = {
+          name: a.name || code,
+          target: a.target,
+          direction: a.direction || 'above',
+          addedAt: Date.now(),
+        };
+        changed = true;
+      } else if (!WATCHLIST[code].target && a.target) {
+        // 관심 종목은 있는데 알림은 없으면 → 알림만 추가
+        WATCHLIST[code].target = a.target;
+        WATCHLIST[code].direction = a.direction || 'above';
+        changed = true;
+      }
+    }
+    if (changed) {
+      saveWatchlist();
+      if (state.currentView === 'watchlist') renderWatchlistView();
+    }
+  } catch {}
+}
+
 function saveWatchlist() {
   try {
     localStorage.setItem(WATCHLIST_KEY, JSON.stringify(WATCHLIST));
@@ -2956,6 +2989,7 @@ async function initMarket() {
     loadWatchlist();
     MARKET = await loadMarket();
     await loadDescriptions();
+    await syncWatchlistFromGitHub();
     render();
     setView('strength');
     checkAlerts();
