@@ -562,7 +562,7 @@ def fetch_watchlist_stock_history(days=7):
     headers = {**HEADERS, "Referer": "https://stock.naver.com/"}
     histories = {}
     for code in codes[:50]:  # 최대 50개
-        url = f"https://api.stock.naver.com/chart/domestic/stock/{code}?periodType=dayCandle&count={days}"
+        url = f"https://api.stock.naver.com/chart/domestic/item/{code}?periodType=dayCandle&count={days}"
         try:
             r = requests.get(url, headers=headers, timeout=8)
             if r.status_code != 200:
