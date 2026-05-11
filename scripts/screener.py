@@ -29,6 +29,12 @@ HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; MinerviniScreener/1.0)"}
 DART_KEY = os.environ.get("DART_API_KEY", "")
 DART_BASE = "https://opendart.fss.or.kr/api"
 
+# 작전주/펌프 필터 임계값
+PUMP_MIN_MARKET_CAP = 100_000_000_000  # 1000억
+PUMP_5D_RISE_PCT = 50  # 5일 +50% 상승 시 의심
+LISTING_MIN_DAYS = 180  # 신규상장 6개월 이내 차단
+DEDUP_RESET_DAYS = 30  # 30일 지나면 dedup reset (재진입 알림 가능)
+
 # ================================
 # DART (재무 데이터) 모듈
 # ================================
@@ -288,6 +294,59 @@ def calc_rs_rating(stock_history, market_history):
 
 
 # ================================
+# 작전주 / 펌프 필터
+# ================================
+
+def load_metadata():
+    """data/stock_metadata.json 로드. 없으면 빈 dict."""
+    path = Path("data/stock_metadata.json")
+    if not path.exists():
+        return {"stocks": {}, "warning_stocks": []}
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {"stocks": {}, "warning_stocks": []}
+
+
+def is_pump_or_warning(code, meta_stocks, warning_set, history):
+    """작전주/펌프 종목 판정. True면 스크리너에서 제외.
+    Returns (skip, reason).
+    """
+    # 1. 관리종목/투자유의
+    if code in warning_set:
+        return True, "관리종목/투자유의"
+
+    meta = meta_stocks.get(code, {})
+
+    # 2. 신규상장 6개월 이내
+    listed_date = meta.get("listed_date")
+    if listed_date:
+        try:
+            ld = datetime.strptime(listed_date, "%Y.%m.%d") if "." in listed_date else datetime.strptime(listed_date, "%Y-%m-%d")
+            ld = KST.localize(ld)
+            days_listed = (datetime.now(KST) - ld).days
+            if days_listed < LISTING_MIN_DAYS:
+                return True, f"신규상장 ({days_listed}일)"
+        except Exception:
+            pass
+
+    # 3. 소형주 + 급등 (작전주 의심)
+    market_cap = meta.get("market_cap", 0) or 0
+    if market_cap and market_cap < PUMP_MIN_MARKET_CAP and history and len(history) >= 6:
+        close_now = history[-1]["close"]
+        close_5d_ago = history[-6]["close"] if history[-6]["close"] > 0 else None
+        if close_5d_ago:
+            rise_pct = (close_now - close_5d_ago) / close_5d_ago * 100
+            if rise_pct >= PUMP_5D_RISE_PCT:
+                return True, f"소형 + 5일 +{rise_pct:.0f}% (작전 의심)"
+
+    # 4. 거래대금 너무 낮음 (이미 main에서 1차 필터 했지만 강화)
+    # (생략 — main에서 처리)
+
+    return False, None
+
+
+# ================================
 # 미너비니 조건 평가
 # ================================
 
@@ -530,16 +589,37 @@ def notify_new_minervini(results):
         return
 
     alerted_path = Path("data/screener_alerted.json")
-    alerted = {"strict": [], "strong": []}
+    alerted = {"strict": {}, "strong": {}}
     if alerted_path.exists():
         try:
-            alerted = json.loads(alerted_path.read_text(encoding="utf-8"))
-            alerted.setdefault("strict", [])
-            alerted.setdefault("strong", [])
+            raw = json.loads(alerted_path.read_text(encoding="utf-8"))
+            # 구버전 (list) → 신버전 (dict {code: date}) 마이그레이션
+            for key in ["strict", "strong"]:
+                v = raw.get(key, {})
+                if isinstance(v, list):
+                    today_str = datetime.now(KST).strftime("%Y-%m-%d")
+                    alerted[key] = {c: today_str for c in v}
+                elif isinstance(v, dict):
+                    alerted[key] = v
+                else:
+                    alerted[key] = {}
         except Exception:
             pass
-    strict_set = set(alerted["strict"])
-    strong_set = set(alerted["strong"])
+    # 30일 이상 지난 entry는 dedup에서 빠짐 (재진입 알림 가능)
+    today = datetime.now(KST)
+    cutoff = today.timestamp() - DEDUP_RESET_DAYS * 86400
+    def active_set(d):
+        out = set()
+        for code, date_str in d.items():
+            try:
+                ts = datetime.strptime(date_str, "%Y-%m-%d").timestamp()
+                if ts >= cutoff:
+                    out.add(code)
+            except Exception:
+                pass
+        return out
+    strict_set = active_set(alerted["strict"])
+    strong_set = active_set(alerted["strong"])
 
     new_strict = []
     new_strong = []
@@ -593,9 +673,13 @@ def notify_new_minervini(results):
     msg = "\n".join(lines)
     ok, info = send_telegram(bot_token, chat_id, msg)
     if ok:
-        # 발송 성공 시에만 캐시 업데이트
-        alerted["strict"] = sorted(strict_set)
-        alerted["strong"] = sorted(strong_set)
+        # 발송 성공 시에만 캐시 업데이트 (오늘 날짜로)
+        today_str = datetime.now(KST).strftime("%Y-%m-%d")
+        for r in new_strict:
+            alerted["strict"][r["code"]] = today_str
+            alerted["strong"][r["code"]] = today_str  # strict는 strong 자동 충족
+        for r in new_strong:
+            alerted["strong"][r["code"]] = today_str
         alerted["last_sent"] = datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST")
         alerted_path.write_text(json.dumps(alerted, ensure_ascii=False, indent=2), encoding="utf-8")
         print(f"  ✅ telegram sent: strict {len(new_strict)} new, strong {len(new_strong)} new")
@@ -658,12 +742,26 @@ def main():
         market_index_history = [h["close"] for h in market["indices"]["kospi"]["history"]]
     print(f"  market index history: {len(market_index_history)} days")
 
+    # 5.5 작전주/펌프 필터 metadata 로드
+    metadata = load_metadata()
+    meta_stocks = metadata.get("stocks", {})
+    warning_set = set(metadata.get("warning_stocks", []))
+    print(f"  metadata loaded: {len(meta_stocks)} stocks, {len(warning_set)} warnings")
+
     # 6. 평가
     print("\n[평가] 미너비니 조건 적용...")
     results = []
+    skipped_pump = 0
+    skip_reasons = {}
     for code in candidate_codes:
         history = histories.get(code)
         if not history or len(history) < 220:
+            continue
+        # 작전주/펌프/관리종목 필터
+        skip, reason = is_pump_or_warning(code, meta_stocks, warning_set, history)
+        if skip:
+            skipped_pump += 1
+            skip_reasons[reason] = skip_reasons.get(reason, 0) + 1
             continue
         closes = [h["close"] for h in history]
         # market history를 종목 history와 align (같은 길이로)
@@ -680,6 +778,8 @@ def main():
             "change": s.get("change", 0),
             **evaluation,
         })
+    if skipped_pump:
+        print(f"  filtered out {skipped_pump} stocks: {skip_reasons}")
 
     # 7. 정렬: total_score 높은 순
     results.sort(key=lambda x: x["total_score"], reverse=True)

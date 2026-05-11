@@ -31,6 +31,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from screener import (
     fetch_stock_history, fetch_all_stock_history,
     sma, send_telegram,
+    load_metadata, is_pump_or_warning, DEDUP_RESET_DAYS,
 )
 
 
@@ -332,16 +333,35 @@ def notify_new_momentum(results):
         return
 
     alerted_path = Path("data/momentum_alerted.json")
-    alerted = {"strong": [], "pre_breakout": []}
+    alerted = {"strong": {}, "pre_breakout": {}}
     if alerted_path.exists():
         try:
-            alerted = json.loads(alerted_path.read_text(encoding="utf-8"))
-            alerted.setdefault("strong", [])
-            alerted.setdefault("pre_breakout", [])
+            raw = json.loads(alerted_path.read_text(encoding="utf-8"))
+            for key in ["strong", "pre_breakout"]:
+                v = raw.get(key, {})
+                if isinstance(v, list):
+                    today_str = datetime.now(KST).strftime("%Y-%m-%d")
+                    alerted[key] = {c: today_str for c in v}
+                elif isinstance(v, dict):
+                    alerted[key] = v
+                else:
+                    alerted[key] = {}
         except Exception:
             pass
-    strong_set = set(alerted["strong"])
-    pre_set = set(alerted["pre_breakout"])
+    today = datetime.now(KST)
+    cutoff = today.timestamp() - DEDUP_RESET_DAYS * 86400
+    def active_set(d):
+        out = set()
+        for code, date_str in d.items():
+            try:
+                ts = datetime.strptime(date_str, "%Y-%m-%d").timestamp()
+                if ts >= cutoff:
+                    out.add(code)
+            except Exception:
+                pass
+        return out
+    strong_set = active_set(alerted["strong"])
+    pre_set = active_set(alerted["pre_breakout"])
 
     new_strong = []
     new_pre = []
@@ -397,8 +417,11 @@ def notify_new_momentum(results):
     msg = "\n".join(lines)
     ok, info = send_telegram(bot_token, chat_id, msg)
     if ok:
-        alerted["strong"] = sorted(strong_set)
-        alerted["pre_breakout"] = sorted(pre_set)
+        today_str = datetime.now(KST).strftime("%Y-%m-%d")
+        for r in new_strong:
+            alerted["strong"][r["code"]] = today_str
+        for r in new_pre:
+            alerted["pre_breakout"][r["code"]] = today_str
         alerted["last_sent"] = datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST")
         alerted_path.write_text(json.dumps(alerted, ensure_ascii=False, indent=2), encoding="utf-8")
         print(f"  ✅ telegram sent: strong {len(new_strong)} new, pre_breakout {len(new_pre)} new")
@@ -474,6 +497,12 @@ def main():
     else:
         print("  ⚠️ data/dart_financials.json not found — EPS 가속화 시그널 비활성")
 
+    # 5.5 작전주/펌프 필터 metadata 로드
+    metadata = load_metadata()
+    meta_stocks = metadata.get("stocks", {})
+    warning_set = set(metadata.get("warning_stocks", []))
+    print(f"  metadata loaded: {len(meta_stocks)} stocks, {len(warning_set)} warnings")
+
     # 6. OHLC 252일 fetch
     print("\n[Naver] 252일 OHLC 수집...")
     histories = fetch_all_stock_history(candidate_codes, days=252)
@@ -481,9 +510,17 @@ def main():
     # 7. 평가
     print("\n[평가] 모멘텀 시그널 적용...")
     results = []
+    skipped_pump = 0
+    skip_reasons = {}
     for code in candidate_codes:
         history = histories.get(code)
         if not history or len(history) < 220:
+            continue
+        # 작전주/펌프/관리종목 필터
+        skip, reason = is_pump_or_warning(code, meta_stocks, warning_set, history)
+        if skip:
+            skipped_pump += 1
+            skip_reasons[reason] = skip_reasons.get(reason, 0) + 1
             continue
         theme_w = rising_stocks_weights.get(code, 0)
         evaluation = evaluate_momentum(code, history, financials_cache.get(code), theme_w)
@@ -498,6 +535,8 @@ def main():
             "change": s.get("change", 0),
             **evaluation,
         })
+    if skipped_pump:
+        print(f"  filtered out {skipped_pump} stocks: {skip_reasons}")
 
     # 8. 정렬
     results.sort(key=lambda x: x["total_score"], reverse=True)
