@@ -1,9 +1,10 @@
 name: Momentum Screener
 
 on:
-  schedule:
-    # 미너비니 다음에 실행 (KST 17:30 = UTC 8:30) 평일
-    - cron: "30 8 * * 1-5"
+  workflow_run:
+    # 미너비니 끝나면 자동 실행 (DART 캐시가 fresh한 직후)
+    workflows: ["Minervini Screener"]
+    types: [completed]
   workflow_dispatch:
 
 permissions:
@@ -15,11 +16,15 @@ concurrency:
 
 jobs:
   momentum:
+    # 미너비니가 성공했을 때만 실행 (실패 시 stale data 방지)
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: main  # workflow_run 시 default branch 명시
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -55,7 +60,7 @@ jobs:
             fi
             echo "Push attempt $i failed, fetching and rebasing..."
             git fetch origin main
-            git rebase origin/main || git rebase --abort
+            git rebase -X theirs origin/main || { git rebase --abort; git pull --rebase=true -X theirs origin main; }
             sleep 2
           done
           echo "Failed to push after 3 attempts"

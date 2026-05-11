@@ -29,7 +29,7 @@ HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; MomentumScreener/1.0)"}
 # 같은 디렉토리의 screener.py 함수 재사용
 sys.path.insert(0, str(Path(__file__).parent))
 from screener import (
-    fetch_stock_history, fetch_all_stock_history,
+    fetch_all_stock_history,
     sma, send_telegram,
     load_metadata, is_pump_or_warning, DEDUP_RESET_DAYS,
 )
@@ -151,13 +151,17 @@ def evaluate_momentum(stock_code, history, financials, theme_weight):
     # === Signal 1: MA200 막 돌파 (Stage 1→2 전환 핵심) ===
     ma200_cross_recent = False
     cross_days_ago = None
-    for i in range(2, 16):  # 최근 15일 내 (오늘 제외, 어제~15일 전 사이)
+    # i=1 (오늘) 부터 i=15 (15일 전) — 가장 최근 cross를 찾음
+    for i in range(1, 16):
         if len(closes) < 200 + i:
             break
         # i일 전 ma200과 i일 전 종가
-        ma_then = sum(closes[-(200 + i):-i]) / 200
+        if i == 0:
+            ma_then = sum(closes[-200:]) / 200  # 오늘 ma200
+        else:
+            ma_then = sum(closes[-(200 + i):-i]) / 200
         ma_prev_day = sum(closes[-(201 + i):-(i + 1)]) / 200 if len(closes) >= 201 + i else None
-        close_then = closes[-i]
+        close_then = closes[-i] if i > 0 else closes[-1]
         close_prev = closes[-(i + 1)] if len(closes) > i else None
         if ma_prev_day and close_prev and close_prev <= ma_prev_day and close_then > ma_then:
             ma200_cross_recent = True
@@ -230,7 +234,7 @@ def evaluate_momentum(stock_code, history, financials, theme_weight):
 
     # === Signal 9: Pocket Pivot (Minervini's institutional accumulation signal) ===
     # 정의: 오늘이 up day인데 거래량이 최근 10일 down day 거래량 max 이상
-    # → 조용한 매집 신호 (가격은 살짝 오르는데 큰 거래량)
+    # → 기관 매집 신호. (5% 상한 제거 - Minervini 본인 정의에 없음)
     pocket_pivot = False
     if len(history) >= 11 and len(volumes) >= 11:
         today_change_pct = (closes[-1] - closes[-2]) / closes[-2] * 100 if closes[-2] > 0 else 0
@@ -243,8 +247,7 @@ def evaluate_momentum(stock_code, history, financials, theme_weight):
                     down_volumes_10d.append(volumes[i])
             if down_volumes_10d:
                 max_down_vol = max(down_volumes_10d)
-                if volumes[-1] >= max_down_vol and today_change_pct < 5:
-                    # 가격은 5% 미만 (조용함) but 거래량은 큼
+                if volumes[-1] >= max_down_vol:
                     pocket_pivot = True
 
     # === Fundamental: EPS 가속화 ===

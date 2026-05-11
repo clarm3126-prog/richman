@@ -156,24 +156,32 @@ def fetch_all_quarterly_data(corp_codes_map, target_codes, max_workers=8):
             return stock_code, None
         existing = cache.get(stock_code, {})
         last_updated = existing.get("_updated_date", "")
-        # 1주일 내 업데이트면 skip
+        # 1주일 내 업데이트면 skip (단, 기존 quarters가 있을 때만 — 빈 cache는 재시도)
         today_str = today.strftime("%Y%m%d")
-        if last_updated == today_str:
+        if last_updated == today_str and existing.get("quarters"):
             return stock_code, existing
         result = {"_updated_date": today_str, "quarters": {}, "annuals": {}}
+        fetch_failures = 0
+        fetch_attempts = 0
         for year, rcode, qname in quarters:
             key = f"{year}_{qname}"
             # 캐시에 이미 있고 과거 데이터면 재사용
             if existing.get("quarters", {}).get(key) and year < cur_year - 1:
                 result["quarters"][key] = existing["quarters"][key]
                 continue
+            fetch_attempts += 1
             items = fetch_financial(corp_code, year, rcode)
             if items is None:
+                fetch_failures += 1
                 continue
             metrics = parse_financials(items)
             if metrics["매출액"] > 0:
                 result["quarters"][key] = metrics
             time.sleep(0.05)  # rate limit
+        # 모든 fetch가 실패했고 새로 시도한 게 많으면 (rate limit 의심) 캐시 update 안 함
+        # → 다음 run에서 재시도 가능
+        if fetch_attempts > 0 and fetch_failures == fetch_attempts and not result["quarters"]:
+            return stock_code, existing  # 기존 cache 유지
         return stock_code, result
 
     print(f"  fetching financials for {len(needed_codes)} stocks (병렬 {max_workers})...")
@@ -319,14 +327,18 @@ def is_pump_or_warning(code, meta_stocks, warning_set, history):
     meta = meta_stocks.get(code, {})
 
     # 2. 신규상장 6개월 이내
+    # Naver는 "2024.05.11" / "2024.5.11" / "2024-05-11" 같이 다양하게 옴.
+    # strptime "%m"는 Windows에서 zero-padding 강제 → manual parse로 안전하게.
     listed_date = meta.get("listed_date")
     if listed_date:
         try:
-            ld = datetime.strptime(listed_date, "%Y.%m.%d") if "." in listed_date else datetime.strptime(listed_date, "%Y-%m-%d")
-            ld = KST.localize(ld)
-            days_listed = (datetime.now(KST) - ld).days
-            if days_listed < LISTING_MIN_DAYS:
-                return True, f"신규상장 ({days_listed}일)"
+            parts = listed_date.replace("-", ".").split(".")
+            if len(parts) == 3:
+                y, m, d = int(parts[0]), int(parts[1]), int(parts[2])
+                ld = KST.localize(datetime(y, m, d))
+                days_listed = (datetime.now(KST) - ld).days
+                if days_listed < LISTING_MIN_DAYS:
+                    return True, f"신규상장 ({days_listed}일)"
         except Exception:
             pass
 

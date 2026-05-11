@@ -8,24 +8,20 @@
 
 출력: data/exit_signals.json + Telegram 알림 (신규 위험/주의 신호만)
 """
-import concurrent.futures
 import json
 import os
 import sys
-import time
 import traceback
 from datetime import datetime
 from pathlib import Path
 
 import pytz
-import requests
 
 KST = pytz.timezone("Asia/Seoul")
-HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; ExitSignals/1.0)"}
 
 sys.path.insert(0, str(Path(__file__).parent))
 from screener import (
-    fetch_stock_history, fetch_all_stock_history,
+    fetch_all_stock_history,
     sma, send_telegram, DEDUP_RESET_DAYS,
 )
 
@@ -117,14 +113,16 @@ def evaluate_exit_signals(code, history, entry_price=None):
             "detail": f"종가 {cur_close:,} < MA21 {ma21:,.0f}",
         })
 
-    # 5. 분배일 카운트 (최근 20일 중 음봉 + 거래량 증가 일수)
+    # 5. 분배일 카운트 (최근 20일 중 음봉 + 평균 이상 거래량)
+    # O'Neil 정의: -0.2% 이상 하락 + 평균 거래량 초과
     distribution_days = 0
     if len(closes) >= 21 and len(volumes) >= 21:
         for i in range(-20, 0):
             if i - 1 < -len(closes):
                 continue
             day_change = (closes[i] - closes[i - 1]) / closes[i - 1] * 100 if closes[i - 1] > 0 else 0
-            if day_change <= -0.5 and volumes[i] > volumes[i - 1]:
+            # 하락 폭 -0.2% 이상 AND 거래량이 20일 평균 초과
+            if day_change <= -0.2 and vol_20d > 0 and volumes[i] > vol_20d:
                 distribution_days += 1
         if distribution_days >= 5:
             signals.append({

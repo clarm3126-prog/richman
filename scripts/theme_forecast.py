@@ -89,8 +89,10 @@ def load_theme_members_cached(theme_list, max_workers=10):
             cache = json.loads(cache_path.read_text(encoding="utf-8"))
             updated = cache.get("_updated", "")
             if updated:
-                age = (datetime.now(KST) - datetime.strptime(updated, "%Y-%m-%d")).days
-                cache_age = age
+                # date-only 비교로 TZ-naive vs aware 충돌 회피
+                today_date = datetime.now(KST).date()
+                updated_date = datetime.strptime(updated, "%Y-%m-%d").date()
+                cache_age = (today_date - updated_date).days
         except Exception:
             cache = {}
 
@@ -336,17 +338,42 @@ def normalize_scores(theme_signals_list, weights):
         return []
 
     def percentile_score(values, key, max_pts, reverse=False):
-        """values를 percentile rank → 0~max_pts."""
-        sorted_vals = sorted([(v.get(key), i) for i, v in enumerate(values) if v.get(key) is not None],
-                             key=lambda x: x[0], reverse=not reverse)
-        # reverse=True면 낮은 값이 좋음 (avg_rank처럼)
+        """values를 percentile rank → 0~max_pts.
+        - reverse=False(기본): 높은 값 = 좋음 (높은 점수)
+        - reverse=True: 낮은 값 = 좋음 (avg_rank처럼)
+        - 동률(ties): 같은 값들은 평균 rank 부여 (공정성)
+        - None 값: 중간값(median) percentile = 0.5 부여 (penalize 안 함)
+        """
+        n_total = len(values)
+        if n_total == 0:
+            return []
+        # None 분리
+        valid = [(v.get(key), i) for i, v in enumerate(values) if v.get(key) is not None]
+        if not valid:
+            # 모두 None → 모두 중간값
+            return [max_pts * 0.5] * n_total
+        # 정렬
+        sorted_vals = sorted(valid, key=lambda x: x[0], reverse=not reverse)
         n = len(sorted_vals)
-        if n == 0:
-            return [0] * len(values)
-        scores = [0] * len(values)
-        for rank, (_, idx) in enumerate(sorted_vals):
-            pct = 1 - (rank / n)
-            scores[idx] = pct * max_pts
+        scores = [None] * n_total
+        # 동률 그룹별 평균 rank
+        i_pos = 0
+        while i_pos < n:
+            j = i_pos
+            same_val = sorted_vals[i_pos][0]
+            while j < n and sorted_vals[j][0] == same_val:
+                j += 1
+            # i_pos ~ j-1 까지가 동률 그룹
+            avg_rank = (i_pos + j - 1) / 2  # 0-indexed 평균 rank
+            pct = 1 - (avg_rank / max(n - 1, 1)) if n > 1 else 1.0
+            for k in range(i_pos, j):
+                _, idx = sorted_vals[k]
+                scores[idx] = pct * max_pts
+            i_pos = j
+        # None은 median percentile = 0.5
+        for i in range(n_total):
+            if scores[i] is None:
+                scores[i] = max_pts * 0.5
         return scores
 
     n_themes = len(theme_signals_list)
@@ -462,8 +489,8 @@ def main():
             continue  # 멤버 너무 적으면 신뢰 어려움
         mom = compute_momentum_signals(history_list, name)
         if not mom:
-            # 새로 등장한 테마 — history 없음
-            mom = {"avg_rank_5d": None, "rank_delta_5d": 0, "avg_change_5d": t.get("change", 0), "top20_freq_30d": 0}
+            # 새로 등장한 테마 — history 없음. 모두 None으로 두면 percentile_score가 median(0.5) 부여
+            mom = {"avg_rank_5d": None, "rank_delta_5d": None, "avg_change_5d": None, "top20_freq_30d": None}
         flow = compute_money_flow_signal(members, stocks,
                                          [foreign_buy, inst_buy], [foreign_sell, inst_sell])
         fund = compute_fundamental_signal(members, financials_cache)

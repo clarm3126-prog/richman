@@ -12,16 +12,12 @@
 """
 import concurrent.futures
 import json
-import re
 import sys
-import time
 import traceback
 from datetime import datetime
 from pathlib import Path
 
-import pytz
 import requests
-from bs4 import BeautifulSoup
 
 # 같은 디렉토리의 fetch_prices에서 함수 재사용
 sys.path.insert(0, str(Path(__file__).parent))
@@ -29,7 +25,6 @@ from fetch_prices import (
     KST, HEADERS,
     fetch_naver_themes,
     fetch_naver_industries,
-    _enrich_with_stocks,
 )
 
 
