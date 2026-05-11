@@ -305,6 +305,46 @@
   .heatmap-day-header.day-red { color: #dc2626; font-weight: 600; }
   .heatmap-day.day-blue,
   .heatmap-day-header.day-blue { color: #2563eb; font-weight: 600; }
+  .heatmap-day.other-month {
+    background: transparent !important;
+    color: #d1d5db;
+    cursor: default;
+    font-size: 10px;
+    padding: 4px;
+  }
+  .heatmap-day.other-month:hover { box-shadow: none; }
+  .cal-nav {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .cal-nav-btn {
+    padding: 7px 12px;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    color: #374151;
+    font-family: inherit;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .cal-nav-btn:active { background: #e5e7eb; }
+  .cal-nav-today { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+  .cal-month-input {
+    flex: 1;
+    padding: 7px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 7px;
+    font-size: 13px;
+    font-family: inherit;
+    background: #fff;
+    color: #1a1a1a;
+    min-width: 0;
+  }
+  .cal-month-input:focus { outline: none; border-color: #2563eb; }
   .app-toast {
     position: fixed;
     bottom: 24px;
@@ -761,6 +801,11 @@
     .heatmap-day-header.day-red { color: #fca5a5; }
     .heatmap-day.day-blue,
     .heatmap-day-header.day-blue { color: #93c5fd; }
+    .heatmap-day.other-month { color: #4b5563; }
+    .cal-nav-btn { background: #2a2f3a; border-color: #3a414f; color: #d1d5db; }
+    .cal-nav-btn:active { background: #3a414f; }
+    .cal-nav-today { background: #e5e7eb; color: #0f1115; border-color: #e5e7eb; }
+    .cal-month-input { background: #2a2f3a; border-color: #3a414f; color: #e5e7eb; }
   }
 </style>
 </head>
@@ -1522,7 +1567,7 @@ const DATA = {
   ]
 };
 
-const state = { activeTheme: "전체", query: "", historyDate: null, historyThemes: null, currentView: "strength" };
+const state = { activeTheme: "전체", query: "", historyDate: null, historyThemes: null, currentView: "strength", calendarMonth: null };
 let MARKET = null;
 let HISTORY_LOADED = null;
 let HISTORY_LOADING = null; // in-flight Promise (중복 fetch 방지)
@@ -3237,53 +3282,71 @@ async function loadAndRenderMovements() {
 function renderHeatmap(loaded, type) {
   // type: 'theme' or 'industry'
   const isIndustry = type === 'industry';
-  const dates = loaded.dates || [];
-  if (dates.length === 0) return '';
   const dataMap = isIndustry ? (loaded.industries || {}) : (loaded.history || {});
   const dayInfo = {};
-  dates.forEach(date => {
+  Object.keys(dataMap).forEach(date => {
     const list = dataMap[date] || [];
-    if (list.length === 0) return;
-    dayInfo[date] = list.slice(0, 10);
+    if (list.length > 0) dayInfo[date] = list.slice(0, 10);
   });
-  const sortedDates = Object.keys(dayInfo).sort();
-  if (sortedDates.length === 0) return '';
-  const lastDate = parseDate(sortedDates[sortedDates.length - 1]);
-  const today = lastDate;
-  const start = new Date(today);
-  start.setDate(start.getDate() - 34);
-  const dayOfWeek = start.getDay();
-  start.setDate(start.getDate() - dayOfWeek);
-  const weekHeaders = ['일','월','화','수','목','금','토'];
+
+  // 표시할 월 결정 (state 우선, 없으면 데이터 최신 월, 그것도 없으면 오늘)
+  let monthStr = state.calendarMonth;
+  if (!monthStr) {
+    const sortedDates = Object.keys(dayInfo).sort();
+    if (sortedDates.length > 0) {
+      monthStr = sortedDates[sortedDates.length - 1].slice(0, 6);
+    } else {
+      const now = new Date();
+      monthStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}`;
+    }
+  }
+  const year = parseInt(monthStr.slice(0, 4));
+  const monthIdx = parseInt(monthStr.slice(4, 6)) - 1;
+  const firstDay = new Date(year, monthIdx, 1);
+  const startOfCalendar = new Date(firstDay);
+  startOfCalendar.setDate(startOfCalendar.getDate() - firstDay.getDay());
+
+  const weekHeaders = ['일', '월', '화', '수', '목', '금', '토'];
   const label = isIndustry ? '업종' : '테마';
   const dataAttr = isIndustry ? 'industry' : 'theme';
+  const monthInputValue = `${year}-${String(monthIdx + 1).padStart(2, '0')}`;
+  const isCustomMonth = !!state.calendarMonth;
+
   let html = '';
   html += `<div class="strength-section">`;
-  html += `<div class="strength-title" style="margin-bottom:8px">📅 ${label} 강도 캘린더</div>`;
-  html += `<div class="strength-meta" style="margin-bottom:6px">최근 5주 · 1위 ${label} 색상 · 칸 클릭 시 그날 TOP 10</div>`;
+  html += `<div class="strength-title" style="margin-bottom:8px">📅 ${label} 강도 캘린더 — ${year}년 ${monthIdx + 1}월</div>`;
+  html += `<div class="cal-nav">
+    <button class="cal-nav-btn" onclick="navigateMonth(-1, '${type}')">◀</button>
+    <input type="month" class="cal-month-input" value="${monthInputValue}" onchange="setCalendarMonth(this.value.replace('-',''), '${type}')">
+    <button class="cal-nav-btn" onclick="navigateMonth(1, '${type}')">▶</button>
+    ${isCustomMonth ? `<button class="cal-nav-btn cal-nav-today" onclick="resetCalendarMonth('${type}')">최신</button>` : ''}
+  </div>`;
+  html += `<div class="strength-meta" style="margin-bottom:6px">색깔 = 그날 1위 ${label} · 칸 클릭 시 TOP 10</div>`;
   html += `<div class="heatmap-container">`;
   weekHeaders.forEach((h, idx) => {
     const cls = idx === 0 ? 'day-red' : idx === 6 ? 'day-blue' : '';
     html += `<div class="heatmap-day-header ${cls}">${h}</div>`;
   });
-  for (let i = 0; i < 35; i++) {
-    const d = new Date(start);
+
+  // 6주 (42칸) 렌더 — 모든 월에 안전한 크기
+  for (let i = 0; i < 42; i++) {
+    const d = new Date(startOfCalendar);
     d.setDate(d.getDate() + i);
-    if (d > today) {
-      html += `<div class="heatmap-day empty"></div>`;
-      continue;
-    }
+    const isInMonth = d.getMonth() === monthIdx && d.getFullYear() === year;
     const dateStr = formatDate(d);
     const dow = d.getDay();
     const isHoli = isHoliday(dateStr);
-    const isSat = dow === 6;
-    const isSun = dow === 0;
-    const isOff = isSat || isSun || isHoli;
+    const isOff = dow === 0 || dow === 6 || isHoli;
+
+    if (!isInMonth) {
+      // 다른 월의 날짜 (앞/뒤 채움) — 흐릿하게
+      html += `<div class="heatmap-day other-month">${d.getDate()}</div>`;
+      continue;
+    }
 
     if (isOff) {
-      // 주말·공휴일: 배경색 없이 날짜만 (일요일/공휴일=빨강, 토요일=파랑)
-      const colorCls = (isSun || isHoli) ? 'day-red' : 'day-blue';
-      const tooltip = isHoli ? `${dateStr} (공휴일)` : isSun ? `${dateStr} (일요일)` : `${dateStr} (토요일)`;
+      const colorCls = (dow === 0 || isHoli) ? 'day-red' : 'day-blue';
+      const tooltip = isHoli ? `${dateStr} (공휴일)` : dow === 0 ? `${dateStr} (일요일)` : `${dateStr} (토요일)`;
       html += `<div class="heatmap-day day-off ${colorCls}" title="${tooltip}">${d.getDate()}</div>`;
       continue;
     }
@@ -3312,9 +3375,47 @@ function renderHeatmap(loaded, type) {
     }
   }
   html += `</div>`;
-  html += `<div class="strength-meta" style="margin-top:8px;text-align:center;font-size:11px">색깔 = 그날 1위 ${label} · 같은 색 연속 = 강세 지속 · 빨강 날짜 = 휴장일</div>`;
   html += `</div>`;
   return html;
+}
+
+function navigateMonth(direction, type) {
+  let monthStr = state.calendarMonth;
+  if (!monthStr && HISTORY_LOADED) {
+    const dataMap = type === 'industry' ? (HISTORY_LOADED.industries || {}) : (HISTORY_LOADED.history || {});
+    const sortedDates = Object.keys(dataMap).sort();
+    if (sortedDates.length > 0) monthStr = sortedDates[sortedDates.length - 1].slice(0, 6);
+  }
+  if (!monthStr) {
+    const now = new Date();
+    monthStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}`;
+  }
+  let year = parseInt(monthStr.slice(0, 4));
+  let monthIdx = parseInt(monthStr.slice(4, 6)) - 1;
+  monthIdx += direction;
+  if (monthIdx < 0) { monthIdx = 11; year -= 1; }
+  if (monthIdx > 11) { monthIdx = 0; year += 1; }
+  state.calendarMonth = `${year}${String(monthIdx + 1).padStart(2, '0')}`;
+  rerenderCalendar(type);
+}
+
+function setCalendarMonth(yyyymm, type) {
+  if (!yyyymm || yyyymm.length !== 6) return;
+  state.calendarMonth = yyyymm;
+  rerenderCalendar(type);
+}
+
+function resetCalendarMonth(type) {
+  state.calendarMonth = null;
+  rerenderCalendar(type);
+}
+
+function rerenderCalendar(type) {
+  if (type === 'industry') {
+    if (MARKET) renderMarket(MARKET);
+  } else {
+    loadAndRenderMovements();
+  }
 }
 
 function bindHeatmapClicks(container) {
