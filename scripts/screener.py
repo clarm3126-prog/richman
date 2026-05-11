@@ -496,6 +496,114 @@ def evaluate_minervini(stock_code, history, financials, market_history):
 
 
 # ================================
+# Telegram 알림
+# ================================
+
+def send_telegram(bot_token, chat_id, text):
+    """Telegram sendMessage."""
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+    try:
+        r = requests.post(
+            url,
+            json={"chat_id": chat_id, "text": text, "parse_mode": "Markdown", "disable_web_page_preview": True},
+            timeout=10,
+        )
+        if r.status_code == 200:
+            return True, "OK"
+        try:
+            err = r.json().get("description", r.text[:200])
+        except Exception:
+            err = r.text[:200]
+        return False, f"HTTP {r.status_code}: {err}"
+    except Exception as e:
+        return False, f"Exception: {e}"
+
+
+def notify_new_minervini(results):
+    """이전에 알린 적 없는 신규 strict/strong 종목 → Telegram 알림.
+    중복 방지: data/screener_alerted.json에 (code, category) 누적.
+    """
+    bot_token = os.environ.get("TELEGRAM_BOT_TOKEN")
+    chat_id = os.environ.get("TELEGRAM_CHAT_ID")
+    if not bot_token or not chat_id:
+        print("  TELEGRAM_BOT_TOKEN/CHAT_ID env not set (skip alerts)")
+        return
+
+    alerted_path = Path("data/screener_alerted.json")
+    alerted = {"strict": [], "strong": []}
+    if alerted_path.exists():
+        try:
+            alerted = json.loads(alerted_path.read_text(encoding="utf-8"))
+            alerted.setdefault("strict", [])
+            alerted.setdefault("strong", [])
+        except Exception:
+            pass
+    strict_set = set(alerted["strict"])
+    strong_set = set(alerted["strong"])
+
+    new_strict = []
+    new_strong = []
+    for r in results:
+        code = r.get("code")
+        if not code:
+            continue
+        if r.get("minervini_strict") and code not in strict_set:
+            new_strict.append(r)
+            strict_set.add(code)
+            strong_set.add(code)  # strict는 strong도 자동 충족
+        elif r.get("minervini_strong") and code not in strong_set:
+            new_strong.append(r)
+            strong_set.add(code)
+
+    if not new_strict and not new_strong:
+        print("  no new minervini candidates (skip telegram)")
+        return
+
+    today = datetime.now(KST).strftime("%Y-%m-%d")
+    lines = [f"🎯 *미너비니 신규 진입* — {today}\n"]
+
+    def fmt_one(r):
+        tt_pass = r.get("tt_passed_count", 0)
+        fund_pass = r.get("fund_passed_count", 0)
+        score = r.get("total_score", 0)
+        rs = (r.get("trend_template") or {}).get("_rs_value")
+        rs_txt = f" · RS {rs}" if rs else ""
+        ch = r.get("change", 0)
+        sign = "+" if ch > 0 else ""
+        price = r.get("price", 0)
+        return (
+            f"• *{r['name']}* (`{r['code']}` {r.get('market','')})\n"
+            f"  {price:,}원 ({sign}{ch:.2f}%) · TT {tt_pass}/8 · F {fund_pass}/3{rs_txt} · 점수 *{score}*"
+        )
+
+    if new_strict:
+        lines.append(f"*🏆 엄격 통과 (8/8 Trend Template) — {len(new_strict)}개*")
+        for r in new_strict[:10]:
+            lines.append(fmt_one(r))
+        if len(new_strict) > 10:
+            lines.append(f"... 외 {len(new_strict) - 10}개")
+        lines.append("")
+    if new_strong:
+        lines.append(f"*⭐ 우량 (6+/8 + 펀더멘털) — {len(new_strong)}개*")
+        for r in new_strong[:10]:
+            lines.append(fmt_one(r))
+        if len(new_strong) > 10:
+            lines.append(f"... 외 {len(new_strong) - 10}개")
+
+    msg = "\n".join(lines)
+    ok, info = send_telegram(bot_token, chat_id, msg)
+    if ok:
+        # 발송 성공 시에만 캐시 업데이트
+        alerted["strict"] = sorted(strict_set)
+        alerted["strong"] = sorted(strong_set)
+        alerted["last_sent"] = datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST")
+        alerted_path.write_text(json.dumps(alerted, ensure_ascii=False, indent=2), encoding="utf-8")
+        print(f"  ✅ telegram sent: strict {len(new_strict)} new, strong {len(new_strong)} new")
+    else:
+        print(f"  ❌ telegram failed: {info}")
+
+
+# ================================
 # 메인
 # ================================
 
@@ -590,6 +698,10 @@ def main():
         "results": results[:100],  # top 100 저장
     }, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     print(f"\n✅ Saved screener_results.json ({len(results[:100])} stocks)")
+
+    # 9. Telegram 알림 (신규 strict/strong만)
+    print("\n[Telegram] 신규 미너비니 종목 알림...")
+    notify_new_minervini(results)
 
 
 if __name__ == "__main__":
