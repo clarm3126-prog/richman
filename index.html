@@ -34,7 +34,7 @@
     margin-bottom: 12px;
   }
   @media (min-width: 600px) {
-    .top-nav { grid-template-columns: repeat(10, 1fr); }
+    .top-nav { grid-template-columns: repeat(11, 1fr); }
   }
   .nav-btn {
     padding: 10px 4px;
@@ -884,6 +884,7 @@
     <button class="nav-btn" data-view="investor" onclick="setView('investor')">💵 매매</button>
     <button class="nav-btn" data-view="volume" onclick="setView('volume')">🔥 거래량</button>
     <button class="nav-btn" data-view="minervini" onclick="setView('minervini')">🎯 미너비니</button>
+    <button class="nav-btn" data-view="momentum" onclick="setView('momentum')">🚀 모멘텀</button>
     <button class="nav-btn" data-view="watchlist" onclick="setView('watchlist')">⭐ 관심</button>
   </div>
   <input type="text" class="search-box" id="search" placeholder="회사명·종목코드·키워드 검색">
@@ -1654,6 +1655,9 @@ function setView(viewName) {
   } else if (viewName === 'minervini') {
     renderMinerviniView();
     document.getElementById('content').innerHTML = '';
+  } else if (viewName === 'momentum') {
+    renderMomentumView();
+    document.getElementById('content').innerHTML = '';
   } else {
     if (MARKET) renderMarket(MARKET);
     renderContent();
@@ -2117,6 +2121,126 @@ function renderMinerviniView() {
 function setMinerviniFilter(f) {
   state.minerviniFilter = f;
   renderMinerviniView();
+}
+
+// === 🚀 신규 모멘텀 (Stage 1→2 전환 종목) ===
+let MOMENTUM_DATA = null;
+let MOMENTUM_LOADING = null;
+
+async function loadMomentumData() {
+  if (MOMENTUM_DATA) return MOMENTUM_DATA;
+  if (MOMENTUM_LOADING) return MOMENTUM_LOADING;
+  MOMENTUM_LOADING = (async () => {
+    try {
+      const r = await fetch('data/momentum_results.json?t=' + Date.now());
+      if (!r.ok) return null;
+      MOMENTUM_DATA = await r.json();
+      return MOMENTUM_DATA;
+    } catch { return null; }
+    finally { MOMENTUM_LOADING = null; }
+  })();
+  return MOMENTUM_LOADING;
+}
+
+function renderMomentumView() {
+  const el = document.getElementById('strength');
+  if (!el) return;
+  if (state.currentView !== 'momentum') return;
+  el.innerHTML = `<div class="strength-section"><div class="strength-loading">모멘텀 결과 로딩 중...</div></div>`;
+  const filter = state.momentumFilter || 'strong'; // strong | pre | all
+  loadMomentumData().then(data => {
+    if (state.currentView !== 'momentum') return;
+    if (!data) {
+      el.innerHTML = `<div class="strength-section"><div class="strength-loading">아직 모멘텀 결과가 없습니다.<br><span style="font-size:11px">GitHub Actions가 장 마감 후 (KST 17:30) 첫 실행을 마치면 표시됩니다.</span></div></div>`;
+      return;
+    }
+    const all = data.results || [];
+    let filtered;
+    if (filter === 'strong') filtered = all.filter(r => r.momentum_strong);
+    else if (filter === 'pre') filtered = all.filter(r => r.pre_breakout);
+    else filtered = all;
+
+    let html = '';
+    const marketTag = data.market_bullish
+      ? '<span style="color:#059669;font-weight:700">🟢 강세장</span>'
+      : '<span style="color:#dc2626;font-weight:700">🔴 약세장 (신호 신뢰도↓)</span>';
+    html += `<div class="strength-section">
+      <div class="strength-title">🚀 신규 모멘텀 (Stage 1→2 전환)</div>
+      <div class="strength-meta">기준일 ${data.trading_day || '—'} · ${marketTag} · 평가 ${data.total_evaluated || 0}개 · 강세 ${data.momentum_strong_count || 0}개 · 사전 ${data.pre_breakout_count || 0}개</div>
+      <div class="market-filter" style="margin-top:8px">
+        <button class="${filter==='strong'?'active':''}" onclick="setMomentumFilter('strong')">🔥 강세 (돌파+거래량)</button>
+        <button class="${filter==='pre'?'active':''}" onclick="setMomentumFilter('pre')">⏳ 사전 (VCP 완성)</button>
+        <button class="${filter==='all'?'active':''}" onclick="setMomentumFilter('all')">전체</button>
+      </div>
+    </div>`;
+
+    // 강세 전환 테마 박스
+    if (data.rising_themes && data.rising_themes.length > 0) {
+      html += `<div class="strength-section">
+        <div class="strength-title" style="font-size:13px">🔥 최근 강세 전환 테마 TOP ${Math.min(10, data.rising_themes.length)}</div>
+        <div class="mv-chips" style="margin-top:8px">
+          ${data.rising_themes.slice(0, 10).map(t => `<span class="mv-chip pass" title="${t.old_rank}위 → ${t.recent_rank}위">${t.name} (▲${t.delta})</span>`).join('')}
+        </div>
+      </div>`;
+    }
+
+    if (filtered.length === 0) {
+      html += `<div class="strength-section"><div class="strength-loading">현재 조건에 맞는 종목이 없습니다.</div></div>`;
+    } else {
+      html += `<div class="strength-section">`;
+      filtered.slice(0, 50).forEach((r, i) => {
+        const cls = r.change > 0 ? 'up' : r.change < 0 ? 'down' : 'flat';
+        const sign = r.change > 0 ? '+' : '';
+        const techIcons = [
+          [r.ma200_cross_days_ago ? `MA200 ${r.ma200_cross_days_ago}일전 돌파` : 'MA200 돌파', r.ma200_cross_recent],
+          ['VCP 완성', r.vcp_contracting],
+          ['Tight 10일', r.tight_action],
+          [`거래량 ${r.vol_ratio}x`, r.volume_surge_2x],
+          ['Pivot 돌파', r.pivot_breakout],
+          ['Higher Lows', r.higher_lows],
+        ].map(([n, ok]) => `<span class="mv-chip ${ok?'pass':'fail'}">${n}</span>`).join('');
+        const flowIcons = [
+          [`거래량 ${r.vol_ratio}x`, r.volume_surge_15x],
+          [`테마 강세 (W ${r.theme_weight})`, r.theme_rising],
+        ].map(([n, ok]) => `<span class="mv-chip ${ok?'pass':'fail'}">${n}</span>`).join('');
+        const epsTxt = r.eps_growth_recent !== null ? `EPS ${r.eps_growth_recent}%` : 'EPS —';
+        const fundIcons = [
+          [`${epsTxt} 가속화`, r.eps_accelerating],
+        ].map(([n, ok]) => `<span class="mv-chip ${ok?'pass':'fail'}">${n}</span>`).join('');
+        const ribbon = r.momentum_strong
+          ? `<span class="mv-ribbon strict">🔥 강세</span>`
+          : (r.pre_breakout ? `<span class="mv-ribbon strong">⏳ 사전</span>` : '');
+        html += `
+          <div class="mv-card" data-code="${r.code}" onclick="openStockModal('${r.code}')">
+            <div class="mv-head">
+              <div class="mv-rank">#${i + 1}</div>
+              <div class="mv-name-block">
+                <div class="mv-name">${r.name} ${ribbon}</div>
+                <div class="mv-sub">${r.code} · ${r.market || ''} · ${r.price ? r.price.toLocaleString('ko-KR') : '—'}원
+                  <span class="${cls}">${sign}${(r.change ?? 0).toFixed(2)}%</span></div>
+              </div>
+              <div class="mv-score">
+                <div class="mv-score-total">${r.total_score ?? 0}</div>
+                <div class="mv-score-detail">기술 ${r.technical_score}/60 · 자금 ${r.flow_score}/20 · 펀 ${r.fund_score}/20</div>
+              </div>
+            </div>
+            <div class="mv-section-label">기술 신호</div>
+            <div class="mv-chips">${techIcons}</div>
+            <div class="mv-section-label">자금흐름</div>
+            <div class="mv-chips">${flowIcons}</div>
+            <div class="mv-section-label">펀더멘털</div>
+            <div class="mv-chips">${fundIcons}</div>
+          </div>`;
+      });
+      html += `</div>`;
+    }
+    el.innerHTML = html;
+  });
+}
+
+function setMomentumFilter(f) {
+  state.momentumFilter = f;
+  renderMomentumView();
 }
 
 function renderWatchlistView() {
