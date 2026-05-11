@@ -37,6 +37,11 @@
       "addedAt": 1778475723190,
       "target": 2000,
       "direction": "below"
+    },
+    {
+      "code": "006340",
+      "name": "대원전선",
+      "addedAt": 1778491513794
     }
   ]
 }
