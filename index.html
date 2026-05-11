@@ -2257,6 +2257,7 @@ function renderMomentumView() {
         const flowIcons = [
           [`거래량 ${r.vol_ratio}x`, r.volume_surge_15x],
           [`테마 강세 (W ${r.theme_weight})`, r.theme_rising],
+          [`Pocket Pivot 🤫`, r.pocket_pivot],
         ].map(([n, ok]) => `<span class="mv-chip ${ok?'pass':'fail'}">${n}</span>`).join('');
         const epsTxt = r.eps_growth_recent !== null ? `EPS ${r.eps_growth_recent}%` : 'EPS —';
         const fundIcons = [
@@ -2742,6 +2743,8 @@ function openStockModal(code) {
       <div style="font-size:13px;line-height:1.6;color:#4b5563">${escapeHtml(desc)}</div>
     </div>`;
   }
+  // 스크리너 점수 cross-display (placeholder; 비동기 채움)
+  html += `<div id="modalScoresSection-${code}"></div>`;
   // 액션 버튼
   html += `<div class="detail-actions">
     <button onclick="toggleWatchlist('${code}','${(s.name).replace(/'/g, "\\'")}')">${watched ? '⭐ 관심 해제' : '☆ 관심 추가'}</button>
@@ -2750,6 +2753,58 @@ function openStockModal(code) {
   </div>`;
   modal.querySelector('#stockModalBody').innerHTML = html;
   modal.classList.add('show');
+  // 점수 섹션 비동기 렌더
+  renderModalScores(code);
+}
+
+async function renderModalScores(code) {
+  const target = document.getElementById(`modalScoresSection-${code}`);
+  if (!target) return;
+  // 모든 데이터 병렬 로드
+  const [mvData, mmData, exitData] = await Promise.all([
+    loadMinerviniData(),
+    loadMomentumData(),
+    loadExitSignals(),
+  ]);
+  if (!document.getElementById(`modalScoresSection-${code}`)) return; // 모달 닫힘
+  let html = '';
+  const mvHit = mvData && mvData.results && mvData.results.find(r => r.code === code);
+  const mmHit = mmData && mmData.results && mmData.results.find(r => r.code === code);
+  const exitHit = exitData && exitData.results && exitData.results.find(r => r.code === code);
+  if (!mvHit && !mmHit && !exitHit) {
+    target.innerHTML = `<div class="detail-section">
+      <div class="label" style="font-size:11px;color:#6b7280">🎯 스크리너 점수</div>
+      <div style="font-size:12px;color:#9ca3af;margin-top:4px">이 종목은 미너비니/모멘텀 평가 대상에 없거나 데이터 부족합니다.</div>
+    </div>`;
+    return;
+  }
+  html += `<div class="detail-section">
+    <div class="label" style="font-size:11px;color:#6b7280;margin-bottom:8px">🎯 스크리너 점수 / 시그널</div>`;
+  if (mvHit) {
+    const cat = mvHit.minervini_strict ? '🏆 엄격(8/8)' : (mvHit.minervini_strong ? '⭐ 우량' : '평가됨');
+    html += `<div style="font-size:12px;margin:4px 0">
+      <b>🎯 미너비니</b>: ${cat} · 점수 <b>${mvHit.total_score}</b>/100
+      <span style="color:#6b7280">(TT ${mvHit.tt_passed_count}/8, F ${mvHit.fund_passed_count}/3)</span>
+    </div>`;
+  }
+  if (mmHit) {
+    const cat = mmHit.momentum_strong ? '🔥 강세' : (mmHit.pre_breakout ? '⏳ 사전' : '평가됨');
+    html += `<div style="font-size:12px;margin:4px 0">
+      <b>🚀 모멘텀</b>: ${cat} · 점수 <b>${mmHit.total_score}</b>/100
+      ${mmHit.ma200_cross_days_ago ? `· MA200 ${mmHit.ma200_cross_days_ago}일전 돌파` : ''}
+      ${mmHit.pocket_pivot ? '· 🤫 Pocket Pivot' : ''}
+    </div>`;
+  }
+  if (exitHit && exitHit.overall !== 'ok') {
+    const sevColor = exitHit.overall === 'critical' ? '#dc2626' : (exitHit.overall === 'warning' ? '#d97706' : '#6b7280');
+    const sevEmoji = exitHit.overall === 'critical' ? '🛑' : (exitHit.overall === 'warning' ? '⚠️' : 'ℹ️');
+    const sigList = (exitHit.signals || []).map(s => s.label).join(', ');
+    html += `<div style="font-size:12px;margin:4px 0;color:${sevColor}">
+      <b>${sevEmoji} 매도 시그널</b>: ${sigList}
+    </div>`;
+  }
+  html += `</div>`;
+  target.innerHTML = html;
 }
 
 function closeStockModal() {

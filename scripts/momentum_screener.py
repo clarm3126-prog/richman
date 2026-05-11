@@ -228,6 +228,25 @@ def evaluate_momentum(stock_code, history, financials, theme_weight):
     # === Signal 8: 테마 모멘텀 (속한 테마가 ranking 상승 중) ===
     theme_rising = theme_weight >= 0.5
 
+    # === Signal 9: Pocket Pivot (Minervini's institutional accumulation signal) ===
+    # 정의: 오늘이 up day인데 거래량이 최근 10일 down day 거래량 max 이상
+    # → 조용한 매집 신호 (가격은 살짝 오르는데 큰 거래량)
+    pocket_pivot = False
+    if len(history) >= 11 and len(volumes) >= 11:
+        today_change_pct = (closes[-1] - closes[-2]) / closes[-2] * 100 if closes[-2] > 0 else 0
+        if today_change_pct > 0:
+            # 최근 10일 down day 중 최대 거래량
+            down_volumes_10d = []
+            for i in range(-11, -1):
+                day_chg = (closes[i] - closes[i - 1]) / closes[i - 1] * 100 if closes[i - 1] > 0 else 0
+                if day_chg < 0:
+                    down_volumes_10d.append(volumes[i])
+            if down_volumes_10d:
+                max_down_vol = max(down_volumes_10d)
+                if volumes[-1] >= max_down_vol and today_change_pct < 5:
+                    # 가격은 5% 미만 (조용함) but 거래량은 큼
+                    pocket_pivot = True
+
     # === Fundamental: EPS 가속화 ===
     eps_accelerating = False
     eps_growth_recent = None
@@ -275,7 +294,7 @@ def evaluate_momentum(stock_code, history, financials, theme_weight):
         volume_surge_2x, pivot_breakout, higher_lows,
     ]
     technical_score = sum(technical_signals) * 10  # 60점 만점
-    flow_score = (volume_surge_15x * 10) + (theme_rising * 10)  # 20점
+    flow_score = (volume_surge_15x * 10) + (theme_rising * 10) + (pocket_pivot * 5)  # 25점
     fund_score = eps_accelerating * 20  # 20점
     total = technical_score + flow_score + fund_score
 
@@ -286,10 +305,13 @@ def evaluate_momentum(stock_code, history, financials, theme_weight):
         and liquidity_ok
         and (volume_surge_15x or theme_rising or pivot_breakout)
     )
-    # 사전 진입 후보 (VCP 완성 직전, 아직 폭발 X): tight + low vol but no breakout yet
+    # 사전 진입 후보 (VCP 완성 + Pocket Pivot OR Tight): 폭발 직전 매집 의심
     pre_breakout = (
-        vcp_contracting and tight_action and higher_lows
-        and not pivot_breakout and liquidity_ok
+        liquidity_ok and higher_lows
+        and (
+            (vcp_contracting and tight_action and not pivot_breakout)
+            or (pocket_pivot and tight_action)
+        )
     )
 
     return {
@@ -306,6 +328,7 @@ def evaluate_momentum(stock_code, history, financials, theme_weight):
         "liquidity_ok": liquidity_ok,
         "theme_rising": theme_rising,
         "theme_weight": round(theme_weight, 2),
+        "pocket_pivot": pocket_pivot,
         "eps_growth_recent": round(eps_growth_recent, 1) if eps_growth_recent is not None else None,
         "eps_growth_prev": round(eps_growth_prev, 1) if eps_growth_prev is not None else None,
         "eps_accelerating": eps_accelerating,
