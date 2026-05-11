@@ -823,6 +823,24 @@ def main():
     print("Computing volume surges...")
     volume_surges = update_volume_data(stocks)
 
+    # 거래량 surge daily archive (장 마감 후만)
+    if datetime.now(KST).hour >= 16 and volume_surges:
+        archive_dir = Path("data/volume_history")
+        archive_dir.mkdir(parents=True, exist_ok=True)
+        today_str = datetime.now(KST).strftime("%Y%m%d")
+        archive_path = archive_dir / f"{today_str}.json"
+        # 가벼운 버전: top 30
+        lite = [{
+            "code": s["code"], "name": s["name"], "market": s.get("market", ""),
+            "price": s["price"], "change": s["change"], "ratio": s["ratio"],
+            "volume": s["volume"],
+        } for s in volume_surges[:30]]
+        archive_path.write_text(json.dumps({
+            "trading_day": today_str,
+            "stocks": lite,
+        }, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+        print(f"  archived volume surges: {archive_path.name} ({len(lite)} stocks)")
+
     print("Computing investor rankings (real net buy/sell amounts)...")
     investor_top = compute_investor_rankings(stocks, top_n_traded=80, top_n_per_list=15)
 

@@ -2087,21 +2087,221 @@ function renderVolumeView() {
   el.querySelectorAll('.strength-row[data-code]').forEach(row => {
     row.onclick = () => openStockModal(row.dataset.code);
   });
+  // 거래량 캘린더 추가 (비동기 로드)
+  loadVolumeHistory().then(history => {
+    if (state.currentView !== 'volume') return;
+    if (!history || !history.dates || history.dates.length === 0) return;
+    el.insertAdjacentHTML('beforeend', renderVolumeHeatmap(history));
+    bindVolumeHeatmapClicks(el, history);
+  });
+}
+
+// === 거래량 캘린더 ===
+let VOLUME_HISTORY = null;
+let VOLUME_HISTORY_LOADING = null;
+
+async function loadVolumeHistory() {
+  if (VOLUME_HISTORY) return VOLUME_HISTORY;
+  if (VOLUME_HISTORY_LOADING) return VOLUME_HISTORY_LOADING;
+  VOLUME_HISTORY_LOADING = (async () => {
+    try {
+      // 최근 60일치 시도
+      const today = new Date();
+      const dates = [];
+      for (let i = 0; i < 60; i++) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        dates.push(formatDate(d));
+      }
+      const results = await Promise.all(dates.map(date =>
+        fetch(`data/volume_history/${date}.json?t=${Date.now()}`)
+          .then(r => r.ok ? r.json() : null)
+          .catch(() => null)
+      ));
+      const out = { dates: [], byDate: {} };
+      for (let i = 0; i < dates.length; i++) {
+        if (results[i] && results[i].stocks && results[i].stocks.length > 0) {
+          out.dates.push(dates[i]);
+          out.byDate[dates[i]] = results[i].stocks;
+        }
+      }
+      VOLUME_HISTORY = out;
+      return out;
+    } catch { VOLUME_HISTORY = { dates: [], byDate: {} }; return VOLUME_HISTORY; }
+    finally { VOLUME_HISTORY_LOADING = null; }
+  })();
+  return VOLUME_HISTORY_LOADING;
+}
+
+function renderVolumeHeatmap(history) {
+  const dayInfo = history.byDate || {};
+
+  // 표시할 월 결정
+  let monthStr = state.volCalendarMonth;
+  if (!monthStr) {
+    const sortedDates = Object.keys(dayInfo).sort();
+    if (sortedDates.length > 0) {
+      monthStr = sortedDates[sortedDates.length - 1].slice(0, 6);
+    } else {
+      const now = new Date();
+      monthStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}`;
+    }
+  }
+  const year = parseInt(monthStr.slice(0, 4));
+  const monthIdx = parseInt(monthStr.slice(4, 6)) - 1;
+  const firstDay = new Date(year, monthIdx, 1);
+  const startOfCalendar = new Date(firstDay);
+  startOfCalendar.setDate(startOfCalendar.getDate() - firstDay.getDay());
+
+  const weekHeaders = ['일', '월', '화', '수', '목', '금', '토'];
+  const monthInputValue = `${year}-${String(monthIdx + 1).padStart(2, '0')}`;
+  const isCustomMonth = !!state.volCalendarMonth;
+
+  let html = '';
+  html += `<div class="strength-section">`;
+  html += `<div class="strength-title" style="margin-bottom:8px">📅 거래량 급증 캘린더 — ${year}년 ${monthIdx + 1}월</div>`;
+  html += `<div class="cal-nav">
+    <button class="cal-nav-btn" onclick="navigateVolMonth(-1)">◀</button>
+    <input type="month" class="cal-month-input" value="${monthInputValue}" onchange="setVolCalendarMonth(this.value.replace('-',''))">
+    <button class="cal-nav-btn" onclick="navigateVolMonth(1)">▶</button>
+    ${isCustomMonth ? `<button class="cal-nav-btn cal-nav-today" onclick="resetVolCalendarMonth()">최신</button>` : ''}
+  </div>`;
+  html += `<div class="strength-meta" style="margin-bottom:6px">색깔 = 1위 종목 등락 색 · 칸 클릭 시 그날 TOP 10</div>`;
+  html += `<div class="heatmap-container">`;
+  weekHeaders.forEach((h, idx) => {
+    const cls = idx === 0 ? 'day-red' : idx === 6 ? 'day-blue' : '';
+    html += `<div class="heatmap-day-header ${cls}">${h}</div>`;
+  });
+
+  for (let i = 0; i < 42; i++) {
+    const d = new Date(startOfCalendar);
+    d.setDate(d.getDate() + i);
+    const isInMonth = d.getMonth() === monthIdx && d.getFullYear() === year;
+    const dateStr = formatDate(d);
+    const dow = d.getDay();
+    const isHoli = isHoliday(dateStr);
+    const isOff = dow === 0 || dow === 6 || isHoli;
+
+    if (!isInMonth) {
+      html += `<div class="heatmap-day other-month">${d.getDate()}</div>`;
+      continue;
+    }
+    if (isOff) {
+      const colorCls = (dow === 0 || isHoli) ? 'day-red' : 'day-blue';
+      const tooltip = isHoli ? `${dateStr} (공휴일)` : dow === 0 ? `${dateStr} (일요일)` : `${dateStr} (토요일)`;
+      html += `<div class="heatmap-day day-off ${colorCls}" title="${tooltip}">${d.getDate()}</div>`;
+      continue;
+    }
+    const list = dayInfo[dateStr];
+    if (!list) {
+      html += `<div class="heatmap-day" title="${dateStr} (데이터 없음)">${d.getDate()}</div>`;
+    } else {
+      const top5 = list.slice(0, 5);
+      const top1 = top5[0];
+      const sign = top1.change > 0 ? '+' : '';
+      const tooltip = `${dateStr} · 1위 ${top1.name} ${top1.ratio}x ${sign}${top1.change.toFixed(2)}%`;
+      let inner = `<div class="day-num">${d.getDate()}</div>`;
+      inner += `<div class="day-themes">`;
+      top5.forEach(t => {
+        // 거래량 종목은 등락에 따라 색깔
+        const color = t.change > 2 ? '#dc2626' : t.change > 0 ? '#fca5a5' : t.change < -2 ? '#2563eb' : t.change < 0 ? '#93c5fd' : '#6b7280';
+        const tSign = t.change > 0 ? '+' : '';
+        const shortName = t.name.length > 7 ? t.name.slice(0, 6) + '…' : t.name;
+        inner += `<div class="day-theme" style="background:${color}" title="${t.name} ${t.ratio}x ${tSign}${t.change.toFixed(2)}%">
+          <span class="day-theme-name">${shortName}</span>
+          <span class="day-theme-pct">${t.ratio}x</span>
+        </div>`;
+      });
+      inner += `</div>`;
+      html += `<div class="heatmap-day has-data" data-vol-date="${dateStr}" title="${tooltip}">${inner}</div>`;
+    }
+  }
+  html += `</div>`;
+  html += `</div>`;
+  return html;
+}
+
+function bindVolumeHeatmapClicks(container, history) {
+  container.querySelectorAll('.heatmap-day[data-vol-date]').forEach(d => {
+    d.onclick = () => {
+      const date = d.dataset.volDate;
+      const list = (history.byDate[date] || []).slice(0, 20);
+      showVolumeDayModal(date, list);
+    };
+  });
+}
+
+function showVolumeDayModal(date, list) {
+  const modal = document.getElementById('dayRankingModal');
+  modal.querySelector('#dayRankingTitle').textContent = `🔥 ${fmtDateStr(date)} 거래량 급증 TOP ${list.length}`;
+  let html = '<div style="display:flex;flex-direction:column;gap:6px">';
+  if (list.length === 0) {
+    html += '<div class="strength-loading">데이터 없음</div>';
+  } else {
+    list.forEach((s, i) => {
+      const sign = s.change > 0 ? '+' : '';
+      const cls = s.change > 0 ? 'up' : s.change < 0 ? 'down' : 'flat';
+      html += `<div class="legend-item" data-stock-code="${s.code}" data-modal-row="1">
+        <span class="legend-rank">${i + 1}</span>
+        <span class="legend-name">${s.name}<span style="font-size:10px;color:#9ca3af;margin-left:4px">${s.code}·${s.market || ''}</span></span>
+        <span class="legend-val up" style="font-weight:700">${s.ratio}x</span>
+        <span class="legend-val ${cls}">${sign}${s.change.toFixed(2)}%</span>
+      </div>`;
+    });
+  }
+  html += '</div>';
+  modal.querySelector('#dayRankingBody').innerHTML = html;
+  modal.classList.add('show');
+  modal.querySelectorAll('[data-stock-code]').forEach(row => {
+    row.onclick = () => {
+      closeDayRankingModal();
+      openStockModal(row.dataset.stockCode);
+    };
+  });
+}
+
+function navigateVolMonth(direction) {
+  let monthStr = state.volCalendarMonth;
+  if (!monthStr) {
+    const sortedDates = VOLUME_HISTORY ? Object.keys(VOLUME_HISTORY.byDate).sort() : [];
+    if (sortedDates.length > 0) monthStr = sortedDates[sortedDates.length - 1].slice(0, 6);
+    else {
+      const now = new Date();
+      monthStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}`;
+    }
+  }
+  const y = parseInt(monthStr.slice(0, 4));
+  const m = parseInt(monthStr.slice(4, 6));
+  const d = new Date(y, m - 1 + direction, 1);
+  state.volCalendarMonth = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}`;
+  if (state.currentView === 'volume') renderVolumeView();
+}
+
+function setVolCalendarMonth(monthStr) {
+  state.volCalendarMonth = monthStr;
+  if (state.currentView === 'volume') renderVolumeView();
+}
+
+function resetVolCalendarMonth() {
+  state.volCalendarMonth = null;
+  if (state.currentView === 'volume') renderVolumeView();
 }
 
 // === 백테스트 통계 (모든 스크리너 공유) ===
+// EMPTY sentinel: 한 번 fetch 했는데 실패한 경우 (404 등). 무한 재시도 방지.
+const EMPTY_DATA = {__empty: true};
 let BACKTEST_DATA = null;
 let BACKTEST_LOADING = null;
 async function loadBacktestData() {
-  if (BACKTEST_DATA) return BACKTEST_DATA;
+  if (BACKTEST_DATA) return BACKTEST_DATA;  // 캐시 (또는 sentinel)
   if (BACKTEST_LOADING) return BACKTEST_LOADING;
   BACKTEST_LOADING = (async () => {
     try {
       const r = await fetch('data/backtest_stats.json?t=' + Date.now());
-      if (!r.ok) return null;
+      if (!r.ok) { BACKTEST_DATA = EMPTY_DATA; return null; }
       BACKTEST_DATA = await r.json();
       return BACKTEST_DATA;
-    } catch { return null; }
+    } catch { BACKTEST_DATA = EMPTY_DATA; return null; }
     finally { BACKTEST_LOADING = null; }
   })();
   return BACKTEST_LOADING;
@@ -2139,10 +2339,10 @@ async function loadMinerviniData() {
   MINERVINI_LOADING = (async () => {
     try {
       const r = await fetch('data/screener_results.json?t=' + Date.now());
-      if (!r.ok) return null;
+      if (!r.ok) { MINERVINI_DATA = EMPTY_DATA; return null; }
       MINERVINI_DATA = await r.json();
       return MINERVINI_DATA;
-    } catch { return null; }
+    } catch { MINERVINI_DATA = EMPTY_DATA; return null; }
     finally { MINERVINI_LOADING = null; }
   })();
   return MINERVINI_LOADING;
@@ -2266,10 +2466,10 @@ async function loadMomentumData() {
   MOMENTUM_LOADING = (async () => {
     try {
       const r = await fetch('data/momentum_results.json?t=' + Date.now());
-      if (!r.ok) return null;
+      if (!r.ok) { MOMENTUM_DATA = EMPTY_DATA; return null; }
       MOMENTUM_DATA = await r.json();
       return MOMENTUM_DATA;
-    } catch { return null; }
+    } catch { MOMENTUM_DATA = EMPTY_DATA; return null; }
     finally { MOMENTUM_LOADING = null; }
   })();
   return MOMENTUM_LOADING;
@@ -2393,10 +2593,10 @@ async function loadEarningsData() {
   EARNINGS_LOADING = (async () => {
     try {
       const r = await fetch('data/earnings_calendar.json?t=' + Date.now());
-      if (!r.ok) return null;
+      if (!r.ok) { EARNINGS_DATA = EMPTY_DATA; return null; }
       EARNINGS_DATA = await r.json();
       return EARNINGS_DATA;
-    } catch { return null; }
+    } catch { EARNINGS_DATA = EMPTY_DATA; return null; }
     finally { EARNINGS_LOADING = null; }
   })();
   return EARNINGS_LOADING;
@@ -2432,10 +2632,10 @@ async function loadExitSignals() {
   EXIT_SIGNALS_LOADING = (async () => {
     try {
       const r = await fetch('data/exit_signals.json?t=' + Date.now());
-      if (!r.ok) return null;
+      if (!r.ok) { EXIT_SIGNALS_DATA = EMPTY_DATA; return null; }
       EXIT_SIGNALS_DATA = await r.json();
       return EXIT_SIGNALS_DATA;
-    } catch { return null; }
+    } catch { EXIT_SIGNALS_DATA = EMPTY_DATA; return null; }
     finally { EXIT_SIGNALS_LOADING = null; }
   })();
   return EXIT_SIGNALS_LOADING;
@@ -3941,10 +4141,10 @@ async function loadForecastData() {
   FORECAST_LOADING = (async () => {
     try {
       const r = await fetch('data/theme_forecast.json?t=' + Date.now());
-      if (!r.ok) return null;
+      if (!r.ok) { FORECAST_DATA = EMPTY_DATA; return null; }
       FORECAST_DATA = await r.json();
       return FORECAST_DATA;
-    } catch { return null; }
+    } catch { FORECAST_DATA = EMPTY_DATA; return null; }
     finally { FORECAST_LOADING = null; }
   })();
   return FORECAST_LOADING;
