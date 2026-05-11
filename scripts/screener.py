@@ -415,10 +415,10 @@ def evaluate_minervini(stock_code, history, financials, market_history):
     tt["ma150_above_ma200"] = ma150 > ma200 if (ma150 and ma200) else False
     tt["ma200_uptrend"] = is_uptrend(closes, 200, 21)
     # 52주 고가/저가
-    high_52w = max(highs[-min(252, len(highs)):])
-    low_52w = min(lows[-min(252, len(lows)):])
-    tt["within_25pct_of_52w_high"] = cur_close >= high_52w * 0.75
-    tt["above_25pct_from_52w_low"] = cur_close >= low_52w * 1.25
+    high_52w = max(highs[-252:])
+    low_52w = min(lows[-252:])
+    tt["within_25pct_of_52w_high"] = high_52w > 0 and cur_close >= high_52w * 0.75
+    tt["above_25pct_from_52w_low"] = low_52w > 0 and cur_close >= low_52w * 1.25
     # RS Rating
     rs = calc_rs_rating(closes, market_history) if market_history else None
     tt["rs_rating_70plus"] = rs is not None and rs >= 70
@@ -429,10 +429,17 @@ def evaluate_minervini(stock_code, history, financials, market_history):
     if len(history) >= 5:
         last5_high = max(highs[-5:])
         last5_low = min(lows[-5:])
-        setup["5day_tightness_10pct"] = (last5_high - last5_low) / last5_low * 100 <= 10
+        # division by zero 가드 — 거래정지 등으로 가격 0인 케이스 방어
+        if last5_low > 0:
+            setup["5day_tightness_10pct"] = (last5_high - last5_low) / last5_low * 100 <= 10
+        else:
+            setup["5day_tightness_10pct"] = False
         last5_open = opens[-5]
         last5_close = closes[-1]
-        setup["5day_open_close_5pct"] = abs(last5_close - last5_open) / last5_open * 100 <= 5
+        if last5_open > 0:
+            setup["5day_open_close_5pct"] = abs(last5_close - last5_open) / last5_open * 100 <= 5
+        else:
+            setup["5day_open_close_5pct"] = False
     else:
         setup["5day_tightness_10pct"] = False
         setup["5day_open_close_5pct"] = False
