@@ -10,7 +10,9 @@
     {
       "code": "264850",
       "name": "이랜시스",
-      "addedAt": 1778476847098
+      "addedAt": 1778476847098,
+      "target": 8000,
+      "direction": "below"
     },
     {
       "code": "356680",
