@@ -126,7 +126,7 @@ def parse_financials(items):
     return metrics
 
 
-def fetch_all_quarterly_data(corp_codes_map, target_codes, max_workers=8):
+def fetch_all_quarterly_data(corp_codes_map, target_codes, max_workers=12):
     """대상 종목들의 최근 5분기 + 3년 연간 재무 데이터 수집.
     캐시: data/dart_financials.json
     """
@@ -185,16 +185,19 @@ def fetch_all_quarterly_data(corp_codes_map, target_codes, max_workers=8):
         return stock_code, result
 
     print(f"  fetching financials for {len(needed_codes)} stocks (병렬 {max_workers})...")
+    save_every = 100  # 100종목마다 cache flush (timeout 걸려도 진척 보존)
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as ex:
         futures = {ex.submit(fetch_one, c): c for c in needed_codes}
         done = 0
         for f in concurrent.futures.as_completed(futures):
             code, data = f.result()
             done += 1
-            if done % 50 == 0:
-                print(f"    ...{done}/{len(needed_codes)} done")
             if data:
                 cache[code] = data
+            if done % save_every == 0:
+                # 점진적 저장 — timeout/cancel 시에도 부분 진척 보존
+                cache_path.write_text(json.dumps(cache, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+                print(f"    ...{done}/{len(needed_codes)} done (cache flushed: {len(cache)} stocks)")
 
     cache_path.write_text(json.dumps(cache, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     print(f"  saved financial data: {len(cache)} stocks total")
@@ -731,7 +734,7 @@ def main():
         candidates.items(),
         key=lambda x: x[1]["price"] * x[1]["volume"],
         reverse=True,
-    )[:1000]
+    )[:700]  # 첫 run 시 timeout 방지 위해 700개로 제한 (이후 cache 활용 시 빠름)
     candidate_codes = [c for c, _ in sorted_candidates]
     print(f"  Step 2: top {len(candidate_codes)} by trading value")
 
