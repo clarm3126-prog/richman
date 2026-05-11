@@ -41,7 +41,9 @@
     {
       "code": "006340",
       "name": "대원전선",
-      "addedAt": 1778491513794
+      "addedAt": 1778491513794,
+      "target": 15000,
+      "direction": "below"
     }
   ]
 }
