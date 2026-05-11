@@ -1,0 +1,55 @@
+name: Backtest
+
+on:
+  schedule:
+    # 매일 KST 18:00 (UTC 9:00) 평일 - 미너비니/모멘텀 끝난 후
+    # 매일 한 번 archive + 통계 갱신
+    - cron: "0 9 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: backtest
+  cancel-in-progress: false
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run backtest
+        run: python scripts/backtest.py
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/backtest_stats.json data/screener_results_history/ data/momentum_results_history/ 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+          git commit -m "chore: backtest stats + history archive [auto]"
+          for i in 1 2 3; do
+            if git push; then exit 0; fi
+            git fetch origin main
+            git rebase origin/main || git rebase --abort
+            sleep 2
+          done
+          exit 1

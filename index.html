@@ -2004,6 +2004,46 @@ function renderVolumeView() {
   });
 }
 
+// === 백테스트 통계 (모든 스크리너 공유) ===
+let BACKTEST_DATA = null;
+let BACKTEST_LOADING = null;
+async function loadBacktestData() {
+  if (BACKTEST_DATA) return BACKTEST_DATA;
+  if (BACKTEST_LOADING) return BACKTEST_LOADING;
+  BACKTEST_LOADING = (async () => {
+    try {
+      const r = await fetch('data/backtest_stats.json?t=' + Date.now());
+      if (!r.ok) return null;
+      BACKTEST_DATA = await r.json();
+      return BACKTEST_DATA;
+    } catch { return null; }
+    finally { BACKTEST_LOADING = null; }
+  })();
+  return BACKTEST_LOADING;
+}
+
+function renderBacktestBanner(category) {
+  if (!BACKTEST_DATA) return '';
+  if (BACKTEST_DATA.status !== 'ok') {
+    return `<div class="strength-section" style="background:#fef9c3">
+      <div style="font-size:11px;color:#92400e">📊 백테스트: ${BACKTEST_DATA.message || '데이터 누적 중'}</div>
+    </div>`;
+  }
+  const cat = (BACKTEST_DATA.categories || {})[category];
+  if (!cat) return '';
+  const s30 = cat["30d"];
+  const s60 = cat["60d"];
+  if (!s30 && !s60) return '';
+  const fmt = (s) => s
+    ? `n=${s.count} · 승률 <b>${s.win_rate}%</b> · 평균 <b style="color:${s.avg_return >= 0 ? '#dc2626' : '#2563eb'}">${s.avg_return >= 0 ? '+' : ''}${s.avg_return}%</b> · 최대 +${s.max_return}% / 최소 ${s.min_return}%`
+    : '데이터 부족';
+  return `<div class="strength-section" style="background:#f0f9ff;border-color:#bae6fd">
+    <div style="font-size:11px;font-weight:700;color:#0369a1;margin-bottom:4px">📊 과거 검증 (${category})</div>
+    <div style="font-size:11px;color:#374151">30일 후: ${fmt(s30)}</div>
+    ${s60 ? `<div style="font-size:11px;color:#374151;margin-top:2px">60일 후: ${fmt(s60)}</div>` : ''}
+  </div>`;
+}
+
 // === 🎯 미너비니 SEPA + Trend Template ===
 let MINERVINI_DATA = null;
 let MINERVINI_LOADING = null;
@@ -2029,6 +2069,12 @@ function renderMinerviniView() {
   if (state.currentView !== 'minervini') return;
   el.innerHTML = `<div class="strength-section"><div class="strength-loading">미너비니 결과 로딩 중...</div></div>`;
   const filter = state.minerviniFilter || 'strong'; // strict | strong | all
+  // 백테스트 데이터 비동기 prefetch (있으면 banner 표시)
+  if (!BACKTEST_DATA && !BACKTEST_LOADING) {
+    loadBacktestData().then(() => {
+      if (state.currentView === 'minervini') renderMinerviniView();
+    });
+  }
   loadMinerviniData().then(data => {
     if (state.currentView !== 'minervini') return;
     if (!data) {
@@ -2050,6 +2096,8 @@ function renderMinerviniView() {
         <button class="${filter==='all'?'active':''}" onclick="setMinerviniFilter('all')">전체</button>
       </div>
     </div>`;
+    // 백테스트 banner
+    html += renderBacktestBanner(filter === 'strict' ? 'minervini_strict' : 'minervini_strong');
     if (filtered.length === 0) {
       html += `<div class="strength-section"><div class="strength-loading">현재 조건에 맞는 종목이 없습니다.</div></div>`;
     } else {
@@ -2148,6 +2196,11 @@ function renderMomentumView() {
   if (state.currentView !== 'momentum') return;
   el.innerHTML = `<div class="strength-section"><div class="strength-loading">모멘텀 결과 로딩 중...</div></div>`;
   const filter = state.momentumFilter || 'strong'; // strong | pre | all
+  if (!BACKTEST_DATA && !BACKTEST_LOADING) {
+    loadBacktestData().then(() => {
+      if (state.currentView === 'momentum') renderMomentumView();
+    });
+  }
   loadMomentumData().then(data => {
     if (state.currentView !== 'momentum') return;
     if (!data) {
@@ -2173,6 +2226,8 @@ function renderMomentumView() {
         <button class="${filter==='all'?'active':''}" onclick="setMomentumFilter('all')">전체</button>
       </div>
     </div>`;
+    // 백테스트 banner
+    html += renderBacktestBanner(filter === 'strong' ? 'momentum_strong' : 'pre_breakout');
 
     // 강세 전환 테마 박스
     if (data.rising_themes && data.rising_themes.length > 0) {
@@ -2243,6 +2298,45 @@ function setMomentumFilter(f) {
   renderMomentumView();
 }
 
+// Earnings calendar 캐시
+let EARNINGS_DATA = null;
+let EARNINGS_LOADING = null;
+async function loadEarningsData() {
+  if (EARNINGS_DATA) return EARNINGS_DATA;
+  if (EARNINGS_LOADING) return EARNINGS_LOADING;
+  EARNINGS_LOADING = (async () => {
+    try {
+      const r = await fetch('data/earnings_calendar.json?t=' + Date.now());
+      if (!r.ok) return null;
+      EARNINGS_DATA = await r.json();
+      return EARNINGS_DATA;
+    } catch { return null; }
+    finally { EARNINGS_LOADING = null; }
+  })();
+  return EARNINGS_LOADING;
+}
+
+function renderEarningsBanner(watchlistCodes) {
+  if (!EARNINGS_DATA || !EARNINGS_DATA.disclosures) return '';
+  const wlSet = new Set(watchlistCodes);
+  const mine = EARNINGS_DATA.disclosures.filter(d => wlSet.has(d.code));
+  if (mine.length === 0) return '';
+  let html = `<div class="strength-section" style="border-left:4px solid #0369a1">
+    <div class="strength-title">📊 관심 종목 실적 공시</div>
+    <div class="strength-meta">최근 7일 · ${mine.length}건</div>
+    <div style="margin-top:8px">`;
+  for (const d of mine.slice(0, 10)) {
+    const isProv = (d.report_nm || '').includes('잠정');
+    html += `<div style="padding:6px 0;border-bottom:1px solid #f3f4f6">
+      <div style="font-weight:700;font-size:13px">${isProv ? '🚨' : '📋'} ${d.name} <span style="color:#6b7280;font-weight:400;font-size:11px">${d.code}</span></div>
+      <div style="font-size:11px;color:#6b7280;margin-top:2px">${d.report_nm}</div>
+      <a href="${d.url}" target="_blank" rel="noreferrer" style="font-size:10px;color:#0369a1;margin-top:2px;display:inline-block">📄 DART 공시 보기</a>
+    </div>`;
+  }
+  html += `</div></div>`;
+  return html;
+}
+
 // Exit signals 캐시
 let EXIT_SIGNALS_DATA = null;
 let EXIT_SIGNALS_LOADING = null;
@@ -2297,15 +2391,22 @@ function renderWatchlistView() {
   if (state.currentView !== 'watchlist') return;
   const codes = Object.keys(WATCHLIST);
   const alertCodes = codes.filter(c => WATCHLIST[c].target);
-  // exit signals 비동기 로드 후 재렌더 (배너 위에 표시)
+  // exit signals + earnings 비동기 로드 후 재렌더
   if (!EXIT_SIGNALS_DATA && !EXIT_SIGNALS_LOADING) {
     loadExitSignals().then(() => {
+      if (state.currentView === 'watchlist') renderWatchlistView();
+    });
+  }
+  if (!EARNINGS_DATA && !EARNINGS_LOADING) {
+    loadEarningsData().then(() => {
       if (state.currentView === 'watchlist') renderWatchlistView();
     });
   }
   let html = '';
   // 매도 시그널 배너 (있을 때만)
   html += renderExitSignalsBanner(codes);
+  // 실적 공시 배너 (있을 때만)
+  html += renderEarningsBanner(codes);
   // 관심 종목 카드
   html += `<div class="strength-section">`;
   const hasPat = !!getPat();
