@@ -1,0 +1,61 @@
+name: Backfill History
+
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: '몇 일치 백필할까? (기본 60)'
+        required: false
+        default: '60'
+      overwrite:
+        description: '기존 파일도 덮어쓰기? (true/false)'
+        required: false
+        default: 'false'
+
+permissions:
+  contents: write
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run backfill
+        run: |
+          ARGS="${{ inputs.days }}"
+          if [ "${{ inputs.overwrite }}" = "true" ]; then
+            ARGS="$ARGS --overwrite"
+          fi
+          python scripts/backfill_history.py $ARGS
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/ 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+          git commit -m "chore: backfill history (${{ inputs.days }} days) [auto]"
+          for i in 1 2 3; do
+            if git push; then exit 0; fi
+            git fetch origin main
+            git rebase origin/main || git rebase --abort
+            sleep 2
+          done
+          exit 1
