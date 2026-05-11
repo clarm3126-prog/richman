@@ -27,7 +27,9 @@
     {
       "code": "005880",
       "name": "대한해운",
-      "addedAt": 1778475723190
+      "addedAt": 1778475723190,
+      "target": 2000,
+      "direction": "below"
     }
   ]
 }
