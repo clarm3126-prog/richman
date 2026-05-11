@@ -50,7 +50,7 @@ jobs:
             exit 0
           fi
           git commit -m "chore: update market data [auto]"
-          # Retry up to 3 times with rebase if remote has new commits
+          # Retry up to 3 times with rebase. -X theirs: data files are last-writer-wins.
           for i in 1 2 3; do
             if git push; then
               echo "Push succeeded on attempt $i"
@@ -58,15 +58,7 @@ jobs:
             fi
             echo "Push attempt $i failed, fetching and rebasing..."
             git fetch origin main
-            git rebase origin/main || {
-              echo "Rebase failed; aborting and retrying with stash"
-              git rebase --abort || true
-              git stash
-              git pull --rebase origin main
-              git stash pop || true
-              git add data/ 2>/dev/null || true
-              git diff --cached --quiet || git commit --amend --no-edit
-            }
+            git rebase -X theirs origin/main || { git rebase --abort; git pull --rebase=true -X theirs origin main; }
             sleep 2
           done
           echo "Failed to push after 3 attempts"

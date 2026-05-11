@@ -1,10 +1,10 @@
 name: Backtest
 
 on:
-  schedule:
-    # 매일 KST 18:00 (UTC 9:00) 평일 - 미너비니/모멘텀 끝난 후
-    # 매일 한 번 archive + 통계 갱신
-    - cron: "0 9 * * 1-5"
+  workflow_run:
+    # 모멘텀 끝나면 자동 실행 (screener+momentum 결과 fresh한 직후)
+    workflows: ["Momentum Screener"]
+    types: [completed]
   workflow_dispatch:
 
 permissions:
@@ -16,11 +16,14 @@ concurrency:
 
 jobs:
   backtest:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: main
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -49,7 +52,7 @@ jobs:
           for i in 1 2 3; do
             if git push; then exit 0; fi
             git fetch origin main
-            git rebase origin/main || git rebase --abort
+            git rebase -X theirs origin/main || { git rebase --abort; git pull --rebase=true -X theirs origin main; }
             sleep 2
           done
           exit 1

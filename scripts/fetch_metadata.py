@@ -99,48 +99,44 @@ def fetch_dart_warning_stocks():
     if not DART_KEY:
         print("  no DART_API_KEY (skip warning stocks)")
         return set()
+    from datetime import timedelta
     warning = set()
     today = datetime.now(KST)
-    # 최근 90일
-    bgn_de = (today.replace(day=max(1, today.day))).strftime("%Y%m%d")
-    # bgn_de = 90일 전
-    from datetime import timedelta
     bgn_de = (today - timedelta(days=90)).strftime("%Y%m%d")
     end_de = today.strftime("%Y%m%d")
-    # 공시 종류: 관리종목 지정/해제 등은 별도 보고서
-    # 간단한 방법: 공시검색 → '관리종목지정', '투자유의', '상장폐지'  키워드 매칭
-    keywords = ["관리종목지정", "투자유의종목지정", "상장폐지", "거래정지"]
-    for keyword in keywords:
-        page = 1
-        while page <= 10:  # max 10 pages × 100 = 1000 disclosures
-            url = f"{DART_BASE}/list.json"
-            params = {
-                "crtfc_key": DART_KEY,
-                "bgn_de": bgn_de,
-                "end_de": end_de,
-                "page_no": page,
-                "page_count": 100,
-            }
-            try:
-                r = requests.get(url, params=params, timeout=10)
-                data = r.json()
-                if data.get("status") != "000":
-                    break
-                items = data.get("list", [])
-                if not items:
-                    break
-                for item in items:
-                    report_nm = item.get("report_nm", "")
-                    if keyword in report_nm:
-                        stock_code = item.get("stock_code", "")
-                        if stock_code and stock_code.isdigit():
-                            warning.add(stock_code.zfill(6))
-                if len(items) < 100:
-                    break
-                page += 1
-                time.sleep(0.05)
-            except Exception:
+    # 공시 종류: 관리종목 지정/해제 등 — 한 번에 모든 공시 fetch 후 키워드 4개 동시 매칭
+    keywords = ("관리종목지정", "투자유의종목지정", "상장폐지", "거래정지")
+    page = 1
+    while page <= 10:  # max 10 pages × 100 = 1000 disclosures
+        url = f"{DART_BASE}/list.json"
+        params = {
+            "crtfc_key": DART_KEY,
+            "bgn_de": bgn_de,
+            "end_de": end_de,
+            "page_no": page,
+            "page_count": 100,
+        }
+        try:
+            r = requests.get(url, params=params, timeout=10)
+            data = r.json()
+            if data.get("status") != "000":
                 break
+            items = data.get("list", [])
+            if not items:
+                break
+            for item in items:
+                report_nm = item.get("report_nm", "") or ""
+                if any(k in report_nm for k in keywords):
+                    stock_code = item.get("stock_code", "")
+                    if stock_code and stock_code.isdigit():
+                        warning.add(stock_code.zfill(6))
+            if len(items) < 100:
+                break
+            page += 1
+            time.sleep(0.05)
+        except Exception as e:
+            print(f"  warning stocks fetch err page {page}: {e}")
+            break
     print(f"  found {len(warning)} warning stocks (관리/투자유의/상장폐지/거래정지)")
     return warning
 

@@ -49,10 +49,13 @@ def evaluate_picks(snapshots, category_filter, days_forward=30, max_picks_per_da
     category_filter: lambda r → bool
     """
     today = datetime.now(KST)
-    cutoff = today - timedelta(days=days_forward)
+    # days_forward는 trading days로 계산하지만 cutoff는 calendar days로 변환 필요.
+    # 252 trading days/year ≈ 365 calendar → ratio ~1.45. 안전마진 +5일 추가.
+    calendar_cutoff_days = int(days_forward * 365 / 252) + 5
+    cutoff = today - timedelta(days=calendar_cutoff_days)
     cutoff_str = cutoff.strftime("%Y%m%d")
 
-    # days_forward 일 이상 지난 snapshot만 사용
+    # cutoff_str보다 오래된 snapshot만 사용 (충분히 미래 가격 확보됨)
     eligible = [s for s in snapshots if s.get("_date", "") <= cutoff_str]
     if not eligible:
         return None

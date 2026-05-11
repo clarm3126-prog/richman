@@ -751,9 +751,13 @@ def find_new_highs(stocks):
             if s.get("volume", 0) <= 5000 or s.get("price", 0) <= 0:
                 continue
             ch = cached_high.get(code, 0)
-            if ch == 0 or s["price"] >= ch * 0.95:
+            if ch == 0 or s["price"] >= ch * 0.90:  # 90% 임계 (comment와 일치)
                 candidates.append(code)
         print(f"  [INCREMENTAL] checking {len(candidates)} stocks near 52w high (rest cached)...")
+
+    # 캐시 OVERWRITE 전 snapshot — fallback 비교용
+    cached_high_snapshot = dict(cached_high)
+    candidates_set = set(candidates)
 
     new_highs = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=15) as ex:
@@ -769,10 +773,12 @@ def find_new_highs(stocks):
             if high_52w and today_high and today_high >= high_52w:
                 new_highs.append(code)
 
-    # incremental 모드: 캐시에 있는 다른 종목들 중 오늘 가격 >= 캐시의 52w high인 것도 포함
+    # incremental 모드: 90% 임계 미달이라 fetch 안 한 종목 중에도
+    # 오늘 가격이 (snapshot으로 본 어제 기준의) 52w high를 돌파한 게 있을 수 있음.
+    # 단, candidates에 포함된 종목은 이미 정확히 평가됐으므로 제외.
     if not is_full_refresh:
-        for code, ch in cached_high.items():
-            if code in new_highs:
+        for code, ch in cached_high_snapshot.items():
+            if code in candidates_set or code in new_highs:
                 continue
             s = stocks.get(code)
             if not s or s.get("price", 0) < ch:

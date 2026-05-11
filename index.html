@@ -1888,11 +1888,13 @@ function openAlertModal(code) {
   modal.querySelector('#alertTarget').value = w.target || '';
   modal.querySelector('#alertDirection').value = w.direction || 'above';
   modal.classList.add('show');
+  document.body.style.overflow = 'hidden';
   requestNotificationPermission();
 }
 
 function closeAlertModal() {
   document.getElementById('alertModal').classList.remove('show');
+  if (!document.querySelector('.modal-overlay.show')) document.body.style.overflow = '';
 }
 
 async function saveAlertModal() {
@@ -1973,12 +1975,12 @@ async function clearOwnedModal() {
 
 function confirmRemoveWatchlist(code) {
   if (confirm('관심 종목에서 삭제하시겠습니까?')) {
-    const hadAlert = WATCHLIST[code] && WATCHLIST[code].target;
     delete WATCHLIST[code];
     TRIGGERED.delete(code);
     saveWatchlist();
     renderWatchlistView();
-    if (hadAlert) autoSyncIfPossible();
+    // 삭제는 항상 sync (zombie entry 방지)
+    autoSyncIfPossible();
   }
 }
 
@@ -2087,12 +2089,17 @@ function renderVolumeView() {
   el.querySelectorAll('.strength-row[data-code]').forEach(row => {
     row.onclick = () => openStockModal(row.dataset.code);
   });
-  // 거래량 캘린더 추가 (비동기 로드)
+  // 거래량 캘린더 추가 (비동기 로드, 중복 방지)
   loadVolumeHistory().then(history => {
     if (state.currentView !== 'volume') return;
     if (!history || !history.dates || history.dates.length === 0) return;
-    el.insertAdjacentHTML('beforeend', renderVolumeHeatmap(history));
-    bindVolumeHeatmapClicks(el, history);
+    // 이미 캘린더가 있으면 skip (rapid double-click 방지)
+    if (el.querySelector('[data-vol-heatmap]')) return;
+    const wrap = document.createElement('div');
+    wrap.setAttribute('data-vol-heatmap', '1');
+    wrap.innerHTML = renderVolumeHeatmap(history);
+    el.appendChild(wrap);
+    bindVolumeHeatmapClicks(wrap, history);
   });
 }
 
@@ -2308,7 +2315,7 @@ async function loadBacktestData() {
 }
 
 function renderBacktestBanner(category) {
-  if (!BACKTEST_DATA) return '';
+  if (!BACKTEST_DATA || BACKTEST_DATA.__empty) return '';
   if (BACKTEST_DATA.status !== 'ok') {
     return `<div class="strength-section" style="background:#fef9c3">
       <div style="font-size:11px;color:#92400e">📊 백테스트: ${BACKTEST_DATA.message || '데이터 누적 중'}</div>
@@ -2362,7 +2369,7 @@ function renderMinerviniView() {
   }
   loadMinerviniData().then(data => {
     if (state.currentView !== 'minervini') return;
-    if (!data) {
+    if (!data || data.__empty) {
       el.innerHTML = `<div class="strength-section"><div class="strength-loading">아직 스크리너 결과가 없습니다.<br><span style="font-size:11px">GitHub Actions가 장 마감 후 (KST 17:00) 첫 실행을 마치면 표시됩니다.</span></div></div>`;
       return;
     }
@@ -2488,7 +2495,7 @@ function renderMomentumView() {
   }
   loadMomentumData().then(data => {
     if (state.currentView !== 'momentum') return;
-    if (!data) {
+    if (!data || data.__empty) {
       el.innerHTML = `<div class="strength-section"><div class="strength-loading">아직 모멘텀 결과가 없습니다.<br><span style="font-size:11px">GitHub Actions가 장 마감 후 (KST 17:30) 첫 실행을 마치면 표시됩니다.</span></div></div>`;
       return;
     }
@@ -2603,7 +2610,7 @@ async function loadEarningsData() {
 }
 
 function renderEarningsBanner(watchlistCodes) {
-  if (!EARNINGS_DATA || !EARNINGS_DATA.disclosures) return '';
+  if (!EARNINGS_DATA || EARNINGS_DATA.__empty || !EARNINGS_DATA.disclosures) return '';
   const wlSet = new Set(watchlistCodes);
   const mine = EARNINGS_DATA.disclosures.filter(d => wlSet.has(d.code));
   if (mine.length === 0) return '';
@@ -2643,7 +2650,7 @@ async function loadExitSignals() {
 
 function renderExitSignalsBanner(watchlistCodes) {
   // 보유/관심 구분해서 표시. Telegram은 보유만 발송됨.
-  if (!EXIT_SIGNALS_DATA || !EXIT_SIGNALS_DATA.results) return '';
+  if (!EXIT_SIGNALS_DATA || EXIT_SIGNALS_DATA.__empty || !EXIT_SIGNALS_DATA.results) return '';
   const wlSet = new Set(watchlistCodes);
   const ownedCrit = [], ownedWarn = [];
   const wlCrit = [], wlWarn = [];
@@ -2850,15 +2857,21 @@ function onWatchlistSearch(query) {
 }
 
 function addFromSearch(code, name) {
+  // 현재 검색어 백업
+  const prevSearch = document.getElementById('watchlistSearch');
+  const prevQuery = prevSearch ? prevSearch.value : '';
   if (!WATCHLIST[code]) {
     WATCHLIST[code] = { name, addedAt: Date.now() };
     saveWatchlist();
     autoSyncIfPossible();
   }
   renderWatchlistView();
-  // Re-trigger search to update buttons
-  const search = document.getElementById('watchlistSearch');
-  if (search) onWatchlistSearch(search.value);
+  // 검색어 복원 + results 재실행
+  const newSearch = document.getElementById('watchlistSearch');
+  if (newSearch && prevQuery) {
+    newSearch.value = prevQuery;
+    onWatchlistSearch(prevQuery);
+  }
 }
 
 const PAT_KEY = 'github_pat_v1';
@@ -3674,7 +3687,10 @@ function getTopMovers(market, n, extraFilter) {
 
 function setMarketFilter(filter) {
   state.marketFilter = filter;
-  if (MARKET) renderMarket(MARKET);
+  // view에 따라 적절한 render 함수 호출
+  if (state.currentView === 'investor') renderInvestorView();
+  else if (state.currentView === 'volume') renderVolumeView();
+  else if (MARKET) renderMarket(MARKET);
 }
 
 const colorClass = v => v > 0 ? 'up' : v < 0 ? 'down' : 'flat';
@@ -4151,7 +4167,7 @@ async function loadForecastData() {
 }
 
 function renderForecastBox(data) {
-  if (!data || !data.top_themes || data.top_themes.length === 0) return '';
+  if (!data || data.__empty || !data.top_themes || data.top_themes.length === 0) return '';
   const stats = data.backtest_stats;
   // 신뢰도 banner
   let trustBadge = '';
@@ -4179,8 +4195,8 @@ function renderForecastBox(data) {
   for (let i = 0; i < top.length; i++) {
     const t = top[i];
     const why = [];
-    if (t.rank_delta_5d >= 5) why.push(`📈 ranking ${(t.avg_rank_5d + t.rank_delta_5d).toFixed(0)}위→${t.avg_rank_5d.toFixed(0)}위`);
-    if (t.avg_change_5d > 1) why.push(`💵 5일 평균 +${t.avg_change_5d}%`);
+    if (t.rank_delta_5d >= 5 && t.avg_rank_5d != null) why.push(`📈 ranking ${(t.avg_rank_5d + t.rank_delta_5d).toFixed(0)}위→${t.avg_rank_5d.toFixed(0)}위`);
+    if (t.avg_change_5d != null && t.avg_change_5d > 1) why.push(`💵 5일 평균 +${t.avg_change_5d}%`);
     if (t.net_buy_amount > 0) why.push(`🌐 외인+기관 매수`);
     if (t.accelerating_pct >= 30) why.push(`📊 EPS가속 ${t.accelerating_pct}%`);
     if (t.top20_freq_30d >= 0.5) why.push(`🔥 30일 강세지속`);
@@ -4451,14 +4467,6 @@ function showDayRankingModal(date, list, type) {
 
 function closeDayRankingModal() {
   document.getElementById('dayRankingModal').classList.remove('show');
-}
-
-function parseDate(yyyymmdd) {
-  return new Date(
-    parseInt(yyyymmdd.slice(0,4)),
-    parseInt(yyyymmdd.slice(4,6)) - 1,
-    parseInt(yyyymmdd.slice(6,8))
-  );
 }
 
 function formatDate(d) {
