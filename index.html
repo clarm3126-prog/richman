@@ -34,7 +34,7 @@
     margin-bottom: 12px;
   }
   @media (min-width: 600px) {
-    .top-nav { grid-template-columns: repeat(9, 1fr); }
+    .top-nav { grid-template-columns: repeat(10, 1fr); }
   }
   .nav-btn {
     padding: 10px 4px;
@@ -717,6 +717,58 @@
   .idx { display: flex; gap: 6px; align-items: baseline; }
   .idx-name { font-weight: 700; font-size: 12px; color: #6b7280; }
   .strength-section + .strength-section { margin-top: 0; }
+  /* === 🎯 미너비니 카드 === */
+  .mv-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    cursor: pointer;
+  }
+  .mv-card:active { background: #f9fafb; }
+  .mv-head {
+    display: flex; gap: 10px; align-items: flex-start;
+    margin-bottom: 10px;
+  }
+  .mv-rank { font-size: 13px; font-weight: 700; color: #6b7280; min-width: 28px; }
+  .mv-name-block { flex: 1; min-width: 0; }
+  .mv-name { font-size: 14px; font-weight: 700; }
+  .mv-sub { font-size: 11px; color: #6b7280; margin-top: 2px; }
+  .mv-sub .up { color: #dc2626; font-weight: 600; }
+  .mv-sub .down { color: #2563eb; font-weight: 600; }
+  .mv-score { text-align: right; }
+  .mv-score-total {
+    font-size: 18px; font-weight: 800;
+    color: #059669;
+    font-variant-numeric: tabular-nums;
+  }
+  .mv-score-detail { font-size: 10px; color: #6b7280; margin-top: 2px; }
+  .mv-section-label {
+    font-size: 10px; font-weight: 700; color: #6b7280;
+    margin: 8px 0 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .mv-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+  .mv-chip {
+    font-size: 10px; padding: 3px 7px; border-radius: 10px;
+    font-weight: 600;
+    border: 1px solid transparent;
+    white-space: nowrap;
+  }
+  .mv-chip.pass { background: #d1fae5; color: #065f46; border-color: #6ee7b7; }
+  .mv-chip.fail { background: #f3f4f6; color: #9ca3af; border-color: #e5e7eb; }
+  .mv-ribbon {
+    display: inline-block;
+    margin-left: 6px;
+    font-size: 10px; font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    vertical-align: middle;
+  }
+  .mv-ribbon.strict { background: #fef3c7; color: #92400e; }
+  .mv-ribbon.strong { background: #dbeafe; color: #1e40af; }
   @media (prefers-color-scheme: dark) {
     html, body { background: #0f1115; color: #e5e7eb; }
     header { background: #1a1d23; border-bottom-color: #2a2f3a; }
@@ -806,6 +858,16 @@
     .cal-nav-btn:active { background: #3a414f; }
     .cal-nav-today { background: #e5e7eb; color: #0f1115; border-color: #e5e7eb; }
     .cal-month-input { background: #2a2f3a; border-color: #3a414f; color: #e5e7eb; }
+    .mv-card { background: #1a1d23; border-color: #2a2f3a; }
+    .mv-card:active { background: #2a2f3a; }
+    .mv-rank, .mv-sub, .mv-section-label, .mv-score-detail { color: #9ca3af; }
+    .mv-sub .up { color: #fca5a5; }
+    .mv-sub .down { color: #93c5fd; }
+    .mv-score-total { color: #6ee7b7; }
+    .mv-chip.pass { background: #064e3b; color: #6ee7b7; border-color: #065f46; }
+    .mv-chip.fail { background: #2a2f3a; color: #6b7280; border-color: #3a414f; }
+    .mv-ribbon.strict { background: #78350f; color: #fde68a; }
+    .mv-ribbon.strong { background: #1e3a8a; color: #bfdbfe; }
   }
 </style>
 </head>
@@ -821,6 +883,7 @@
     <button class="nav-btn" data-view="newhighs" onclick="setView('newhighs')">🚀 신고가</button>
     <button class="nav-btn" data-view="investor" onclick="setView('investor')">💵 매매</button>
     <button class="nav-btn" data-view="volume" onclick="setView('volume')">🔥 거래량</button>
+    <button class="nav-btn" data-view="minervini" onclick="setView('minervini')">🎯 미너비니</button>
     <button class="nav-btn" data-view="watchlist" onclick="setView('watchlist')">⭐ 관심</button>
   </div>
   <input type="text" class="search-box" id="search" placeholder="회사명·종목코드·키워드 검색">
@@ -1588,6 +1651,9 @@ function setView(viewName) {
   } else if (viewName === 'volume') {
     renderVolumeView();
     document.getElementById('content').innerHTML = '';
+  } else if (viewName === 'minervini') {
+    renderMinerviniView();
+    document.getElementById('content').innerHTML = '';
   } else {
     if (MARKET) renderMarket(MARKET);
     renderContent();
@@ -1932,6 +1998,125 @@ function renderVolumeView() {
   el.querySelectorAll('.strength-row[data-code]').forEach(row => {
     row.onclick = () => openStockModal(row.dataset.code);
   });
+}
+
+// === 🎯 미너비니 SEPA + Trend Template ===
+let MINERVINI_DATA = null;
+let MINERVINI_LOADING = null;
+
+async function loadMinerviniData() {
+  if (MINERVINI_DATA) return MINERVINI_DATA;
+  if (MINERVINI_LOADING) return MINERVINI_LOADING;
+  MINERVINI_LOADING = (async () => {
+    try {
+      const r = await fetch('data/screener_results.json?t=' + Date.now());
+      if (!r.ok) return null;
+      MINERVINI_DATA = await r.json();
+      return MINERVINI_DATA;
+    } catch { return null; }
+    finally { MINERVINI_LOADING = null; }
+  })();
+  return MINERVINI_LOADING;
+}
+
+function renderMinerviniView() {
+  const el = document.getElementById('strength');
+  if (!el) return;
+  if (state.currentView !== 'minervini') return;
+  el.innerHTML = `<div class="strength-section"><div class="strength-loading">미너비니 결과 로딩 중...</div></div>`;
+  const filter = state.minerviniFilter || 'strong'; // strict | strong | all
+  loadMinerviniData().then(data => {
+    if (state.currentView !== 'minervini') return;
+    if (!data) {
+      el.innerHTML = `<div class="strength-section"><div class="strength-loading">아직 스크리너 결과가 없습니다.<br><span style="font-size:11px">GitHub Actions가 장 마감 후 (KST 17:00) 첫 실행을 마치면 표시됩니다.</span></div></div>`;
+      return;
+    }
+    const all = data.results || [];
+    let filtered;
+    if (filter === 'strict') filtered = all.filter(r => r.minervini_strict);
+    else if (filter === 'strong') filtered = all.filter(r => r.minervini_strong);
+    else filtered = all;
+    let html = '';
+    html += `<div class="strength-section">
+      <div class="strength-title">🎯 미너비니 SEPA + Trend Template</div>
+      <div class="strength-meta">기준일 ${data.trading_day || '—'} · 평가 ${data.total_evaluated || 0}개 · 엄격 ${data.minervini_strict_count || 0}개 · 우량 ${data.minervini_strong_count || 0}개</div>
+      <div class="market-filter" style="margin-top:8px">
+        <button class="${filter==='strict'?'active':''}" onclick="setMinerviniFilter('strict')">엄격(8/8)</button>
+        <button class="${filter==='strong'?'active':''}" onclick="setMinerviniFilter('strong')">우량(6+/8 + 펀더멘털)</button>
+        <button class="${filter==='all'?'active':''}" onclick="setMinerviniFilter('all')">전체</button>
+      </div>
+    </div>`;
+    if (filtered.length === 0) {
+      html += `<div class="strength-section"><div class="strength-loading">현재 조건에 맞는 종목이 없습니다.</div></div>`;
+    } else {
+      html += `<div class="strength-section">`;
+      filtered.slice(0, 50).forEach((r, i) => {
+        const tt = r.trend_template || {};
+        const fund = r.fundamentals || {};
+        const setup = r.setup || {};
+        const cls = r.change > 0 ? 'up' : r.change < 0 ? 'down' : 'flat';
+        const sign = r.change > 0 ? '+' : '';
+        const ttIcons = [
+          ['MA50↑', tt.price_above_ma50],
+          ['MA150↑', tt.price_above_ma150],
+          ['MA200↑', tt.price_above_ma200],
+          ['50>150', tt.ma50_above_ma150],
+          ['150>200', tt.ma150_above_ma200],
+          ['200추세', tt.ma200_uptrend],
+          ['52w고점-25%', tt.within_25pct_of_52w_high],
+          ['52w저점+25%', tt.above_25pct_from_52w_low],
+          ['RS70+', tt.rs_rating_70plus],
+        ].map(([name, ok]) => `<span class="mv-chip ${ok?'pass':'fail'}">${name}</span>`).join('');
+        const fundIcons = [
+          [`EPS YoY ${fund.eps_growth_q_yoy ?? '—'}%`, fund.eps_growth_25pct],
+          [`EPS가속`, fund.eps_accelerating],
+          [`매출 YoY ${fund.sales_growth_q_yoy ?? '—'}%`, fund.sales_growth_15pct],
+          [`OPM(Q) ${fund.op_margin_q ?? 0}%`, fund.op_margin_q_10pct],
+          [`OPM(연) ${fund.op_margin_annual ?? 0}%`, fund.op_margin_annual_10pct],
+          [`OPM(3년) ${fund.op_margin_3y_avg ?? 0}%`, fund.op_margin_3y_avg_20pct],
+        ].map(([name, ok]) => `<span class="mv-chip ${ok?'pass':'fail'}">${name}</span>`).join('');
+        const setupIcons = [
+          ['5일타이트', setup['5day_tightness_10pct']],
+          ['5일 시-종 5%', setup['5day_open_close_5pct']],
+          ['거래대금 70억', setup.trade_value_7B_1x],
+          ['임펄스 +25%', setup.impulse_25pct_20d],
+        ].map(([name, ok]) => `<span class="mv-chip ${ok?'pass':'fail'}">${name}</span>`).join('');
+        const rsVal = tt._rs_value !== null && tt._rs_value !== undefined ? `RS ${tt._rs_value}` : '';
+        const ribbon = r.minervini_strict
+          ? `<span class="mv-ribbon strict">엄격 통과</span>`
+          : (r.minervini_strong ? `<span class="mv-ribbon strong">우량</span>` : '');
+        html += `
+          <div class="mv-card" data-code="${r.code}" onclick="openStockModal('${r.code}')">
+            <div class="mv-head">
+              <div class="mv-rank">#${i + 1}</div>
+              <div class="mv-name-block">
+                <div class="mv-name">${r.name} ${ribbon}</div>
+                <div class="mv-sub">${r.code} · ${r.market || ''} · ${r.price ? r.price.toLocaleString('ko-KR') : '—'}원
+                  <span class="${cls}">${sign}${(r.change ?? 0).toFixed(2)}%</span>
+                  · ${rsVal}</div>
+              </div>
+              <div class="mv-score">
+                <div class="mv-score-total">${r.total_score ?? 0}</div>
+                <div class="mv-score-detail">TT ${r.tt_score}/40 · S ${r.setup_score}/20 · F ${r.fund_score}/40</div>
+              </div>
+            </div>
+            <div class="mv-section-label">Trend Template (${r.tt_passed_count}/8)</div>
+            <div class="mv-chips">${ttIcons}</div>
+            <div class="mv-section-label">Fundamentals (${r.fund_passed_count}/3 핵심)</div>
+            <div class="mv-chips">${fundIcons}</div>
+            <div class="mv-section-label">Setup / Liquidity</div>
+            <div class="mv-chips">${setupIcons}</div>
+          </div>`;
+      });
+      html += `</div>`;
+    }
+    el.innerHTML = html;
+  });
+}
+
+function setMinerviniFilter(f) {
+  state.minerviniFilter = f;
+  renderMinerviniView();
 }
 
 function renderWatchlistView() {
