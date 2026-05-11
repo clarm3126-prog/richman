@@ -209,35 +209,58 @@ def fetch_all_quarterly_data(corp_codes_map, target_codes, max_workers=12):
 # ================================
 
 def fetch_stock_history(code, days=252):
-    """종목 일봉 OHLC."""
-    url = f"https://api.stock.naver.com/chart/domestic/item/{code}?periodType=dayCandle&count={days}"
-    headers = {**HEADERS, "Referer": "https://stock.naver.com/"}
+    """종목 일봉 OHLC.
+    구 API (api.stock.naver.com/chart/domestic/item/...?count=N)는 ~110개만 반환됨.
+    front-api/external/chart/domestic/info는 startTime/endTime 기간 지원 → 252일+ 가능.
+    응답 format: Python literal (single quotes) — ast.literal_eval로 파싱.
+    """
+    import ast as _ast
+    from datetime import timedelta as _td
+    today = datetime.now(KST)
+    # days 거래일 확보 위해 calendar days로 1.6배 + 30일 안전마진
+    start = today - _td(days=int(days * 1.6) + 30)
+    start_str = start.strftime("%Y%m%d")
+    end_str = today.strftime("%Y%m%d")
+    url = "https://m.stock.naver.com/front-api/external/chart/domestic/info"
+    params = {
+        "symbol": code,
+        "requestType": 1,
+        "startTime": start_str,
+        "endTime": end_str,
+        "timeframe": "day",
+    }
+    headers = {**HEADERS, "Referer": "https://m.stock.naver.com/"}
     try:
-        r = requests.get(url, headers=headers, timeout=10)
+        r = requests.get(url, params=params, headers=headers, timeout=10)
         if r.status_code != 200:
             return code, []
-        data = r.json()
+        text = r.text.strip()
+        if not text:
+            return code, []
+        data = _ast.literal_eval(text)
+        if not data or len(data) < 2:
+            return code, []
+        # data[0] = header ['날짜','시가','고가','저가','종가','거래량','외국인소진율']
+        # data[1:] = 데이터 행
         out = []
-        for p in data.get("priceInfos", []):
-            d = p.get("localDate")
-            close = p.get("closePrice")
-            high = p.get("highPrice")
-            low = p.get("lowPrice")
-            openp = p.get("openPrice")
-            vol = p.get("accumulatedTradingVolume")
-            if d and close is not None:
-                try:
-                    out.append({
-                        "date": str(d),
-                        "open": float(openp) if openp else 0,
-                        "high": float(high) if high else 0,
-                        "low": float(low) if low else 0,
-                        "close": float(close),
-                        "volume": int(vol) if vol else 0,
-                    })
-                except (ValueError, TypeError):
-                    pass
+        for row in data[1:]:
+            if len(row) < 6:
+                continue
+            try:
+                out.append({
+                    "date": str(row[0]),
+                    "open": float(row[1]),
+                    "high": float(row[2]),
+                    "low": float(row[3]),
+                    "close": float(row[4]),
+                    "volume": int(row[5]) if row[5] else 0,
+                })
+            except (ValueError, TypeError):
+                pass
         out.sort(key=lambda x: x["date"])
+        # days 만큼만 (최근 N개)
+        if len(out) > days:
+            out = out[-days:]
         return code, out
     except Exception:
         return code, []
