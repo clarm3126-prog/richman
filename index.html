@@ -3932,13 +3932,103 @@ function renderMovements(movements, daysAvailable) {
   });
 }
 
+// === 🔮 테마 강세 예측 ===
+let FORECAST_DATA = null;
+let FORECAST_LOADING = null;
+async function loadForecastData() {
+  if (FORECAST_DATA) return FORECAST_DATA;
+  if (FORECAST_LOADING) return FORECAST_LOADING;
+  FORECAST_LOADING = (async () => {
+    try {
+      const r = await fetch('data/theme_forecast.json?t=' + Date.now());
+      if (!r.ok) return null;
+      FORECAST_DATA = await r.json();
+      return FORECAST_DATA;
+    } catch { return null; }
+    finally { FORECAST_LOADING = null; }
+  })();
+  return FORECAST_LOADING;
+}
+
+function renderForecastBox(data) {
+  if (!data || !data.top_themes || data.top_themes.length === 0) return '';
+  const stats = data.backtest_stats;
+  // 신뢰도 banner
+  let trustBadge = '';
+  let trustColor = '#9ca3af';
+  let trustText = '데이터 누적 중';
+  if (stats && stats.status === 'ok') {
+    const s7 = stats.stats_7d_top5;
+    if (s7) {
+      const acc = s7.avg_hit_rate;
+      if (acc >= 60) { trustColor = '#059669'; trustText = `정확도 ${acc}% ✅`; }
+      else if (acc >= 50) { trustColor = '#d97706'; trustText = `정확도 ${acc}% (참고)`; }
+      else { trustColor = '#dc2626'; trustText = `정확도 ${acc}% (낮음)`; }
+    }
+  } else if (stats && stats.status === 'warming_up') {
+    trustText = stats.message || '백테스트 데이터 누적 중';
+  }
+  trustBadge = `<span style="font-size:10px;background:${trustColor};color:#fff;padding:2px 6px;border-radius:4px;margin-left:6px">${trustText}</span>`;
+
+  let html = `<div class="strength-section" style="border-left:4px solid #7c3aed;background:#f5f3ff">
+    <div class="strength-title">🔮 다음 주 강세 예상 테마 ${trustBadge}</div>
+    <div class="strength-meta">기준일 ${data.trading_day} · 모멘텀+자금흐름+펀더멘털 결합 · ${data.history_days_available}일 데이터 기반</div>`;
+  // top 10
+  const top = data.top_themes.slice(0, 10);
+  html += `<div style="margin-top:8px">`;
+  for (let i = 0; i < top.length; i++) {
+    const t = top[i];
+    const why = [];
+    if (t.rank_delta_5d >= 5) why.push(`📈 ranking ${(t.avg_rank_5d + t.rank_delta_5d).toFixed(0)}위→${t.avg_rank_5d.toFixed(0)}위`);
+    if (t.avg_change_5d > 1) why.push(`💵 5일 평균 +${t.avg_change_5d}%`);
+    if (t.net_buy_amount > 0) why.push(`🌐 외인+기관 매수`);
+    if (t.accelerating_pct >= 30) why.push(`📊 EPS가속 ${t.accelerating_pct}%`);
+    if (t.top20_freq_30d >= 0.5) why.push(`🔥 30일 강세지속`);
+    const whyStr = why.length > 0 ? why.join(' · ') : '신호 약함';
+    html += `<div style="padding:8px 0;border-bottom:1px solid #e9d5ff;cursor:default">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:13px;color:#5b21b6">#${i+1} ${t.name}</div>
+          <div style="font-size:10px;color:#6b7280;margin-top:2px">현재 ${t.current_rank}위 · ${t.current_change >= 0 ? '+' : ''}${t.current_change}%</div>
+          <div style="font-size:11px;color:#374151;margin-top:3px">${whyStr}</div>
+        </div>
+        <div style="text-align:right;margin-left:8px">
+          <div style="font-size:16px;font-weight:800;color:#7c3aed">${t.total_score}</div>
+          <div style="font-size:9px;color:#6b7280">M${t.momentum_score} F${t.flow_score} U${t.fundamental_score}</div>
+        </div>
+      </div>
+    </div>`;
+  }
+  html += `</div>`;
+  // 백테스트 결과 widget
+  if (stats && stats.status === 'ok') {
+    html += `<div style="margin-top:10px;padding:8px;background:#fff;border-radius:6px;font-size:11px">
+      <b style="color:#5b21b6">📊 자체 검증 (${stats.n_archives}일치 누적)</b><br>`;
+    if (stats.stats_7d_top5) {
+      const s = stats.stats_7d_top5;
+      html += `7일 후 TOP 5 적중률: <b>${s.avg_hit_rate}%</b> · 평균 등락률 ${s.avg_change_after !== null ? (s.avg_change_after >= 0 ? '+' : '') + s.avg_change_after + '%' : '—'}<br>`;
+    }
+    if (stats.stats_30d_top5) {
+      const s = stats.stats_30d_top5;
+      html += `30일 후 TOP 5 적중률: <b>${s.avg_hit_rate}%</b> · 평균 등락률 ${s.avg_change_after !== null ? (s.avg_change_after >= 0 ? '+' : '') + s.avg_change_after + '%' : '—'}`;
+    }
+    html += `</div>`;
+  } else {
+    html += `<div style="margin-top:10px;padding:8px;background:#fef9c3;border-radius:6px;font-size:11px;color:#92400e">
+      ⚠️ 자체 백테스트가 아직 충분한 데이터를 모으지 못했습니다 (최소 7일 누적 필요).
+      매주 토요일 자동 검증 → 정확도 표시.
+    </div>`;
+  }
+  html += `</div>`;
+  return html;
+}
+
 async function loadAndRenderMovements() {
   if (state.currentView !== 'movements') return;
   const el = document.getElementById('movements-section');
   if (!el) return;
   if (!HISTORY_LOADED) {
     el.innerHTML = `<div class="strength-section"><div class="strength-loading">⏳ 자금 흐름 데이터 로드 중...</div></div>`;
-    // 백그라운드에서 이미 로딩 중이면 그 Promise 대기 (중복 fetch 방지)
     HISTORY_LOADING = HISTORY_LOADING || loadHistoryRange(60);
     HISTORY_LOADED = await HISTORY_LOADING;
   }
@@ -3948,7 +4038,20 @@ async function loadAndRenderMovements() {
   }
   const movements = computeMovements(HISTORY_LOADED);
   renderMovements(movements, HISTORY_LOADED.dates.length);
-  // 캘린더 히트맵 추가 (테마)
+  // 🔮 forecast box를 맨 위에 prepend (비동기, 도착하면 표시)
+  loadForecastData().then(forecast => {
+    if (state.currentView !== 'movements') return;
+    if (!forecast) return;
+    const target = document.getElementById('movements-section');
+    if (!target) return;
+    // 이미 있으면 skip
+    if (target.querySelector('[data-forecast-box]')) return;
+    const wrap = document.createElement('div');
+    wrap.setAttribute('data-forecast-box', '1');
+    wrap.innerHTML = renderForecastBox(forecast);
+    target.insertBefore(wrap, target.firstChild);
+  });
+  // 캘린더 히트맵 추가
   el.insertAdjacentHTML('beforeend', renderHeatmap(HISTORY_LOADED, 'theme'));
   bindHeatmapClicks(el);
 }
