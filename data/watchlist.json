@@ -32,7 +32,10 @@
     {
       "code": "033100",
       "name": "제룡전기",
-      "addedAt": 1778253273168
+      "addedAt": 1778253273168,
+      "owned": true,
+      "entry_price": 89006,
+      "entry_date": "2026-05-04"
     },
     {
       "code": "005880",
