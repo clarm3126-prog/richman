@@ -34,8 +34,9 @@ from screener import (
 # 매도 시그널 검출
 # ================================
 
-def evaluate_exit_signals(code, history):
+def evaluate_exit_signals(code, history, entry_price=None):
     """단일 종목 매도 시그널 평가.
+    entry_price 제공 시 손절선/수익 trailing 추가 평가.
     Returns dict with severity + signals list.
     """
     if len(history) < 60:
@@ -171,6 +172,39 @@ def evaluate_exit_signals(code, history):
                 "detail": "추세 약화",
             })
 
+    # === 💰 매입가 기반 시그널 (entry_price 제공 시) ===
+    if entry_price and entry_price > 0:
+        return_pct = (cur_close - entry_price) / entry_price * 100
+
+        # 9. 손절선 -7% (Minervini의 매도 룰)
+        if return_pct <= -7:
+            signals.append({
+                "severity": "critical",
+                "type": "stop_loss_7pct",
+                "label": f"손절선 도달 ({return_pct:.1f}%)",
+                "detail": f"매입가 {entry_price:,}원 → 현재 {cur_close:,}원 (Minervini -7% 룰)",
+            })
+
+        # 10. 수익 +20% 후 MA21 trail
+        if return_pct >= 20 and ma21 and ma21_y:
+            if prev_close >= ma21_y and cur_close < ma21:
+                signals.append({
+                    "severity": "warning",
+                    "type": "profit_trail_ma21",
+                    "label": f"수익 trail (MA21 이탈, +{return_pct:.0f}%)",
+                    "detail": f"매입 {entry_price:,} → 현재 {cur_close:,} · 이익 보존 검토",
+                })
+
+        # 11. 수익 +25% 후 MA50 trail (큰 수익은 더 긴 trail)
+        if return_pct >= 50 and ma50 and ma50_y:
+            if prev_close >= ma50_y and cur_close < ma50:
+                signals.append({
+                    "severity": "warning",
+                    "type": "profit_trail_ma50",
+                    "label": f"큰 수익 trail (MA50 이탈, +{return_pct:.0f}%)",
+                    "detail": f"매입 {entry_price:,} → 현재 {cur_close:,}",
+                })
+
     # 종합 severity
     if not signals:
         overall = "ok"
@@ -181,7 +215,7 @@ def evaluate_exit_signals(code, history):
     else:
         overall = "info"
 
-    return {
+    result = {
         "eligible": True,
         "overall": overall,
         "signals": signals,
@@ -193,31 +227,48 @@ def evaluate_exit_signals(code, history):
         "ma200": round(ma200) if ma200 else None,
         "distribution_days_20d": distribution_days,
     }
+    if entry_price and entry_price > 0:
+        result["entry_price"] = entry_price
+        result["return_pct"] = round((cur_close - entry_price) / entry_price * 100, 2)
+    return result
 
 
 def collect_target_codes():
     """평가 대상 종목 수집:
-    1. data/watchlist.json - 사용자 관심 종목
-    2. data/screener_results.json - 최근 미너비니 통과 (top 30)
-    3. data/momentum_results.json - 최근 모멘텀 통과 (top 30)
-    """
-    targets = {}  # {code: {"name": ..., "source": [...]}}
+    1. data/watchlist.json - 보유(owned=true) + 관심
+    2. data/screener_results.json - 최근 미너비니 통과 (top 30) [모니터링용, 알림 X]
+    3. data/momentum_results.json - 최근 모멘텀 통과 (top 30) [모니터링용, 알림 X]
 
-    # 1. Watchlist
+    각 항목에 owned/entry_price 정보 보존 (Telegram 발송 대상 결정용).
+    """
+    targets = {}  # {code: {name, source, owned, entry_price, entry_date}}
+
+    # 1. Watchlist (owned 정보 포함)
     wl_path = Path("data/watchlist.json")
     if wl_path.exists():
         try:
             wl = json.loads(wl_path.read_text(encoding="utf-8"))
             for item in wl.get("watchlist", []):
                 code = str(item.get("code", "")).zfill(6)
-                if code:
-                    if code not in targets:
-                        targets[code] = {"name": item.get("name", code), "source": []}
-                    targets[code]["source"].append("watchlist")
+                if not code:
+                    continue
+                if code not in targets:
+                    targets[code] = {
+                        "name": item.get("name", code),
+                        "source": [],
+                        "owned": False,
+                        "entry_price": None,
+                        "entry_date": None,
+                    }
+                targets[code]["source"].append("watchlist")
+                if item.get("owned"):
+                    targets[code]["owned"] = True
+                    targets[code]["entry_price"] = item.get("entry_price")
+                    targets[code]["entry_date"] = item.get("entry_date")
         except Exception:
             pass
 
-    # 2. Minervini results
+    # 2. Minervini results — 모니터링용 (Telegram 알림 X)
     sr_path = Path("data/screener_results.json")
     if sr_path.exists():
         try:
@@ -226,12 +277,18 @@ def collect_target_codes():
                 code = r.get("code")
                 if code:
                     if code not in targets:
-                        targets[code] = {"name": r.get("name", code), "source": []}
+                        targets[code] = {
+                            "name": r.get("name", code),
+                            "source": [],
+                            "owned": False,
+                            "entry_price": None,
+                            "entry_date": None,
+                        }
                     targets[code]["source"].append("minervini")
         except Exception:
             pass
 
-    # 3. Momentum results
+    # 3. Momentum results — 모니터링용 (Telegram 알림 X)
     mr_path = Path("data/momentum_results.json")
     if mr_path.exists():
         try:
@@ -240,7 +297,13 @@ def collect_target_codes():
                 code = r.get("code")
                 if code:
                     if code not in targets:
-                        targets[code] = {"name": r.get("name", code), "source": []}
+                        targets[code] = {
+                            "name": r.get("name", code),
+                            "source": [],
+                            "owned": False,
+                            "entry_price": None,
+                            "entry_date": None,
+                        }
                     targets[code]["source"].append("momentum")
         except Exception:
             pass
@@ -284,6 +347,9 @@ def notify_exit_signals(results):
     new_critical = []
     new_warning = []
     for r in results:
+        # ✅ Telegram은 보유 종목(owned=True)에만 발송
+        if not r.get("owned"):
+            continue
         code = r["code"]
         for sig in r.get("signals", []):
             if sig["severity"] not in ("critical", "warning"):
@@ -299,6 +365,8 @@ def notify_exit_signals(results):
                 "change": r.get("today_change", 0),
                 "label": sig["label"],
                 "detail": sig["detail"],
+                "return_pct": r.get("return_pct"),
+                "entry_price": r.get("entry_price"),
                 "_key": key,
             }
             if sig["severity"] == "critical":
@@ -307,18 +375,22 @@ def notify_exit_signals(results):
                 new_warning.append(entry)
 
     if not new_critical and not new_warning:
-        print("  no new exit signals (skip telegram)")
+        print("  no new exit signals for owned stocks (skip telegram)")
         return
 
     today_str = today.strftime("%Y-%m-%d")
-    lines = [f"🛑 *매도 시그널* — {today_str}\n"]
+    lines = [f"🛑 *매도 시그널 (보유 종목)* — {today_str}\n"]
 
     def fmt_one(e):
-        src = "/".join(s[:1].upper() for s in e["source"]) or "-"
         sign = "+" if e["change"] > 0 else ""
+        ret_line = ""
+        if e.get("return_pct") is not None and e.get("entry_price"):
+            rsign = "+" if e["return_pct"] > 0 else ""
+            ret_emoji = "🟢" if e["return_pct"] >= 0 else "🔴"
+            ret_line = f"\n  {ret_emoji} 수익률 *{rsign}{e['return_pct']:.2f}%* (매입 {e['entry_price']:,}원)"
         return (
-            f"• *{e['name']}* (`{e['code']}`) [{src}]\n"
-            f"  {e['price']:,}원 ({sign}{e['change']:.2f}%)\n"
+            f"• *{e['name']}* (`{e['code']}`)\n"
+            f"  {e['price']:,}원 ({sign}{e['change']:.2f}%){ret_line}\n"
             f"  ⚡ {e['label']}\n"
             f"  💬 {e['detail']}"
         )
@@ -368,19 +440,27 @@ def main():
 
     print("\n[평가] 매도 시그널...")
     results = []
+    owned_count = 0
     for code, target in targets.items():
         history = histories.get(code)
         if not history or len(history) < 60:
             continue
-        evaluation = evaluate_exit_signals(code, history)
+        entry = target.get("entry_price") if target.get("owned") else None
+        evaluation = evaluate_exit_signals(code, history, entry_price=entry)
         if not evaluation.get("eligible"):
             continue
+        if target.get("owned"):
+            owned_count += 1
         results.append({
             "code": code,
             "name": target["name"],
             "source": target["source"],
+            "owned": target.get("owned", False),
+            "entry_price": target.get("entry_price"),
+            "entry_date": target.get("entry_date"),
             **evaluation,
         })
+    print(f"  owned stocks evaluated: {owned_count}")
 
     # severity 순 정렬
     severity_order = {"critical": 0, "warning": 1, "info": 2, "ok": 3}

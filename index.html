@@ -923,6 +923,25 @@
   </div>
 </div>
 
+<div id="ownedModal" class="modal-overlay" onclick="if(event.target===this) closeOwnedModal()">
+  <div class="modal">
+    <div class="modal-title">📌 보유 종목 등록</div>
+    <div class="modal-current" id="ownedModalCurrent"></div>
+    <div class="modal-form">
+      <label class="modal-label">매입가 (원) <span style="color:#9ca3af;font-weight:400">선택사항</span></label>
+      <input type="text" id="ownedEntryPrice" inputmode="numeric" placeholder="예: 22000" class="modal-input">
+      <label class="modal-label">매입일 <span style="color:#9ca3af;font-weight:400">선택사항</span></label>
+      <input type="date" id="ownedEntryDate" class="modal-input">
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn modal-btn-clear" onclick="clearOwnedModal()">보유 해제</button>
+      <button class="modal-btn modal-btn-cancel" onclick="closeOwnedModal()">취소</button>
+      <button class="modal-btn modal-btn-save" onclick="saveOwnedModal()">저장</button>
+    </div>
+    <div class="modal-note">매입가를 등록하면 -7% 손절선, +20% MA21 trail, +50% MA50 trail 자동 알림.<br>📱 Telegram 매도 시그널은 <b>보유 종목에만</b> 발송됩니다.</div>
+  </div>
+</div>
+
 <div id="dayRankingModal" class="modal-overlay" onclick="if(event.target===this) closeDayRankingModal()">
   <div class="modal" style="max-width:420px">
     <div class="modal-title" id="dayRankingTitle">📅 TOP 10</div>
@@ -1698,11 +1717,24 @@ async function syncWatchlistFromGitHub() {
             WATCHLIST[code].target = item.target;
             WATCHLIST[code].direction = item.direction || 'above';
           }
+          if (item.owned) {
+            WATCHLIST[code].owned = true;
+            if (item.entry_price) WATCHLIST[code].entry_price = item.entry_price;
+            if (item.entry_date) WATCHLIST[code].entry_date = item.entry_date;
+          }
           changed = true;
-        } else if (!WATCHLIST[code].target && item.target) {
-          WATCHLIST[code].target = item.target;
-          WATCHLIST[code].direction = item.direction || 'above';
-          changed = true;
+        } else {
+          if (!WATCHLIST[code].target && item.target) {
+            WATCHLIST[code].target = item.target;
+            WATCHLIST[code].direction = item.direction || 'above';
+            changed = true;
+          }
+          if (!WATCHLIST[code].owned && item.owned) {
+            WATCHLIST[code].owned = true;
+            if (item.entry_price) WATCHLIST[code].entry_price = item.entry_price;
+            if (item.entry_date) WATCHLIST[code].entry_date = item.entry_date;
+            changed = true;
+          }
         }
       }
     }
@@ -1884,6 +1916,59 @@ function clearAlertModal() {
   closeAlertModal();
   if (state.currentView === 'watchlist') renderWatchlistView();
   if (hadAlert) autoSyncIfPossible();
+}
+
+// === 📌 보유 종목 등록 modal ===
+function openOwnedModal(code, name) {
+  const w = WATCHLIST[code] || { name };
+  const modal = document.getElementById('ownedModal');
+  modal.dataset.code = code;
+  modal.dataset.name = name;
+  const cur = MARKET ? MARKET.stocks[code] : null;
+  const curStr = cur ? `${name} (${code}) · 현재가 ${cur.price.toLocaleString('ko-KR')}원` : `${name} (${code})`;
+  modal.querySelector('#ownedModalCurrent').textContent = curStr;
+  modal.querySelector('#ownedEntryPrice').value = w.entry_price || '';
+  modal.querySelector('#ownedEntryDate').value = w.entry_date || new Date().toISOString().slice(0, 10);
+  closeStockModal();
+  modal.classList.add('show');
+}
+
+function closeOwnedModal() {
+  document.getElementById('ownedModal').classList.remove('show');
+}
+
+async function saveOwnedModal() {
+  const modal = document.getElementById('ownedModal');
+  const code = modal.dataset.code;
+  const name = modal.dataset.name;
+  const priceStr = modal.querySelector('#ownedEntryPrice').value.replace(/[^\d]/g, '');
+  const dateStr = modal.querySelector('#ownedEntryDate').value;
+  if (!WATCHLIST[code]) WATCHLIST[code] = { name, addedAt: Date.now() };
+  WATCHLIST[code].owned = true;
+  if (priceStr) WATCHLIST[code].entry_price = parseInt(priceStr, 10);
+  else delete WATCHLIST[code].entry_price;
+  if (dateStr) WATCHLIST[code].entry_date = dateStr;
+  else delete WATCHLIST[code].entry_date;
+  saveWatchlist();
+  closeOwnedModal();
+  if (state.currentView === 'watchlist') renderWatchlistView();
+  showToast('📌 보유 등록 완료');
+  autoSyncIfPossible();
+}
+
+async function clearOwnedModal() {
+  const modal = document.getElementById('ownedModal');
+  const code = modal.dataset.code;
+  if (WATCHLIST[code]) {
+    delete WATCHLIST[code].owned;
+    delete WATCHLIST[code].entry_price;
+    delete WATCHLIST[code].entry_date;
+    saveWatchlist();
+  }
+  closeOwnedModal();
+  if (state.currentView === 'watchlist') renderWatchlistView();
+  showToast('📌 보유 해제');
+  autoSyncIfPossible();
 }
 
 function confirmRemoveWatchlist(code) {
@@ -2357,32 +2442,64 @@ async function loadExitSignals() {
 }
 
 function renderExitSignalsBanner(watchlistCodes) {
-  // 사용자 watchlist에 해당하는 critical/warning만 표시
+  // 보유/관심 구분해서 표시. Telegram은 보유만 발송됨.
   if (!EXIT_SIGNALS_DATA || !EXIT_SIGNALS_DATA.results) return '';
   const wlSet = new Set(watchlistCodes);
-  const myCritical = [];
-  const myWarning = [];
+  const ownedCrit = [], ownedWarn = [];
+  const wlCrit = [], wlWarn = [];
   for (const r of EXIT_SIGNALS_DATA.results) {
     if (!wlSet.has(r.code)) continue;
-    if (r.overall === 'critical') myCritical.push(r);
-    else if (r.overall === 'warning') myWarning.push(r);
+    const isOwned = WATCHLIST[r.code] && WATCHLIST[r.code].owned;
+    if (r.overall === 'critical') (isOwned ? ownedCrit : wlCrit).push(r);
+    else if (r.overall === 'warning') (isOwned ? ownedWarn : wlWarn).push(r);
   }
-  if (myCritical.length === 0 && myWarning.length === 0) return '';
-  let html = `<div class="strength-section" style="border-left:4px solid #dc2626">
-    <div class="strength-title">🛑 매도 시그널 (관심 종목)</div>
-    <div class="strength-meta">${EXIT_SIGNALS_DATA.trading_day || ''} 분석 · 위험 ${myCritical.length}건 · 주의 ${myWarning.length}건</div>
-    <div style="margin-top:8px">`;
-  for (const r of [...myCritical, ...myWarning]) {
-    const sigs = (r.signals || []).map(s =>
-      `<span class="mv-chip ${s.severity === 'critical' ? 'fail' : 'pass'}" style="background:${s.severity === 'critical' ? '#fee2e2' : '#fef3c7'};color:${s.severity === 'critical' ? '#991b1b' : '#92400e'};border-color:${s.severity === 'critical' ? '#fca5a5' : '#fcd34d'}">${s.label}</span>`
-    ).join('');
-    html += `<div style="padding:8px 0;border-bottom:1px solid #f3f4f6;cursor:pointer" onclick="openStockModal('${r.code}')">
-      <div style="font-weight:700;font-size:13px">${r.overall === 'critical' ? '🛑' : '⚠️'} ${r.name} <span style="color:#6b7280;font-weight:400;font-size:11px">${r.code}</span></div>
-      <div style="font-size:11px;color:#6b7280;margin-top:2px">${(r.current_price || 0).toLocaleString('ko-KR')}원 · ${r.today_change >= 0 ? '+' : ''}${r.today_change}%</div>
-      <div class="mv-chips" style="margin-top:4px">${sigs}</div>
-    </div>`;
+  const hasOwned = ownedCrit.length + ownedWarn.length > 0;
+  const hasWl = wlCrit.length + wlWarn.length > 0;
+  if (!hasOwned && !hasWl) return '';
+  let html = '';
+  // 보유 종목 (빨강 강조 — Telegram 알림 보내짐)
+  if (hasOwned) {
+    html += `<div class="strength-section" style="border-left:4px solid #dc2626;background:#fef2f2">
+      <div class="strength-title">🛑 보유 종목 매도 시그널 <span style="font-size:10px;background:#dc2626;color:#fff;padding:2px 6px;border-radius:4px;margin-left:6px">📱 알림 발송</span></div>
+      <div class="strength-meta">${EXIT_SIGNALS_DATA.trading_day || ''} 분석 · 위험 ${ownedCrit.length}건 · 주의 ${ownedWarn.length}건</div>
+      <div style="margin-top:8px">`;
+    for (const r of [...ownedCrit, ...ownedWarn]) {
+      const w = WATCHLIST[r.code] || {};
+      let retLine = '';
+      if (w.entry_price && r.current_price) {
+        const ret = (r.current_price - w.entry_price) / w.entry_price * 100;
+        const retCls = ret >= 0 ? '#dc2626' : '#2563eb';
+        retLine = ` · <span style="color:${retCls};font-weight:700">수익 ${ret >= 0 ? '+' : ''}${ret.toFixed(2)}%</span>`;
+      }
+      const sigs = (r.signals || []).map(s =>
+        `<span class="mv-chip ${s.severity === 'critical' ? 'fail' : 'pass'}" style="background:${s.severity === 'critical' ? '#fee2e2' : '#fef3c7'};color:${s.severity === 'critical' ? '#991b1b' : '#92400e'};border-color:${s.severity === 'critical' ? '#fca5a5' : '#fcd34d'}">${s.label}</span>`
+      ).join('');
+      html += `<div style="padding:8px 0;border-bottom:1px solid #fee2e2;cursor:pointer" onclick="openStockModal('${r.code}')">
+        <div style="font-weight:700;font-size:13px">${r.overall === 'critical' ? '🛑' : '⚠️'} ${r.name} <span style="color:#6b7280;font-weight:400;font-size:11px">${r.code}</span> 📌</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:2px">${(r.current_price || 0).toLocaleString('ko-KR')}원 · ${r.today_change >= 0 ? '+' : ''}${r.today_change}%${retLine}</div>
+        <div class="mv-chips" style="margin-top:4px">${sigs}</div>
+      </div>`;
+    }
+    html += `</div></div>`;
   }
-  html += `</div></div>`;
+  // 관심만 (노랑 — 알림 없음, 모니터링용)
+  if (hasWl) {
+    html += `<div class="strength-section" style="border-left:4px solid #f59e0b;background:#fffbeb">
+      <div class="strength-title">⚠️ 관심 종목 매도 시그널 <span style="font-size:10px;background:#9ca3af;color:#fff;padding:2px 6px;border-radius:4px;margin-left:6px">알림 X · 참고만</span></div>
+      <div class="strength-meta">위험 ${wlCrit.length}건 · 주의 ${wlWarn.length}건 (보유 등록 시 Telegram 알림)</div>
+      <div style="margin-top:8px">`;
+    for (const r of [...wlCrit, ...wlWarn]) {
+      const sigs = (r.signals || []).map(s =>
+        `<span class="mv-chip ${s.severity === 'critical' ? 'fail' : 'pass'}" style="background:${s.severity === 'critical' ? '#fee2e2' : '#fef3c7'};color:${s.severity === 'critical' ? '#991b1b' : '#92400e'};border-color:${s.severity === 'critical' ? '#fca5a5' : '#fcd34d'}">${s.label}</span>`
+      ).join('');
+      html += `<div style="padding:8px 0;border-bottom:1px solid #fef3c7;cursor:pointer" onclick="openStockModal('${r.code}')">
+        <div style="font-weight:700;font-size:13px">${r.overall === 'critical' ? '🛑' : '⚠️'} ${r.name} <span style="color:#6b7280;font-weight:400;font-size:11px">${r.code}</span></div>
+        <div style="font-size:11px;color:#6b7280;margin-top:2px">${(r.current_price || 0).toLocaleString('ko-KR')}원 · ${r.today_change >= 0 ? '+' : ''}${r.today_change}%</div>
+        <div class="mv-chips" style="margin-top:4px">${sigs}</div>
+      </div>`;
+    }
+    html += `</div></div>`;
+  }
   return html;
 }
 
@@ -2456,18 +2573,33 @@ function renderWatchlistView() {
       } else {
         alertLine = `<div class="watchlist-alert" style="color:#9ca3af">알림 미설정</div>`;
       }
+      let ownedLine = '';
+      if (w.owned) {
+        let retStr = '';
+        if (w.entry_price && s) {
+          const ret = (s.price - w.entry_price) / w.entry_price * 100;
+          const retCls = ret >= 0 ? 'up' : 'down';
+          const retSign = ret >= 0 ? '+' : '';
+          retStr = ` · 매입 ${w.entry_price.toLocaleString('ko-KR')}원 · <span class="${retCls}" style="font-weight:700">${retSign}${ret.toFixed(2)}%</span>`;
+        } else if (w.entry_price) {
+          retStr = ` · 매입 ${w.entry_price.toLocaleString('ko-KR')}원`;
+        }
+        ownedLine = `<div style="font-size:11px;color:#92400e;background:#fef3c7;padding:4px 8px;border-radius:4px;margin-top:4px">📌 보유 중${retStr}</div>`;
+      }
       html += `<div class="watchlist-card ${triggered ? 'triggered' : ''}">
         <div class="watchlist-top">
           <div>
-            <div class="company-name">${name}</div>
+            <div class="company-name">${name} ${w.owned ? '<span style="font-size:10px;background:#92400e;color:#fff;padding:1px 5px;border-radius:3px;vertical-align:middle">📌</span>' : ''}</div>
             <div class="company-code">${code}${s ? ` · ${s.market}` : ''}</div>
           </div>
           <button class="watchlist-btn-remove" onclick="confirmRemoveWatchlist('${code}')">삭제</button>
         </div>
         ${priceLine}
+        ${ownedLine}
         ${alertLine}
         <div class="watchlist-actions">
           <button class="link-btn" onclick="openAlertModal('${code}')">${w.target ? '🔔 알림 수정' : '🔔 알림 설정'}</button>
+          <button class="link-btn" onclick="openOwnedModal('${code}','${name.replace(/'/g, "\\'")}')">${w.owned ? '📌 보유 수정' : '🛒 보유 등록'}</button>
           <a class="link-btn" target="_blank" rel="noopener" href="https://m.stock.naver.com/domestic/stock/${code}/total">시세</a>
         </div>
       </div>`;
@@ -2600,6 +2732,11 @@ async function autoSyncWatchlistFile() {
     if (w.target) {
       item.target = w.target;
       item.direction = w.direction || 'above';
+    }
+    if (w.owned) {
+      item.owned = true;
+      if (w.entry_price) item.entry_price = w.entry_price;
+      if (w.entry_date) item.entry_date = w.entry_date;
     }
     list.push(item);
   }
@@ -2736,6 +2873,21 @@ function openStockModal(code) {
       ${triggered ? '<div class="detail-row"><span class="label">상태</span><span class="value up">🚨 도달!</span></div>' : ''}
     </div>`;
   }
+  // 보유 정보 섹션
+  if (watched && w.owned) {
+    let returnLine = '';
+    if (w.entry_price && s.price) {
+      const ret = (s.price - w.entry_price) / w.entry_price * 100;
+      const retCls = ret >= 0 ? 'up' : 'down';
+      const retSign = ret >= 0 ? '+' : '';
+      returnLine = `<div class="detail-row"><span class="label">수익률</span><span class="value ${retCls}">${retSign}${ret.toFixed(2)}%</span></div>`;
+    }
+    html += `<div class="detail-section" style="background:#fef3c7;border-radius:6px;padding:8px">
+      <div class="detail-row"><span class="label">📌 보유 중</span><span class="value">매입 ${w.entry_price ? w.entry_price.toLocaleString('ko-KR') + '원' : '미등록'}</span></div>
+      ${w.entry_date ? `<div class="detail-row"><span class="label">매입일</span><span class="value">${w.entry_date}</span></div>` : ''}
+      ${returnLine}
+    </div>`;
+  }
   // 회사 설명
   if (desc) {
     html += `<div class="detail-section">
@@ -2749,6 +2901,7 @@ function openStockModal(code) {
   html += `<div class="detail-actions">
     <button onclick="toggleWatchlist('${code}','${(s.name).replace(/'/g, "\\'")}')">${watched ? '⭐ 관심 해제' : '☆ 관심 추가'}</button>
     ${watched ? `<button onclick="closeStockModal();openAlertModal('${code}')">🔔 ${w.target ? '알림 수정' : '알림 설정'}</button>` : ''}
+    ${watched ? `<button onclick="openOwnedModal('${code}','${(s.name).replace(/'/g, "\\'")}')">${w.owned ? '📌 보유 수정/해제' : '🛒 보유 등록'}</button>` : ''}
     <a href="https://m.stock.naver.com/domestic/stock/${code}/total" target="_blank" rel="noopener">네이버 시세</a>
   </div>`;
   modal.querySelector('#stockModalBody').innerHTML = html;
