@@ -7,6 +7,12 @@
       "direction": "above"
     },
     {
+      "code": "264850",
+      "name": "이랜시스",
+      "target": 8000,
+      "direction": "below"
+    },
+    {
       "code": "419120",
       "name": "산돌",
       "target": 3600,
