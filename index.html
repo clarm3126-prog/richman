@@ -4617,10 +4617,13 @@ function renderForecastBox(data) {
     if (t.accelerating_pct >= 30) why.push(`📊 EPS가속 ${t.accelerating_pct}%`);
     if (t.top20_freq_30d >= 0.5) why.push(`🔥 30일 강세지속`);
     const whyStr = why.length > 0 ? why.join(' · ') : '신호 약함';
-    html += `<div style="padding:8px 0;border-bottom:1px solid #e9d5ff;cursor:default">
+    const hasStocks = t.stocks && t.stocks.length > 0;
+    const cursorStyle = hasStocks ? 'cursor:pointer' : 'cursor:default';
+    const clickAttr = hasStocks ? `onclick="showForecastThemeStocks(${i})"` : '';
+    html += `<div style="padding:8px 0;border-bottom:1px solid #e9d5ff;${cursorStyle}" ${clickAttr}>
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div style="flex:1;min-width:0">
-          <div style="font-weight:700;font-size:13px;color:#5b21b6">#${i+1} ${t.name}</div>
+          <div style="font-weight:700;font-size:13px;color:#5b21b6">#${i+1} ${t.name} ${hasStocks ? `<span style="font-size:10px;color:#9333ea;font-weight:400">▸ ${t.stocks.length}종목</span>` : ''}</div>
           <div style="font-size:10px;color:#6b7280;margin-top:2px">현재 ${t.current_rank}위 · ${t.current_change >= 0 ? '+' : ''}${t.current_change}%</div>
           <div style="font-size:11px;color:#374151;margin-top:3px">${whyStr}</div>
         </div>
@@ -4653,6 +4656,47 @@ function renderForecastBox(data) {
   }
   html += `</div>`;
   return html;
+}
+
+// 예상 강세 테마 클릭 → 멤버 종목 modal 표시 (dayRankingModal 재활용)
+function showForecastThemeStocks(themeIdx) {
+  if (!FORECAST_DATA || !FORECAST_DATA.top_themes) return;
+  const t = FORECAST_DATA.top_themes[themeIdx];
+  if (!t || !t.stocks) return;
+  const modal = document.getElementById('dayRankingModal');
+  modal.querySelector('#dayRankingTitle').textContent = `🔮 ${t.name} (점수 ${t.total_score}) — ${t.stocks.length}종목`;
+  let html = `<div style="font-size:11px;color:#6b7280;margin-bottom:8px">
+    예상 강세 점수 ${t.total_score} · 현재 ${t.current_rank}위
+  </div>`;
+  html += '<div style="display:flex;flex-direction:column;gap:6px;max-height:60vh;overflow-y:auto">';
+  // MARKET에서 최신 가격으로 sort (당일 등락 큰 순)
+  const sorted = [...t.stocks].sort((a, b) => {
+    const aS = MARKET ? MARKET.stocks[a.code] : null;
+    const bS = MARKET ? MARKET.stocks[b.code] : null;
+    return (bS ? bS.change : 0) - (aS ? aS.change : 0);
+  });
+  sorted.forEach((s, i) => {
+    const liveS = MARKET ? MARKET.stocks[s.code] : null;
+    const change = liveS ? liveS.change : (s.change || 0);
+    const price = liveS ? liveS.price : (s.price || 0);
+    const sign = change > 0 ? '+' : '';
+    const cls = change > 0 ? 'up' : change < 0 ? 'down' : 'flat';
+    html += `<div class="legend-item" data-stock-code="${s.code}" data-modal-row="1">
+      <span class="legend-rank">${i + 1}</span>
+      <span class="legend-name">${s.name}<span style="font-size:10px;color:#9ca3af;margin-left:4px">${s.code}</span></span>
+      <span class="legend-val ${cls}">${price ? price.toLocaleString('ko-KR') + '원' : '—'}</span>
+      <span class="legend-val ${cls}">${sign}${change.toFixed(2)}%</span>
+    </div>`;
+  });
+  html += '</div>';
+  modal.querySelector('#dayRankingBody').innerHTML = html;
+  modal.classList.add('show');
+  modal.querySelectorAll('[data-stock-code]').forEach(row => {
+    row.onclick = () => {
+      closeDayRankingModal();
+      openStockModal(row.dataset.stockCode);
+    };
+  });
 }
 
 async function loadAndRenderMovements() {
