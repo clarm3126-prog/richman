@@ -127,28 +127,45 @@ def compute_daily_changes(stocks_history):
 
 
 def compute_ranking(items, changes):
-    """테마/업종 평균 등락률 ranking."""
+    """테마/업종 평균 등락률 ranking.
+
+    Outlier 처리:
+    1. Korean daily limit ±30% 캡 (그 이상은 데이터 오류로 간주)
+       - 상장폐지/스톡스플릿/거래정지 등으로 인한 가격 왜곡 방어
+    2. 멤버 5개 이상이면 상하위 10% 제거 후 평균 (trimmed mean)
+       - 더 안정적인 추세 추정
+    """
     rankings = []
     for item in items:
         members = item.get("stocks", [])
         if not members:
             continue
-        member_changes = [
+        raw_changes = [
             changes[s["code"]]
             for s in members
             if s.get("code") in changes
         ]
-        if not member_changes:
+        if not raw_changes:
             continue
-        avg = sum(member_changes) / len(member_changes)
-        rise = sum(1 for c in member_changes if c > 0)
-        fall = sum(1 for c in member_changes if c < 0)
+        # 1. ±30% cap (한국 일일 상한)
+        capped = [max(-30.0, min(30.0, c)) for c in raw_changes]
+        # 2. trimmed mean (5개+ 멤버 시 상하위 10% 제거)
+        if len(capped) >= 5:
+            sorted_c = sorted(capped)
+            trim_n = max(1, len(sorted_c) // 10)
+            trimmed = sorted_c[trim_n:-trim_n] if len(sorted_c) > 2 * trim_n else sorted_c
+            avg = sum(trimmed) / len(trimmed)
+        else:
+            avg = sum(capped) / len(capped)
+        # rise/fall은 capped 기준
+        rise = sum(1 for c in capped if c > 0)
+        fall = sum(1 for c in capped if c < 0)
         rankings.append({
             "no": item.get("no"),
             "name": item.get("name"),
             "change": round(avg, 2),
             "rise": rise,
-            "flat": len(member_changes) - rise - fall,
+            "flat": len(capped) - rise - fall,
             "fall": fall,
         })
     rankings.sort(key=lambda x: x["change"], reverse=True)
