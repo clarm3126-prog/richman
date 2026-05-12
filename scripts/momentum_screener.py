@@ -113,6 +113,7 @@ def fetch_theme_members(theme_no):
 
 def get_rising_theme_stocks(rising_themes, market):
     """강세 전환 테마들의 멤버 종목 코드 → 가중치 매핑.
+    또한 각 rt에 'no' + 'stocks' field 추가 (frontend 테마별 탭에서 사용).
     여러 테마에 속하면 가중치 누적.
     """
     # market.naver_themes에서 no 매핑
@@ -121,15 +122,21 @@ def get_rising_theme_stocks(rising_themes, market):
         theme_no_map[t.get("name")] = t.get("no")
 
     stock_weights = {}
+    stocks_data = market.get("stocks", {})
     for rt in rising_themes:
         no = theme_no_map.get(rt["name"])
         if not no:
             continue
-        members = fetch_theme_members(no)
+        rt["no"] = no  # frontend가 dedup용으로 사용
+        members = list(fetch_theme_members(no))
         # 가중치: ranking 상승폭 / 10 (5위 상승 = 0.5)
         weight = rt["delta"] / 10
-        for code in members:
+        rt["stocks"] = []  # frontend 테마별 탭에서 표시할 멤버 종목
+        for code in members[:30]:  # 너무 많으면 잘라냄
             stock_weights[code] = stock_weights.get(code, 0) + weight
+            s = stocks_data.get(code)
+            if s and s.get("name"):
+                rt["stocks"].append({"code": code, "name": s["name"]})
         time.sleep(0.05)
     return stock_weights
 

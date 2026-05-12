@@ -1681,6 +1681,15 @@ function setView(viewName) {
     if (MARKET) renderMarket(MARKET);
     renderContent();
     if (viewName === 'movements') loadAndRenderMovements();
+    // 테마별 view: rising_themes 데이터 (MOMENTUM_DATA) 비동기 로드 후 재렌더
+    if (viewName === 'themes' && !MOMENTUM_DATA && !MOMENTUM_LOADING) {
+      loadMomentumData().then(() => {
+        if (state.currentView === 'themes') {
+          renderTabs();   // 테마 탭 list 갱신
+          renderContent(); // 내용 재렌더
+        }
+      });
+    }
   }
   window.scrollTo({ top: 0, behavior: 'instant' });
 }
@@ -3864,8 +3873,33 @@ function toggleDesc(wrap) {
 function getAllThemes() {
   const myThemes = DATA.themes;
   const naverHot = [];
-  // dedup by no
+  const risingHot = [];
+  // dedup by no — rising → naver → industry → 사용자
   const seenThemeNos = new Set();
+
+  // 1. 🔥 강세 전환 테마 (자금흐름 탭의 forecast box와 동일 데이터)
+  // momentum_results.json의 rising_themes 사용 (각각 stocks 멤버 포함)
+  if (MOMENTUM_DATA && !MOMENTUM_DATA.__empty && MOMENTUM_DATA.rising_themes) {
+    MOMENTUM_DATA.rising_themes.forEach((rt) => {
+      if (!rt.no || !rt.stocks || rt.stocks.length === 0) return;
+      if (seenThemeNos.has(rt.no)) return;
+      seenThemeNos.add(rt.no);
+      risingHot.push({
+        name: `🔥 ${rt.name}`,
+        description: `강세 전환 테마 · ${rt.old_rank}위 → ${rt.recent_rank}위 (▲${rt.delta}) · 자동 추가`,
+        isNaver: true,
+        themeNo: rt.no,
+        companies: rt.stocks.map((s, j) => ({
+          code: s.code,
+          name: s.name,
+          role: j < 3 ? '핵심주' : '관련주',
+          description: getStockDescription(s.code, `${rt.name} 관련주 (강세 전환)`),
+        })),
+      });
+    });
+  }
+
+  // 2. 네이버 현재 강세 테마 top 10 (dedup)
   if (MARKET && MARKET.naver_themes) {
     const uniq = MARKET.naver_themes.filter(t => {
       if (seenThemeNos.has(t.no)) return false;
@@ -3916,7 +3950,8 @@ function getAllThemes() {
       }
     });
   }
-  return [...naverHot, ...industryHot, ...myThemes];
+  // 표시 순서: 🔥 강세 전환 → 📊 네이버 현재 강세 → 🏭 업종 → 사용자 정의
+  return [...risingHot, ...naverHot, ...industryHot, ...myThemes];
 }
 
 function render() {
