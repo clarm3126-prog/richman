@@ -63,11 +63,17 @@ def fetch_dart_disclosures(bgn_de, end_de, keyword=None, max_pages=5):
     return out
 
 
-def parse_earnings_disclosures(items, target_codes=None):
-    """공시 list에서 잠정실적/분기보고서/사업보고서 추출.
-    target_codes: set of stock_code — 관심 종목만 필터 (None이면 전체)
+def parse_earnings_disclosures(items, target_codes=None, surprise_only=False):
+    """공시 list에서 실적 관련 추출.
+    target_codes: set of stock_code — 필터 (None이면 전체)
+    surprise_only: True면 잠정실적/영업(잠정)실적만 (정기보고서 제외)
+                   = 실제 surprise 가능한 공시만
     """
-    keywords = ["잠정실적", "분기보고서", "반기보고서", "사업보고서", "영업(잠정)실적", "영업실적"]
+    if surprise_only:
+        # 잠정실적만 — 시장 반응이 큰 공시
+        keywords = ["잠정실적", "영업(잠정)실적", "매출액또는손익구조30%이상변경"]
+    else:
+        keywords = ["잠정실적", "분기보고서", "반기보고서", "사업보고서", "영업(잠정)실적", "영업실적"]
     out = []
     for item in items:
         report_nm = item.get("report_nm", "") or ""
@@ -91,41 +97,34 @@ def parse_earnings_disclosures(items, target_codes=None):
 
 
 def collect_target_codes():
-    """알림 대상 종목 = watchlist + 미너비니 strict + momentum strong."""
+    """알림 대상 종목 = watchlist + 미너비니 strict (8/8 통과만).
+    - 관심 종목: 사용자가 명시적으로 추가한 것
+    - strict: 8개 조건 모두 통과한 최강 종목만 (보통 0~10개)
+    노이즈 최소화. strong/momentum top 50은 제외 (너무 많아짐).
+    """
     targets = set()
-    for path in ["data/watchlist.json"]:
-        p = Path(path)
-        if p.exists():
-            try:
-                data = json.loads(p.read_text(encoding="utf-8"))
-                for item in data.get("watchlist", []):
-                    code = str(item.get("code", "")).zfill(6)
-                    if code:
-                        targets.add(code)
-            except Exception:
-                pass
-    for path in ["data/screener_results.json"]:
-        p = Path(path)
-        if p.exists():
-            try:
-                data = json.loads(p.read_text(encoding="utf-8"))
-                for r in (data.get("results") or [])[:50]:
-                    code = r.get("code")
-                    if code and r.get("minervini_strong"):
-                        targets.add(code)
-            except Exception:
-                pass
-    for path in ["data/momentum_results.json"]:
-        p = Path(path)
-        if p.exists():
-            try:
-                data = json.loads(p.read_text(encoding="utf-8"))
-                for r in (data.get("results") or [])[:50]:
-                    code = r.get("code")
-                    if code and (r.get("momentum_strong") or r.get("pre_breakout")):
-                        targets.add(code)
-            except Exception:
-                pass
+    # 1. Watchlist
+    p = Path("data/watchlist.json")
+    if p.exists():
+        try:
+            data = json.loads(p.read_text(encoding="utf-8"))
+            for item in data.get("watchlist", []):
+                code = str(item.get("code", "")).zfill(6)
+                if code:
+                    targets.add(code)
+        except Exception:
+            pass
+    # 2. Minervini strict only (8/8 통과)
+    p = Path("data/screener_results.json")
+    if p.exists():
+        try:
+            data = json.loads(p.read_text(encoding="utf-8"))
+            for r in (data.get("results") or []):
+                code = r.get("code")
+                if code and r.get("minervini_strict"):
+                    targets.add(code)
+        except Exception:
+            pass
     return targets
 
 
@@ -208,9 +207,9 @@ def main():
     items = fetch_dart_disclosures(bgn_de, end_de, max_pages=10)
     print(f"  total disclosures: {len(items)}")
 
-    # 전체 실적 관련 공시 추출 (calendar 전체)
-    all_earnings = parse_earnings_disclosures(items)
-    print(f"  earnings disclosures: {len(all_earnings)}")
+    # 전체 실적 관련 공시 추출 — frontend calendar용 (정기보고서 포함)
+    all_earnings = parse_earnings_disclosures(items, surprise_only=False)
+    print(f"  all earnings disclosures (frontend): {len(all_earnings)}")
 
     # 저장 (모든 실적 공시, frontend에서 필터링)
     out_path = Path("data/earnings_calendar.json")
@@ -221,11 +220,13 @@ def main():
     }, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     print(f"\n✅ Saved earnings_calendar.json ({len(all_earnings)} items)")
 
-    # 관심 종목만 알림
+    # Telegram 알림 — surprise만 (잠정실적 한정), 관심 + strict만
+    surprise_earnings = parse_earnings_disclosures(items, surprise_only=True)
+    print(f"  surprise disclosures (잠정실적): {len(surprise_earnings)}")
     target_codes = collect_target_codes()
-    print(f"  target stocks for alert: {len(target_codes)}")
-    my_disclosures = [d for d in all_earnings if d["code"] in target_codes]
-    print(f"  matching disclosures: {len(my_disclosures)}")
+    print(f"  target stocks (관심 + strict): {len(target_codes)}")
+    my_disclosures = [d for d in surprise_earnings if d["code"] in target_codes]
+    print(f"  matching surprise disclosures: {len(my_disclosures)}")
 
     notify_earnings(my_disclosures)
 
