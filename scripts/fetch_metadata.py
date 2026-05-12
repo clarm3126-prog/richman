@@ -105,7 +105,7 @@ def fetch_dart_warning_stocks():
     bgn_de = (today - timedelta(days=90)).strftime("%Y%m%d")
     end_de = today.strftime("%Y%m%d")
     # 공시 종류: 관리종목 지정/해제 등 — 한 번에 모든 공시 fetch 후 키워드 4개 동시 매칭
-    keywords = ("관리종목지정", "투자유의종목지정", "상장폐지", "거래정지")
+    keywords = ("관리종목지정", "투자유의종목지정", "상장폐지", "거래정지", "정리매매", "감리종목", "불성실공시")
     page = 1
     while page <= 10:  # max 10 pages × 100 = 1000 disclosures
         url = f"{DART_BASE}/list.json"
