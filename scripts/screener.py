@@ -832,7 +832,12 @@ def main():
     strong_count = sum(1 for r in results if r.get("minervini_strong"))
     print(f"  evaluated {len(results)} stocks: strict {strict_count}, strong {strong_count}")
 
-    # 8. 저장
+    # 8. 저장 — strict/strong 통과 종목은 무조건 포함, 나머지는 score 순 (총 200까지)
+    must_include = [r for r in results if r.get("minervini_strict") or r.get("minervini_strong")]
+    must_codes = {r["code"] for r in must_include}
+    others = [r for r in results if r["code"] not in must_codes]
+    to_save = must_include + others[: max(0, 200 - len(must_include))]
+    to_save.sort(key=lambda x: x["total_score"], reverse=True)
     out_path = Path("data/screener_results.json")
     out_path.write_text(json.dumps({
         "updated": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
@@ -840,9 +845,9 @@ def main():
         "total_evaluated": len(results),
         "minervini_strict_count": strict_count,
         "minervini_strong_count": strong_count,
-        "results": results[:100],  # top 100 저장
+        "results": to_save,
     }, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-    print(f"\n✅ Saved screener_results.json ({len(results[:100])} stocks)")
+    print(f"\n✅ Saved screener_results.json ({len(to_save)} stocks: must_include {len(must_include)} + others {len(to_save) - len(must_include)})")
 
     # 9. Telegram 알림 (신규 strict/strong만)
     print("\n[Telegram] 신규 미너비니 종목 알림...")
