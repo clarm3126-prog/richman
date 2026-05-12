@@ -570,7 +570,13 @@ def main():
     pre_count = sum(1 for r in results if r.get("pre_breakout"))
     print(f"  evaluated {len(results)} stocks: strong {strong_count}, pre_breakout {pre_count}")
 
-    # 9. 저장
+    # 9. 저장 — 카테고리 통과 종목은 무조건 포함, 나머지는 score 순
+    must_include = [r for r in results if r.get("momentum_strong") or r.get("pre_breakout")]
+    must_codes = {r["code"] for r in must_include}
+    others = [r for r in results if r["code"] not in must_codes]
+    # must_include는 모두 + 나머지는 score 상위 (총 200까지)
+    to_save = must_include + others[: max(0, 200 - len(must_include))]
+    to_save.sort(key=lambda x: x["total_score"], reverse=True)
     out_path = Path("data/momentum_results.json")
     out_path.write_text(json.dumps({
         "updated": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
@@ -580,9 +586,9 @@ def main():
         "total_evaluated": len(results),
         "momentum_strong_count": strong_count,
         "pre_breakout_count": pre_count,
-        "results": results[:100],
+        "results": to_save,
     }, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-    print(f"\n✅ Saved momentum_results.json ({len(results[:100])} stocks)")
+    print(f"\n✅ Saved momentum_results.json ({len(to_save)} stocks: must_include {len(must_include)} + others {len(to_save) - len(must_include)})")
 
     # 10. Telegram 알림
     print("\n[Telegram] 신규 모멘텀 종목 알림...")
