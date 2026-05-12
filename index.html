@@ -2710,6 +2710,123 @@ function renderExitSignalsBanner(watchlistCodes) {
   return html;
 }
 
+// === 📁 포트폴리오 종합 뷰 ===
+function renderPortfolioSummary(codes) {
+  const ownedCodes = codes.filter(c => WATCHLIST[c] && WATCHLIST[c].owned);
+  if (ownedCodes.length === 0) return '';
+
+  // 종목별 stats
+  const items = [];
+  let totalCost = 0, totalValue = 0;
+  let withReturn = 0, sumReturn = 0;
+  let winCount = 0, lossCount = 0;
+  for (const code of ownedCodes) {
+    const w = WATCHLIST[code];
+    const s = MARKET ? MARKET.stocks[code] : null;
+    const item = { code, name: (s && s.name) || w.name || code, market: s ? s.market : '' };
+    if (w.entry_price && s && s.price) {
+      const ret = (s.price - w.entry_price) / w.entry_price * 100;
+      item.entry = w.entry_price;
+      item.cur = s.price;
+      item.ret = ret;
+      sumReturn += ret;
+      withReturn++;
+      if (ret > 0) winCount++;
+      else if (ret < 0) lossCount++;
+      totalCost += w.entry_price;
+      totalValue += s.price;
+    }
+    items.push(item);
+  }
+
+  // 섹터(시장) 분산
+  const marketCounts = {};
+  for (const it of items) {
+    const m = it.market || '미분류';
+    marketCounts[m] = (marketCounts[m] || 0) + 1;
+  }
+
+  // 종합 수익률
+  const portfolioReturn = totalCost > 0 ? ((totalValue - totalCost) / totalCost * 100) : null;
+  const avgReturn = withReturn > 0 ? sumReturn / withReturn : null;
+
+  // 매도 신호 있는 보유 종목 수
+  let signalCount = 0;
+  if (EXIT_SIGNALS_DATA && EXIT_SIGNALS_DATA.results) {
+    const ownedSet = new Set(ownedCodes);
+    for (const r of EXIT_SIGNALS_DATA.results) {
+      if (ownedSet.has(r.code) && (r.overall === 'critical' || r.overall === 'warning')) {
+        signalCount++;
+      }
+    }
+  }
+
+  // 색상
+  const retColor = portfolioReturn === null ? '#6b7280' : portfolioReturn >= 0 ? '#dc2626' : '#2563eb';
+  const retSign = portfolioReturn === null ? '' : (portfolioReturn >= 0 ? '+' : '');
+  const retStr = portfolioReturn === null ? '— (매입가 미등록)' : `${retSign}${portfolioReturn.toFixed(2)}%`;
+
+  let html = `<div class="strength-section" style="border-left:4px solid #92400e;background:#fef3c7">
+    <div class="strength-title">📁 내 포트폴리오 (${ownedCodes.length}종목)</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;font-size:12px">
+      <div style="background:#fff;padding:8px;border-radius:6px">
+        <div style="font-size:10px;color:#6b7280;font-weight:700">종합 수익률</div>
+        <div style="font-size:18px;font-weight:800;color:${retColor};margin-top:2px">${retStr}</div>
+      </div>
+      <div style="background:#fff;padding:8px;border-radius:6px">
+        <div style="font-size:10px;color:#6b7280;font-weight:700">승/패</div>
+        <div style="font-size:18px;font-weight:800;margin-top:2px">
+          <span style="color:#dc2626">${winCount}</span>
+          <span style="color:#9ca3af;font-size:14px"> / </span>
+          <span style="color:#2563eb">${lossCount}</span>
+          <span style="color:#9ca3af;font-size:11px"> (${withReturn}/${ownedCodes.length})</span>
+        </div>
+      </div>
+    </div>`;
+
+  // 분산도
+  const marketChips = Object.entries(marketCounts).map(([m, n]) =>
+    `<span style="background:#fff;padding:2px 8px;border-radius:4px;font-size:11px;border:1px solid #fcd34d"><b>${m}</b> ${n}</span>`
+  ).join(' ');
+  html += `<div style="margin-top:8px;font-size:11px">
+    <span style="color:#92400e;font-weight:700">시장 분산:</span> ${marketChips}
+  </div>`;
+
+  // 매도 시그널 경고
+  if (signalCount > 0) {
+    html += `<div style="margin-top:8px;font-size:11px;background:#fee2e2;color:#991b1b;padding:6px 8px;border-radius:6px;font-weight:700">
+      🛑 매도 시그널 ${signalCount}건 (위 banner 참고)
+    </div>`;
+  }
+
+  // 종목별 상위/하위 (수익률 등록된 것만)
+  if (withReturn > 0) {
+    const sorted = items.filter(i => i.ret !== undefined).sort((a, b) => b.ret - a.ret);
+    const top = sorted.slice(0, 3);
+    const bottom = sorted.slice(-3).reverse();
+    html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;font-size:11px">`;
+    html += `<div><div style="color:#dc2626;font-weight:700;margin-bottom:3px">📈 수익 상위</div>`;
+    for (const it of top) {
+      html += `<div onclick="openStockModal('${it.code}')" style="cursor:pointer;padding:2px 0">
+        ${it.name} <span style="color:#dc2626;font-weight:700">+${it.ret.toFixed(2)}%</span>
+      </div>`;
+    }
+    html += `</div>`;
+    html += `<div><div style="color:#2563eb;font-weight:700;margin-bottom:3px">📉 손실 하위</div>`;
+    for (const it of bottom) {
+      const sign = it.ret >= 0 ? '+' : '';
+      const cls = it.ret >= 0 ? '#dc2626' : '#2563eb';
+      html += `<div onclick="openStockModal('${it.code}')" style="cursor:pointer;padding:2px 0">
+        ${it.name} <span style="color:${cls};font-weight:700">${sign}${it.ret.toFixed(2)}%</span>
+      </div>`;
+    }
+    html += `</div></div>`;
+  }
+
+  html += `</div>`;
+  return html;
+}
+
 function renderWatchlistView() {
   const el = document.getElementById('strength');
   if (!el) return;
@@ -2728,6 +2845,8 @@ function renderWatchlistView() {
     });
   }
   let html = '';
+  // 📁 포트폴리오 종합 (보유 종목 있을 때만)
+  html += renderPortfolioSummary(codes);
   // 매도 시그널 배너 (있을 때만)
   html += renderExitSignalsBanner(codes);
   // 실적 공시 배너 (있을 때만)
@@ -3108,8 +3227,12 @@ function openStockModal(code) {
       <div style="font-size:13px;line-height:1.6;color:#4b5563">${escapeHtml(desc)}</div>
     </div>`;
   }
+  // 차트 (placeholder; 비동기 로드)
+  html += `<div id="modalChartSection-${code}" style="margin:8px 0"></div>`;
   // 스크리너 점수 cross-display (placeholder; 비동기 채움)
   html += `<div id="modalScoresSection-${code}"></div>`;
+  // 시그널 timeline (placeholder; 비동기 채움)
+  html += `<div id="modalTimelineSection-${code}"></div>`;
   // 액션 버튼
   html += `<div class="detail-actions">
     <button onclick="toggleWatchlist('${code}','${(s.name).replace(/'/g, "\\'")}')">${watched ? '⭐ 관심 해제' : '☆ 관심 추가'}</button>
@@ -3121,6 +3244,264 @@ function openStockModal(code) {
   modal.classList.add('show');
   // 점수 섹션 비동기 렌더
   renderModalScores(code);
+  renderStockChart(code);
+  renderSignalTimeline(code);
+}
+
+// === 🕐 시그널 Timeline ===
+async function renderSignalTimeline(code) {
+  const container = document.getElementById(`modalTimelineSection-${code}`);
+  if (!container) return;
+  container.innerHTML = `<div class="detail-section"><div style="font-size:11px;color:#9ca3af">🕐 시그널 history 로드 중...</div></div>`;
+  // 최근 60일 history 시도
+  const today = new Date();
+  const dates = [];
+  for (let i = 0; i < 60; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    dates.push(`${y}${m}${day}`);
+  }
+  // 두 history (screener + momentum) 병렬 fetch
+  const [screenerHist, momHist] = await Promise.all([
+    Promise.all(dates.map(date =>
+      fetch(`data/screener_results_history/${date}.json?t=${Date.now()}`)
+        .then(r => r.ok ? r.json().then(d => ({date, data: d})) : null)
+        .catch(() => null)
+    )),
+    Promise.all(dates.map(date =>
+      fetch(`data/momentum_results_history/${date}.json?t=${Date.now()}`)
+        .then(r => r.ok ? r.json().then(d => ({date, data: d})) : null)
+        .catch(() => null)
+    )),
+  ]);
+  if (!document.getElementById(`modalTimelineSection-${code}`)) return; // 모달 닫힘
+
+  // 종목별 entry 집계
+  const events = []; // [{date, type, score, category}]
+  for (const snap of screenerHist) {
+    if (!snap || !snap.data) continue;
+    const found = (snap.data.results || []).find(r => r.code === code);
+    if (!found) continue;
+    if (found.minervini_strict) {
+      events.push({date: snap.date, type: 'minervini', label: '🎯 strict', score: found.total_score, color: '#7c3aed'});
+    } else if (found.minervini_strong) {
+      events.push({date: snap.date, type: 'minervini', label: '🎯 strong', score: found.total_score, color: '#9333ea'});
+    } else if (found.total_score) {
+      events.push({date: snap.date, type: 'minervini', label: '🎯 평가', score: found.total_score, color: '#c4b5fd'});
+    }
+  }
+  for (const snap of momHist) {
+    if (!snap || !snap.data) continue;
+    const found = (snap.data.results || []).find(r => r.code === code);
+    if (!found) continue;
+    if (found.momentum_strong) {
+      events.push({date: snap.date, type: 'momentum', label: '🚀 강세', score: found.total_score, color: '#dc2626'});
+    } else if (found.pre_breakout) {
+      events.push({date: snap.date, type: 'momentum', label: '⏳ 사전', score: found.total_score, color: '#f59e0b'});
+    } else if (found.total_score) {
+      events.push({date: snap.date, type: 'momentum', label: '🚀 평가', score: found.total_score, color: '#fcd34d'});
+    }
+  }
+  if (events.length === 0) {
+    container.innerHTML = `<div class="detail-section">
+      <div class="label" style="font-size:11px;color:#6b7280">🕐 시그널 Timeline</div>
+      <div style="font-size:12px;color:#9ca3af;margin-top:4px">최근 60일간 평가 history 없음</div>
+    </div>`;
+    return;
+  }
+  // 날짜 desc 정렬
+  events.sort((a, b) => b.date.localeCompare(a.date));
+  // 같은 날짜의 minervini + momentum은 합침
+  const byDate = {};
+  for (const e of events) {
+    byDate[e.date] = byDate[e.date] || [];
+    byDate[e.date].push(e);
+  }
+  const sortedDates = Object.keys(byDate).sort().reverse();
+
+  // 패턴 진단
+  let pattern = '';
+  // 가장 최근 며칠 살펴서 stage 진행 패턴 감지
+  const recentEvts = events.slice(0, 10); // 최근 10개
+  const hasMomentum = recentEvts.some(e => e.type === 'momentum' && (e.label.includes('강세') || e.label.includes('사전')));
+  const hasMinerStrong = recentEvts.some(e => e.label.includes('strong') || e.label.includes('strict'));
+  const oldestRecent = recentEvts[recentEvts.length - 1];
+  const newestRecent = recentEvts[0];
+  if (hasMomentum && hasMinerStrong) {
+    pattern = '✅ 정통 stage 진입 패턴 (모멘텀 → 미너비니 통과) — 강력한 신호';
+  } else if (hasMinerStrong) {
+    pattern = '🎯 미너비니 지속 통과 — Stage 2 안정 진행';
+  } else if (hasMomentum) {
+    pattern = '🚀 Stage 1→2 전환 진행 중 (미너비니 진입 대기)';
+  }
+
+  let html = `<div class="detail-section">
+    <div class="label" style="font-size:11px;color:#6b7280;margin-bottom:6px">🕐 시그널 Timeline (최근 60일, ${events.length}건)</div>`;
+  if (pattern) {
+    html += `<div style="font-size:11px;background:#f0f9ff;color:#0369a1;padding:6px 8px;border-radius:6px;margin-bottom:6px;font-weight:600">${pattern}</div>`;
+  }
+  html += `<div style="max-height:200px;overflow-y:auto">`;
+  // 최근 30일 표시
+  const showDates = sortedDates.slice(0, 30);
+  for (const date of showDates) {
+    const dateF = `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`;
+    const dayEvts = byDate[date];
+    const chips = dayEvts.map(e =>
+      `<span style="display:inline-block;background:${e.color}22;color:${e.color};border:1px solid ${e.color}66;font-size:10px;padding:2px 6px;border-radius:4px;margin:1px;font-weight:600">${e.label}${e.score ? ' · ' + e.score : ''}</span>`
+    ).join('');
+    html += `<div style="display:flex;align-items:center;gap:8px;padding:3px 0;border-bottom:1px solid #f3f4f6">
+      <span style="font-size:10px;color:#6b7280;font-family:monospace;min-width:80px">${dateF}</span>
+      <span>${chips}</span>
+    </div>`;
+  }
+  html += `</div>`;
+  if (sortedDates.length > 30) {
+    html += `<div style="font-size:10px;color:#9ca3af;margin-top:4px;text-align:center">... 외 ${sortedDates.length - 30}일 더</div>`;
+  }
+  html += `</div>`;
+  container.innerHTML = html;
+}
+
+// === 종목 차트 (Candlestick + MA50/150/200 + Volume) ===
+async function renderStockChart(code) {
+  const container = document.getElementById(`modalChartSection-${code}`);
+  if (!container) return;
+  container.innerHTML = `<div style="padding:20px;text-align:center;color:#9ca3af;font-size:11px">📊 차트 로드 중...</div>`;
+  let data;
+  try {
+    const r = await fetch(`data/charts/${code}.json?t=${Date.now()}`);
+    if (!r.ok) {
+      container.innerHTML = `<div style="padding:12px;text-align:center;color:#9ca3af;font-size:11px">📊 차트 데이터 없음 (스크리너 평가 대상 아님)</div>`;
+      return;
+    }
+    data = await r.json();
+  } catch (e) {
+    container.innerHTML = `<div style="padding:12px;text-align:center;color:#dc2626;font-size:11px">차트 로드 실패</div>`;
+    return;
+  }
+  if (!document.getElementById(`modalChartSection-${code}`)) return; // 모달 닫힘
+  container.innerHTML = drawCandlestickSVG(data);
+}
+
+function drawCandlestickSVG(d) {
+  const W = 480, candleH = 200, volH = 50, padL = 50, padR = 8, padT = 10;
+  const totalH = candleH + volH + 30;
+  // 최근 180일 (~6개월) 표시
+  const showDays = Math.min(180, d.dates.length);
+  const startIdx = d.dates.length - showDays;
+  const dates = d.dates.slice(startIdx);
+  const opens = d.open.slice(startIdx);
+  const highs = d.high.slice(startIdx);
+  const lows = d.low.slice(startIdx);
+  const closes = d.close.slice(startIdx);
+  const vols = d.volume.slice(startIdx);
+
+  // MA 계산 (전체 close 기준 → 슬라이스)
+  const ma50full = computeMA(d.close, 50);
+  const ma150full = computeMA(d.close, 150);
+  const ma200full = computeMA(d.close, 200);
+  const ma50 = ma50full.slice(startIdx);
+  const ma150 = ma150full.slice(startIdx);
+  const ma200 = ma200full.slice(startIdx);
+
+  // y-scale (가격) — high/low + MA 모두 포함
+  const priceVals = [];
+  for (let i = 0; i < showDays; i++) {
+    if (highs[i] > 0) priceVals.push(highs[i]);
+    if (lows[i] > 0) priceVals.push(lows[i]);
+    if (ma50[i]) priceVals.push(ma50[i]);
+    if (ma150[i]) priceVals.push(ma150[i]);
+    if (ma200[i]) priceVals.push(ma200[i]);
+  }
+  const yMin = Math.min(...priceVals);
+  const yMax = Math.max(...priceVals);
+  const yRange = (yMax - yMin) || 1;
+  const yPad = yRange * 0.05;
+  const yLo = yMin - yPad;
+  const yHi = yMax + yPad;
+  const yRangePadded = yHi - yLo;
+
+  const xStep = (W - padL - padR) / showDays;
+  const px = (i) => padL + i * xStep + xStep / 2;
+  const py = (v) => padT + (yHi - v) / yRangePadded * (candleH - padT);
+
+  let svg = `<svg viewBox="0 0 ${W} ${totalH}" style="width:100%;height:auto;display:block;background:#fff;border-radius:8px;border:1px solid #e5e7eb">`;
+
+  // y-축 가격 grid
+  for (let i = 0; i <= 4; i++) {
+    const y = padT + (candleH - padT) * (i / 4);
+    const v = yHi - (yRangePadded * i / 4);
+    svg += `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="#f3f4f6" stroke-width="0.5"/>`;
+    svg += `<text x="${padL - 4}" y="${y + 3}" text-anchor="end" font-size="9" fill="#9ca3af">${Math.round(v).toLocaleString()}</text>`;
+  }
+
+  // Candle
+  const candleW = Math.max(1, xStep * 0.7);
+  for (let i = 0; i < showDays; i++) {
+    const o = opens[i], h = highs[i], l = lows[i], c = closes[i];
+    if (!o || !h || !l || !c) continue;
+    const color = c >= o ? '#dc2626' : '#2563eb';
+    const x = px(i);
+    // wick
+    svg += `<line x1="${x}" y1="${py(h)}" x2="${x}" y2="${py(l)}" stroke="${color}" stroke-width="0.6"/>`;
+    // body
+    const bodyTop = py(Math.max(o, c));
+    const bodyH = Math.max(0.5, Math.abs(py(o) - py(c)));
+    svg += `<rect x="${x - candleW / 2}" y="${bodyTop}" width="${candleW}" height="${bodyH}" fill="${color}"/>`;
+  }
+
+  // MA lines
+  function drawMA(arr, color, width) {
+    let path = '';
+    for (let i = 0; i < showDays; i++) {
+      if (arr[i] == null) continue;
+      const x = px(i), y = py(arr[i]);
+      path += (path ? 'L' : 'M') + ` ${x} ${y} `;
+    }
+    if (path) svg += `<path d="${path}" stroke="${color}" stroke-width="${width}" fill="none" opacity="0.85"/>`;
+  }
+  drawMA(ma50, '#f59e0b', 1.4);   // 주황
+  drawMA(ma150, '#9333ea', 1.4);  // 보라
+  drawMA(ma200, '#374151', 1.6);  // 진회색
+
+  // Volume bars
+  const volTop = candleH + 15;
+  const maxVol = Math.max(...vols.filter(v => v > 0));
+  for (let i = 0; i < showDays; i++) {
+    if (!vols[i] || maxVol === 0) continue;
+    const h = (vols[i] / maxVol) * volH;
+    const o = opens[i], c = closes[i];
+    const color = c >= o ? '#fca5a5' : '#93c5fd';
+    const x = px(i);
+    svg += `<rect x="${x - candleW / 2}" y="${volTop + volH - h}" width="${candleW}" height="${h}" fill="${color}"/>`;
+  }
+  // 거래량 라벨
+  svg += `<text x="${padL - 4}" y="${volTop + 8}" text-anchor="end" font-size="9" fill="#9ca3af">거래량</text>`;
+
+  // Legend
+  const legendY = totalH - 6;
+  svg += `<g font-size="10" font-family="sans-serif">`;
+  svg += `<text x="${padL}" y="${legendY}" fill="#f59e0b">━ MA50</text>`;
+  svg += `<text x="${padL + 60}" y="${legendY}" fill="#9333ea">━ MA150</text>`;
+  svg += `<text x="${padL + 130}" y="${legendY}" fill="#374151">━ MA200</text>`;
+  svg += `<text x="${W - padR}" y="${legendY}" text-anchor="end" fill="#6b7280">${dates[0]} ~ ${dates[dates.length - 1]} (${showDays}일)</text>`;
+  svg += `</g>`;
+
+  svg += '</svg>';
+  return svg;
+}
+
+function computeMA(values, period) {
+  const out = new Array(values.length).fill(null);
+  for (let i = period - 1; i < values.length; i++) {
+    let sum = 0;
+    for (let j = i - period + 1; j <= i; j++) sum += values[j];
+    out[i] = sum / period;
+  }
+  return out;
 }
 
 async function renderModalScores(code) {
@@ -4254,22 +4635,109 @@ async function loadAndRenderMovements() {
   }
   const movements = computeMovements(HISTORY_LOADED);
   renderMovements(movements, HISTORY_LOADED.dates.length);
-  // 🔮 forecast box를 맨 위에 prepend (비동기, 도착하면 표시)
+  // 📊 시장 regime indicator를 맨 위에 prepend
+  if (MARKET) {
+    const target = document.getElementById('movements-section');
+    if (target && !target.querySelector('[data-regime-box]')) {
+      const wrap = document.createElement('div');
+      wrap.setAttribute('data-regime-box', '1');
+      wrap.innerHTML = renderMarketRegime();
+      target.insertBefore(wrap, target.firstChild);
+    }
+  }
+  // 🔮 forecast box를 prepend (regime 다음, 비동기)
   loadForecastData().then(forecast => {
     if (state.currentView !== 'movements') return;
     if (!forecast) return;
     const target = document.getElementById('movements-section');
     if (!target) return;
-    // 이미 있으면 skip
     if (target.querySelector('[data-forecast-box]')) return;
     const wrap = document.createElement('div');
     wrap.setAttribute('data-forecast-box', '1');
     wrap.innerHTML = renderForecastBox(forecast);
-    target.insertBefore(wrap, target.firstChild);
+    // regime 다음에 삽입
+    const regimeBox = target.querySelector('[data-regime-box]');
+    if (regimeBox && regimeBox.nextSibling) target.insertBefore(wrap, regimeBox.nextSibling);
+    else target.insertBefore(wrap, target.firstChild);
   });
   // 캘린더 히트맵 추가
   el.insertAdjacentHTML('beforeend', renderHeatmap(HISTORY_LOADED, 'theme'));
   bindHeatmapClicks(el);
+}
+
+// === 📊 시장 Regime Indicator ===
+function renderMarketRegime() {
+  if (!MARKET || !MARKET.indices) return '';
+  const indices = MARKET.indices;
+  const newHighs = (MARKET.new_highs || []).length;
+
+  function regimeFor(idx) {
+    if (!idx || !idx.history || idx.history.length < 50) return null;
+    const closes = idx.history.map(h => h.close);
+    const cur = closes[closes.length - 1];
+    const ma50 = closes.slice(-50).reduce((a, b) => a + b, 0) / 50;
+    const ma200 = closes.length >= 200
+      ? closes.slice(-200).reduce((a, b) => a + b, 0) / 200
+      : null;
+    const above50 = cur > ma50;
+    const ma50Pct = ((cur - ma50) / ma50 * 100);
+    // 5일 변화
+    const fiveAgo = closes[closes.length - 6] || cur;
+    const change5d = ((cur - fiveAgo) / fiveAgo * 100);
+    return { cur, ma50, ma200, above50, ma50Pct, change5d };
+  }
+
+  const kospi = regimeFor(indices.kospi);
+  const kosdaq = regimeFor(indices.kosdaq);
+  if (!kospi) return '';
+
+  // 종합 진단
+  const bullish = kospi.above50 && (kosdaq ? kosdaq.above50 : true);
+  const overallEmoji = bullish ? '🟢' : '🔴';
+  const overallText = bullish ? '강세 진행' : '약세 진행';
+  const overallColor = bullish ? '#059669' : '#dc2626';
+
+  // 진입 환경 평가
+  let envText, envColor;
+  if (bullish && kospi.change5d > 0 && newHighs >= 30) {
+    envText = '✅ 매수 환경 양호';
+    envColor = '#059669';
+  } else if (bullish) {
+    envText = '⚖️ 보통 (선별 진입)';
+    envColor = '#d97706';
+  } else {
+    envText = '⚠️ 매수 자제 권장 (약세장)';
+    envColor = '#dc2626';
+  }
+
+  function fmtIdx(name, r) {
+    if (!r) return '';
+    const dir = r.above50 ? '↑' : '↓';
+    const cls = r.above50 ? '#dc2626' : '#2563eb';
+    const pctStr = (r.ma50Pct >= 0 ? '+' : '') + r.ma50Pct.toFixed(1) + '%';
+    const ch5d = (r.change5d >= 0 ? '+' : '') + r.change5d.toFixed(2) + '%';
+    return `<div style="display:flex;justify-content:space-between;align-items:baseline;margin:3px 0;font-size:12px">
+      <span style="font-weight:700;color:#374151">${name}</span>
+      <span>${r.cur.toLocaleString('ko-KR', {maximumFractionDigits: 2})}
+        <span style="color:${cls};font-weight:700">${dir} MA50 ${pctStr}</span>
+        · 5d <span style="color:${cls}">${ch5d}</span>
+      </span>
+    </div>`;
+  }
+
+  let html = `<div class="strength-section" style="border-left:4px solid ${overallColor};background:${bullish ? '#f0fdf4' : '#fef2f2'}">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <div class="strength-title">${overallEmoji} 시장 진단</div>
+      <span style="font-size:11px;font-weight:700;color:${overallColor}">${overallText}</span>
+    </div>
+    ${fmtIdx('KOSPI', kospi)}
+    ${fmtIdx('KOSDAQ', kosdaq)}
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:6px;border-top:1px solid #e5e7eb;font-size:11px">
+      <span style="color:#6b7280">신고가: <b style="color:#dc2626">${newHighs}개</b></span>
+      <span style="color:${envColor};font-weight:700">${envText}</span>
+    </div>
+  </div>`;
+  return html;
 }
 
 function renderHeatmap(loaded, type) {
