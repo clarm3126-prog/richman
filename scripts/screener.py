@@ -36,6 +36,60 @@ LISTING_MIN_DAYS = 180  # 신규상장 6개월 이내 차단
 DEDUP_RESET_DAYS = 30  # 30일 지나면 dedup reset (재진입 알림 가능)
 
 # ================================
+# 비-주식 종목 제외 (ETF/ETN/SPAC/우선주/채권)
+# ================================
+
+# ETF 운용사 prefix (한국 시장)
+ETF_PREFIXES = (
+    "KODEX ", "TIGER ", "ARIRANG ", "SOL ", "KBSTAR ", "KOSEF ",
+    "HANARO ", "SMART ", "KINDEX ", "RISE ", "TREX ", "FOCUS ",
+    "PLUS ", "WOORI ", "KIWOOM ", "BNK ", "WON ", "ACE ",
+    "마이다스 ", "흥국 ", "교보악사 ", "NH-Amundi ", "신한 ",
+    "삼성KODEX", "미래에셋TIGER",
+)
+
+
+def is_excluded_security(name, code=""):
+    """ETF/ETN/SPAC/우선주/채권 등 일반 주식이 아닌 종목 식별.
+    Returns (excluded: bool, reason: str|None).
+    """
+    if not name:
+        return True, "이름 없음"
+    n = name.strip()
+
+    # 1. ETF — 운용사 prefix
+    for p in ETF_PREFIXES:
+        if n.startswith(p):
+            return True, "ETF"
+
+    # 2. ETN
+    if " ETN" in n or n.startswith("ETN ") or "ETN(H)" in n or "(H)ETN" in n:
+        return True, "ETN"
+
+    # 3. SPAC (스팩)
+    if "스팩" in n or "SPAC" in n.upper():
+        return True, "SPAC"
+
+    # 4. 채권 (이름에 직접 포함)
+    if "채권" in n or "국채" in n:
+        return True, "채권"
+
+    # 5. 우선주 — 한국 시장 convention: 종목코드 끝자리 5 또는 7
+    # (예: 005935 삼성전자우, 005385 현대차우)
+    if code and len(code) == 6 and code[-1] in ("5", "7"):
+        return True, "우선주"
+
+    # 6. 리츠 (REITs) — 부동산투자회사, 주식이지만 성격이 다름
+    # 사용자 요청에 없으므로 일단 포함. 필요 시 추가:
+    # if n.endswith("리츠") or "리츠" in n[-3:]:
+    #     return True, "리츠"
+
+    # 거래정지/정리매매: metadata.warning_stocks에서 처리됨 (is_pump_or_warning)
+
+    return False, None
+
+
+# ================================
 # DART (재무 데이터) 모듈
 # ================================
 
@@ -748,16 +802,24 @@ def main():
     stocks = market.get("stocks", {})
     print(f"  loaded {len(stocks)} stocks from market.json")
 
-    # 2. 1차 필터: 거래대금 + 가격 > 0
+    # 2. 1차 필터: 거래대금 + 가격 > 0 + ETF/ETN/SPAC/우선주/채권 제외
     candidates = {}
+    excluded_counts = {}
     for code, s in stocks.items():
         if s.get("price", 0) <= 0 or s.get("volume", 0) <= 1000:
             continue
         tv = s["price"] * s["volume"]
         if tv < 1e9:  # 10억 미만 거래대금 제외
             continue
+        # ETF/ETN/SPAC/우선주/채권 제외
+        excluded, reason = is_excluded_security(s.get("name", ""), code)
+        if excluded:
+            excluded_counts[reason] = excluded_counts.get(reason, 0) + 1
+            continue
         candidates[code] = s
     print(f"  Step 1: {len(candidates)} stocks pass liquidity filter (거래대금 10억+)")
+    if excluded_counts:
+        print(f"  excluded: {excluded_counts}")
 
     # 거래대금 상위 1000개로 제한 (DART 호출 제한 고려)
     sorted_candidates = sorted(

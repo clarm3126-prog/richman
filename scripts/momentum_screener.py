@@ -31,7 +31,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from screener import (
     fetch_all_stock_history,
     sma, send_telegram,
-    load_metadata, is_pump_or_warning, DEDUP_RESET_DAYS,
+    load_metadata, is_pump_or_warning, is_excluded_security, DEDUP_RESET_DAYS,
 )
 
 
@@ -482,16 +482,24 @@ def main():
     if not market_bullish:
         print("  ⚠️ 시장 약세장 — 신호 신뢰도 낮음 (그래도 평가는 진행)")
 
-    # 3. 1차 필터: 거래대금 + 가격
+    # 3. 1차 필터: 거래대금 + 가격 + ETF/ETN/SPAC/우선주/채권 제외
     candidates = {}
+    excluded_counts = {}
     for code, s in stocks.items():
         if s.get("price", 0) <= 0 or s.get("volume", 0) <= 1000:
             continue
         tv = s["price"] * s["volume"]
         if tv < 3e9:  # 30억 미만 거래대금 제외
             continue
+        # ETF/ETN/SPAC/우선주/채권 제외
+        excluded, reason = is_excluded_security(s.get("name", ""), code)
+        if excluded:
+            excluded_counts[reason] = excluded_counts.get(reason, 0) + 1
+            continue
         candidates[code] = s
     print(f"  Step 1: {len(candidates)} stocks pass liquidity (거래대금 30억+)")
+    if excluded_counts:
+        print(f"  excluded: {excluded_counts}")
 
     # 거래대금 상위 1000개로 제한
     sorted_candidates = sorted(
