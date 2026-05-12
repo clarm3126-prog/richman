@@ -509,12 +509,12 @@ def main():
     if excluded_counts:
         print(f"  excluded: {excluded_counts}")
 
-    # 거래대금 상위 1000개로 제한
+    # 사실상 전체 활발한 종목 cover (거래대금 30억+ 통과 모든 것, 한도 2500)
     sorted_candidates = sorted(
         candidates.items(),
         key=lambda x: x[1]["price"] * x[1]["volume"],
         reverse=True,
-    )[:1000]
+    )[:2500]
     candidate_codes = [c for c, _ in sorted_candidates]
     print(f"  Step 2: top {len(candidate_codes)} by trading value")
 

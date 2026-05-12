@@ -858,14 +858,15 @@ def main():
     if excluded_counts:
         print(f"  excluded: {excluded_counts}")
 
-    # 거래대금 상위 1000개로 제한 (DART 호출 제한 고려)
+    # 한국 거래소의 사실상 모든 활발한 종목 cover (거래대금 10억+ 통과한 모든 종목)
+    # 한도: 2500 (안전장치 — 평균 한국시장 거래대금 10억+ 종목 = ~1500~2000)
     sorted_candidates = sorted(
         candidates.items(),
         key=lambda x: x[1]["price"] * x[1]["volume"],
         reverse=True,
-    )[:700]  # 첫 run 시 timeout 방지 위해 700개로 제한 (이후 cache 활용 시 빠름)
+    )[:2500]
     candidate_codes = [c for c, _ in sorted_candidates]
-    print(f"  Step 2: top {len(candidate_codes)} by trading value")
+    print(f"  Step 2: top {len(candidate_codes)} by trading value (한국시장 사실상 전체 cover)")
 
     # 3. DART 재무 데이터 (캐시 활용)
     print("\n[DART] 재무 데이터 수집...")

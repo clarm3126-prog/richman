@@ -19,7 +19,7 @@ jobs:
     # 미너비니가 성공했을 때만 실행 (실패 시 stale data 방지)
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60  # 한국시장 전체 cover (~2000종목)
     steps:
       - name: Checkout
         uses: actions/checkout@v4

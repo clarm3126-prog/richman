@@ -512,6 +512,24 @@ def main():
     # 8. 정렬: total_score 높은 순
     theme_data.sort(key=lambda x: x["total_score"], reverse=True)
 
+    # 8.5 top 30에 멤버 종목 (이름) 첨부 — frontend 클릭 시 표시용
+    print("[멤버 종목 첨부] top 30 테마...")
+    for td in theme_data[:30]:
+        no = td.get("no")
+        if not no:
+            continue
+        member_codes = theme_members_map.get(no, [])
+        td["stocks"] = []
+        for code in list(member_codes)[:30]:
+            s = stocks.get(code)
+            if s and s.get("name"):
+                td["stocks"].append({
+                    "code": code,
+                    "name": s["name"],
+                    "price": s.get("price", 0),
+                    "change": s.get("change", 0),
+                })
+
     # 9. 백테스트 정확도 로드 (있으면)
     stats_path = Path("data/theme_forecast_stats.json")
     backtest_stats = None

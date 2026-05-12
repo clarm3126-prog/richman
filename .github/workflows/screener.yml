@@ -16,7 +16,7 @@ concurrency:
 jobs:
   screen:
     runs-on: ubuntu-latest
-    timeout-minutes: 60  # 첫 실행 DART 대량 fetch 대비 (이후엔 캐시 활용 5~10분)
+    timeout-minutes: 90  # 한국시장 전체 cover (~2000종목 OHLC fetch + DART)
     steps:
       - name: Checkout
         uses: actions/checkout@v4
