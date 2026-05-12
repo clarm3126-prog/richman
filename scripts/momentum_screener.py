@@ -32,6 +32,7 @@ from screener import (
     fetch_all_stock_history,
     sma, send_telegram,
     load_metadata, is_pump_or_warning, is_excluded_security, DEDUP_RESET_DAYS,
+    save_chart_data,
 )
 
 
@@ -597,6 +598,9 @@ def main():
         "results": to_save,
     }, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     print(f"\n✅ Saved momentum_results.json ({len(to_save)} stocks: must_include {len(must_include)} + others {len(to_save) - len(must_include)})")
+
+    # 9.5 차트 데이터 저장 (252일 OHLC) — 종목 모달용
+    save_chart_data(to_save, histories)
 
     # 10. Telegram 알림
     print("\n[Telegram] 신규 모멘텀 종목 알림...")

@@ -787,6 +787,43 @@ def notify_new_minervini(results):
 
 
 # ================================
+# 차트 데이터 저장 (frontend 종목 모달용)
+# ================================
+
+def save_chart_data(results, histories):
+    """results 종목들의 252일 OHLC를 data/charts/{code}.json으로 저장.
+    Frontend가 종목 모달 열 때 fetch해서 candlestick + MA 차트 그림.
+    """
+    charts_dir = Path("data/charts")
+    charts_dir.mkdir(parents=True, exist_ok=True)
+    saved = 0
+    for r in results:
+        code = r.get("code")
+        if not code:
+            continue
+        history = histories.get(code)
+        if not history or len(history) < 30:
+            continue
+        # 컴팩트 array format (frontend MA 자체 계산)
+        chart = {
+            "code": code,
+            "name": r.get("name", code),
+            "dates": [h["date"] for h in history],
+            "open": [h["open"] for h in history],
+            "high": [h["high"] for h in history],
+            "low": [h["low"] for h in history],
+            "close": [h["close"] for h in history],
+            "volume": [h["volume"] for h in history],
+        }
+        (charts_dir / f"{code}.json").write_text(
+            json.dumps(chart, ensure_ascii=False, separators=(",", ":")),
+            encoding="utf-8",
+        )
+        saved += 1
+    print(f"  saved {saved} chart files to data/charts/")
+
+
+# ================================
 # 메인
 # ================================
 
@@ -910,6 +947,9 @@ def main():
         "results": to_save,
     }, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     print(f"\n✅ Saved screener_results.json ({len(to_save)} stocks: must_include {len(must_include)} + others {len(to_save) - len(must_include)})")
+
+    # 8.5 차트 데이터 저장 (252일 OHLC) — 종목 모달에서 사용
+    save_chart_data(to_save, histories)
 
     # 9. Telegram 알림 (신규 strict/strong만)
     print("\n[Telegram] 신규 미너비니 종목 알림...")
