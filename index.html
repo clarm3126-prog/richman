@@ -798,6 +798,29 @@
   }
   .mv-ribbon.strict { background: #fef3c7; color: #92400e; }
   .mv-ribbon.strong { background: #dbeafe; color: #1e40af; }
+  /* 카테고리별 카드 색상 */
+  .mv-card.cat-mv-strict { border-left: 4px solid #7c3aed; background: #faf5ff; }
+  .mv-card.cat-mv-strong { border-left: 4px solid #2563eb; background: #eff6ff; }
+  .mv-card.cat-mom-strong { border-left: 4px solid #dc2626; background: #fef2f2; }
+  .mv-card.cat-pre { border-left: 4px solid #d97706; background: #fffbeb; }
+  /* 카테고리별 점수 색상 (overrides .mv-score-total) */
+  .mv-card.cat-mv-strict .mv-score-total { color: #7c3aed; }
+  .mv-card.cat-mv-strong .mv-score-total { color: #2563eb; }
+  .mv-card.cat-mom-strong .mv-score-total { color: #dc2626; }
+  .mv-card.cat-pre .mv-score-total { color: #d97706; }
+  /* 카테고리 percentile rank badge */
+  .mv-cat-rank {
+    display: inline-block;
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    margin-top: 3px;
+    font-weight: 600;
+  }
+  .mv-cat-rank.cat-mv-strict { background: #f3e8ff; color: #6b21a8; }
+  .mv-cat-rank.cat-mv-strong { background: #dbeafe; color: #1e40af; }
+  .mv-cat-rank.cat-mom-strong { background: #fee2e2; color: #991b1b; }
+  .mv-cat-rank.cat-pre { background: #fef3c7; color: #92400e; }
   @media (prefers-color-scheme: dark) {
     html, body { background: #0f1115; color: #e5e7eb; }
     header { background: #1a1d23; border-bottom-color: #2a2f3a; }
@@ -898,6 +921,19 @@
     .mv-ribbon.strict { background: #78350f; color: #fde68a; }
     .mv-ribbon.strong { background: #1e3a8a; color: #bfdbfe; }
     .update-badge { background: #2a2f3a; border-color: #3a414f; color: #9ca3af; }
+    /* 카테고리 카드 다크 */
+    .mv-card.cat-mv-strict { background: #1e1b3a; border-left-color: #a78bfa; }
+    .mv-card.cat-mv-strong { background: #172554; border-left-color: #60a5fa; }
+    .mv-card.cat-mom-strong { background: #2a1313; border-left-color: #fca5a5; }
+    .mv-card.cat-pre { background: #2a1f0d; border-left-color: #fcd34d; }
+    .mv-card.cat-mv-strict .mv-score-total { color: #a78bfa; }
+    .mv-card.cat-mv-strong .mv-score-total { color: #60a5fa; }
+    .mv-card.cat-mom-strong .mv-score-total { color: #fca5a5; }
+    .mv-card.cat-pre .mv-score-total { color: #fcd34d; }
+    .mv-cat-rank.cat-mv-strict { background: #4c1d95; color: #ddd6fe; }
+    .mv-cat-rank.cat-mv-strong { background: #1e3a8a; color: #bfdbfe; }
+    .mv-cat-rank.cat-mom-strong { background: #7f1d1d; color: #fecaca; }
+    .mv-cat-rank.cat-pre { background: #78350f; color: #fde68a; }
   }
   /* 마지막 업데이트 시간 badge — 헤더 우측 상단 floating */
   .update-badge {
@@ -2540,6 +2576,13 @@ function renderMinerviniView() {
     if (filtered.length === 0) {
       html += `<div class="strength-section"><div class="strength-loading">현재 조건에 맞는 종목이 없습니다.</div></div>`;
     } else {
+      // 카테고리별 rank 계산 (이미 score 순 정렬됨)
+      const allStrict = all.filter(r => r.minervini_strict);
+      const allStrong = all.filter(r => r.minervini_strong);
+      const strictRankMap = {};
+      allStrict.forEach((r, i) => { strictRankMap[r.code] = i + 1; });
+      const strongRankMap = {};
+      allStrong.forEach((r, i) => { strongRankMap[r.code] = i + 1; });
       html += `<div class="strength-section">`;
       filtered.slice(0, 50).forEach((r, i) => {
         const tt = r.trend_template || {};
@@ -2547,6 +2590,19 @@ function renderMinerviniView() {
         const setup = r.setup || {};
         const cls = r.change > 0 ? 'up' : r.change < 0 ? 'down' : 'flat';
         const sign = r.change > 0 ? '+' : '';
+        // 카테고리 클래스 + percentile rank
+        let cardCat = '', rankBadge = '';
+        if (r.minervini_strict && strictRankMap[r.code]) {
+          cardCat = 'cat-mv-strict';
+          const rk = strictRankMap[r.code];
+          const pct = Math.max(1, Math.round(rk / allStrict.length * 100));
+          rankBadge = `<span class="mv-cat-rank cat-mv-strict">🏆 엄격 ${allStrict.length}개 중 #${rk} (상위 ${pct}%)</span>`;
+        } else if (r.minervini_strong && strongRankMap[r.code]) {
+          cardCat = 'cat-mv-strong';
+          const rk = strongRankMap[r.code];
+          const pct = Math.max(1, Math.round(rk / allStrong.length * 100));
+          rankBadge = `<span class="mv-cat-rank cat-mv-strong">⭐ 우량 ${allStrong.length}개 중 #${rk} (상위 ${pct}%)</span>`;
+        }
         const ttIcons = [
           ['MA50↑', tt.price_above_ma50],
           ['MA150↑', tt.price_above_ma150],
@@ -2577,7 +2633,7 @@ function renderMinerviniView() {
           ? `<span class="mv-ribbon strict">엄격 통과</span>`
           : (r.minervini_strong ? `<span class="mv-ribbon strong">우량</span>` : '');
         html += `
-          <div class="mv-card" data-code="${r.code}" onclick="openStockModal('${r.code}')">
+          <div class="mv-card ${cardCat}" data-code="${r.code}" onclick="openStockModal('${r.code}')">
             <div class="mv-head">
               <div class="mv-rank">#${i + 1}</div>
               <div class="mv-name-block">
@@ -2585,6 +2641,7 @@ function renderMinerviniView() {
                 <div class="mv-sub">${r.code} · ${r.market || ''} · ${r.price ? r.price.toLocaleString('ko-KR') : '—'}원
                   <span class="${cls}">${sign}${(r.change ?? 0).toFixed(2)}%</span>
                   · ${rsVal}</div>
+                ${rankBadge}
               </div>
               <div class="mv-score">
                 <div class="mv-score-total">${r.total_score ?? 0}</div>
@@ -2682,6 +2739,13 @@ function renderMomentumView() {
     if (filtered.length === 0) {
       html += `<div class="strength-section"><div class="strength-loading">현재 조건에 맞는 종목이 없습니다.</div></div>`;
     } else {
+      // 카테고리별 rank 계산
+      const allMomStrong = all.filter(r => r.momentum_strong);
+      const allPre = all.filter(r => r.pre_breakout);
+      const momStrongRankMap = {};
+      allMomStrong.forEach((r, i) => { momStrongRankMap[r.code] = i + 1; });
+      const preRankMap = {};
+      allPre.forEach((r, i) => { preRankMap[r.code] = i + 1; });
       html += `<div class="strength-section">`;
       filtered.slice(0, 50).forEach((r, i) => {
         const cls = r.change > 0 ? 'up' : r.change < 0 ? 'down' : 'flat';
@@ -2706,14 +2770,28 @@ function renderMomentumView() {
         const ribbon = r.momentum_strong
           ? `<span class="mv-ribbon strict">🔥 강세</span>`
           : (r.pre_breakout ? `<span class="mv-ribbon strong">⏳ 사전</span>` : '');
+        // 카테고리 클래스 + percentile rank
+        let cardCat = '', rankBadge = '';
+        if (r.momentum_strong && momStrongRankMap[r.code]) {
+          cardCat = 'cat-mom-strong';
+          const rk = momStrongRankMap[r.code];
+          const pct = Math.max(1, Math.round(rk / allMomStrong.length * 100));
+          rankBadge = `<span class="mv-cat-rank cat-mom-strong">🔥 강세 ${allMomStrong.length}개 중 #${rk} (상위 ${pct}%)</span>`;
+        } else if (r.pre_breakout && preRankMap[r.code]) {
+          cardCat = 'cat-pre';
+          const rk = preRankMap[r.code];
+          const pct = Math.max(1, Math.round(rk / allPre.length * 100));
+          rankBadge = `<span class="mv-cat-rank cat-pre">⏳ 사전 ${allPre.length}개 중 #${rk} (상위 ${pct}%)</span>`;
+        }
         html += `
-          <div class="mv-card" data-code="${r.code}" onclick="openStockModal('${r.code}')">
+          <div class="mv-card ${cardCat}" data-code="${r.code}" onclick="openStockModal('${r.code}')">
             <div class="mv-head">
               <div class="mv-rank">#${i + 1}</div>
               <div class="mv-name-block">
                 <div class="mv-name">${r.name} ${ribbon}</div>
                 <div class="mv-sub">${r.code} · ${r.market || ''} · ${r.price ? r.price.toLocaleString('ko-KR') : '—'}원
                   <span class="${cls}">${sign}${(r.change ?? 0).toFixed(2)}%</span></div>
+                ${rankBadge}
               </div>
               <div class="mv-score">
                 <div class="mv-score-total">${r.total_score ?? 0}</div>
