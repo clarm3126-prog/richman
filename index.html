@@ -29,6 +29,59 @@
   })();
 </script>
 <style>
+  /* CSS 변수 — 라이트/다크 자동 전환 색상 */
+  :root {
+    --fg-strong: #1a1a1a;
+    --fg-mid: #4b5563;
+    --fg-dim: #6b7280;
+    --fg-faint: #9ca3af;
+    --bg-card: #fff;
+    --bg-card-tint-purple: #f5f3ff;
+    --bg-card-tint-green: #f0fdf4;
+    --bg-card-tint-red: #fef2f2;
+    --bg-card-tint-yellow: #fef9c3;
+    --bg-card-tint-blue: #f0f9ff;
+    --bg-card-tint-amber: #fef3c7;
+    --bg-card-tint-rose: #fee2e2;
+    --bg-inset: #f9fafb;
+    --border-light: #e5e7eb;
+    --border-purple: #e9d5ff;
+    --border-blue: #bae6fd;
+    --border-amber: #fcd34d;
+    --border-rose: #fca5a5;
+    --accent-purple: #7c3aed;
+    --accent-purple-text: #5b21b6;
+    --accent-yellow-text: #92400e;
+    --accent-blue-text: #0369a1;
+    --accent-rose-text: #991b1b;
+    --accent-amber-text: #92400e;
+  }
+  .theme-dark {
+    --fg-strong: #e5e7eb;
+    --fg-mid: #d1d5db;
+    --fg-dim: #9ca3af;
+    --fg-faint: #6b7280;
+    --bg-card: #1a1d23;
+    --bg-card-tint-purple: #1f1640;
+    --bg-card-tint-green: #0a2e1a;
+    --bg-card-tint-red: #2a1313;
+    --bg-card-tint-yellow: #2a2008;
+    --bg-card-tint-blue: #0a1f33;
+    --bg-card-tint-amber: #2a1f0d;
+    --bg-card-tint-rose: #2a1313;
+    --bg-inset: #2a2f3a;
+    --border-light: #2a2f3a;
+    --border-purple: #4c1d95;
+    --border-blue: #1e3a8a;
+    --border-amber: #78350f;
+    --border-rose: #7f1d1d;
+    --accent-purple: #a78bfa;
+    --accent-purple-text: #c4b5fd;
+    --accent-yellow-text: #fde68a;
+    --accent-blue-text: #93c5fd;
+    --accent-rose-text: #fca5a5;
+    --accent-amber-text: #fde68a;
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   html, body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
@@ -1055,9 +1108,9 @@
     <div class="modal-title">📌 보유 종목 등록</div>
     <div class="modal-current" id="ownedModalCurrent"></div>
     <div class="modal-form">
-      <label class="modal-label">매입가 (원) <span style="color:#9ca3af;font-weight:400">선택사항</span></label>
+      <label class="modal-label">매입가 (원) <span style="color:var(--fg-faint);font-weight:400">선택사항</span></label>
       <input type="text" id="ownedEntryPrice" inputmode="numeric" placeholder="예: 22000" class="modal-input">
-      <label class="modal-label">매입일 <span style="color:#9ca3af;font-weight:400">선택사항</span></label>
+      <label class="modal-label">매입일 <span style="color:var(--fg-faint);font-weight:400">선택사항</span></label>
       <input type="date" id="ownedEntryDate" class="modal-input">
     </div>
     <div class="modal-actions">
@@ -1100,7 +1153,7 @@
         <button class="modal-btn modal-btn-cancel" style="flex:1;font-size:11px" onclick="togglePatVisibility()">👁️ 보기/숨기기</button>
         <button class="modal-btn modal-btn-cancel" style="flex:1;font-size:11px" onclick="copyPatToClipboard()" id="copyPatBtn">📋 복사</button>
       </div>
-      <div style="font-size:11px;color:#9ca3af;margin-top:8px;line-height:1.7">
+      <div style="font-size:11px;color:var(--fg-faint);margin-top:8px;line-height:1.7">
         <b>📋 발급 방법:</b><br>
         1. <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" style="color:#2563eb">새 Fine-grained Token 발급 페이지 열기</a><br>
         2. <b>Token name</b>: <code>richman alerts</code><br>
@@ -1130,7 +1183,7 @@
       <button id="copyJsonBtn" class="modal-btn modal-btn-cancel" style="width:100%;margin-top:6px" onclick="copyTelegramJson()">📋 클립보드에 복사</button>
       <label class="modal-label">2️⃣ GitHub에서 파일 편집</label>
       <a id="syncEditLink" href="#" target="_blank" class="modal-btn modal-btn-save" style="display:block;text-align:center;text-decoration:none;width:100%">🔗 alerts_config.json 편집 페이지 열기</a>
-      <div style="font-size:11px;color:#9ca3af;margin-top:8px;line-height:1.6">
+      <div style="font-size:11px;color:var(--fg-faint);margin-top:8px;line-height:1.6">
         편집 페이지에서: 기존 내용 전체 삭제 → 복사한 내용 붙여넣기 → 하단 "Commit changes" 클릭
       </div>
     </div>
@@ -2515,7 +2568,7 @@ function showVolumeDayModal(date, list) {
       const cls = s.change > 0 ? 'up' : s.change < 0 ? 'down' : 'flat';
       html += `<div class="legend-item" data-stock-code="${s.code}" data-modal-row="1">
         <span class="legend-rank">${i + 1}</span>
-        <span class="legend-name">${s.name}<span style="font-size:10px;color:#9ca3af;margin-left:4px">${s.code}·${s.market || ''}</span></span>
+        <span class="legend-name">${s.name}<span style="font-size:10px;color:var(--fg-faint);margin-left:4px">${s.code}·${s.market || ''}</span></span>
         <span class="legend-val up" style="font-weight:700">${s.ratio}x</span>
         <span class="legend-val ${cls}">${sign}${s.change.toFixed(2)}%</span>
       </div>`;
@@ -2582,8 +2635,8 @@ async function loadBacktestData() {
 function renderBacktestBanner(category) {
   if (!BACKTEST_DATA || BACKTEST_DATA.__empty) return '';
   if (BACKTEST_DATA.status !== 'ok') {
-    return `<div class="strength-section" style="background:#fef9c3">
-      <div style="font-size:11px;color:#92400e">📊 백테스트: ${BACKTEST_DATA.message || '데이터 누적 중'}</div>
+    return `<div class="strength-section" style="background:var(--bg-card-tint-yellow)">
+      <div style="font-size:11px;color:var(--accent-yellow-text)">📊 백테스트: ${BACKTEST_DATA.message || '데이터 누적 중'}</div>
     </div>`;
   }
   const cat = (BACKTEST_DATA.categories || {})[category];
@@ -2594,10 +2647,10 @@ function renderBacktestBanner(category) {
   const fmt = (s) => s
     ? `n=${s.count} · 승률 <b>${s.win_rate}%</b> · 평균 <b style="color:${s.avg_return >= 0 ? '#dc2626' : '#2563eb'}">${s.avg_return >= 0 ? '+' : ''}${s.avg_return}%</b> · 최대 +${s.max_return}% / 최소 ${s.min_return}%`
     : '데이터 부족';
-  return `<div class="strength-section" style="background:#f0f9ff;border-color:#bae6fd">
-    <div style="font-size:11px;font-weight:700;color:#0369a1;margin-bottom:4px">📊 과거 검증 (${category})</div>
-    <div style="font-size:11px;color:#374151">30일 후: ${fmt(s30)}</div>
-    ${s60 ? `<div style="font-size:11px;color:#374151;margin-top:2px">60일 후: ${fmt(s60)}</div>` : ''}
+  return `<div class="strength-section" style="background:var(--bg-card-tint-blue);border-color:var(--border-blue)">
+    <div style="font-size:11px;font-weight:700;color:var(--accent-blue-text);margin-bottom:4px">📊 과거 검증 (${category})</div>
+    <div style="font-size:11px;color:var(--fg-mid)">30일 후: ${fmt(s30)}</div>
+    ${s60 ? `<div style="font-size:11px;color:var(--fg-mid);margin-top:2px">60일 후: ${fmt(s60)}</div>` : ''}
   </div>`;
 }
 
@@ -2930,8 +2983,8 @@ function renderEarningsBanner(watchlistCodes) {
   for (const d of mine.slice(0, 10)) {
     const isProv = (d.report_nm || '').includes('잠정');
     html += `<div style="padding:6px 0;border-bottom:1px solid #f3f4f6">
-      <div style="font-weight:700;font-size:13px">${isProv ? '🚨' : '📋'} ${d.name} <span style="color:#6b7280;font-weight:400;font-size:11px">${d.code}</span></div>
-      <div style="font-size:11px;color:#6b7280;margin-top:2px">${d.report_nm}</div>
+      <div style="font-weight:700;font-size:13px">${isProv ? '🚨' : '📋'} ${d.name} <span style="color:var(--fg-dim);font-weight:400;font-size:11px">${d.code}</span></div>
+      <div style="font-size:11px;color:var(--fg-dim);margin-top:2px">${d.report_nm}</div>
       <a href="${d.url}" target="_blank" rel="noreferrer" style="font-size:10px;color:#0369a1;margin-top:2px;display:inline-block">📄 DART 공시 보기</a>
     </div>`;
   }
@@ -2991,8 +3044,8 @@ function renderExitSignalsBanner(watchlistCodes) {
         `<span class="mv-chip ${s.severity === 'critical' ? 'fail' : 'pass'}" style="background:${s.severity === 'critical' ? '#fee2e2' : '#fef3c7'};color:${s.severity === 'critical' ? '#991b1b' : '#92400e'};border-color:${s.severity === 'critical' ? '#fca5a5' : '#fcd34d'}">${s.label}</span>`
       ).join('');
       html += `<div style="padding:8px 0;border-bottom:1px solid #fee2e2;cursor:pointer" onclick="openStockModal('${r.code}')">
-        <div style="font-weight:700;font-size:13px">${r.overall === 'critical' ? '🛑' : '⚠️'} ${r.name} <span style="color:#6b7280;font-weight:400;font-size:11px">${r.code}</span> 📌</div>
-        <div style="font-size:11px;color:#6b7280;margin-top:2px">${(r.current_price || 0).toLocaleString('ko-KR')}원 · ${r.today_change >= 0 ? '+' : ''}${r.today_change}%${retLine}</div>
+        <div style="font-weight:700;font-size:13px">${r.overall === 'critical' ? '🛑' : '⚠️'} ${r.name} <span style="color:var(--fg-dim);font-weight:400;font-size:11px">${r.code}</span> 📌</div>
+        <div style="font-size:11px;color:var(--fg-dim);margin-top:2px">${(r.current_price || 0).toLocaleString('ko-KR')}원 · ${r.today_change >= 0 ? '+' : ''}${r.today_change}%${retLine}</div>
         <div class="mv-chips" style="margin-top:4px">${sigs}</div>
       </div>`;
     }
@@ -3009,8 +3062,8 @@ function renderExitSignalsBanner(watchlistCodes) {
         `<span class="mv-chip ${s.severity === 'critical' ? 'fail' : 'pass'}" style="background:${s.severity === 'critical' ? '#fee2e2' : '#fef3c7'};color:${s.severity === 'critical' ? '#991b1b' : '#92400e'};border-color:${s.severity === 'critical' ? '#fca5a5' : '#fcd34d'}">${s.label}</span>`
       ).join('');
       html += `<div style="padding:8px 0;border-bottom:1px solid #fef3c7;cursor:pointer" onclick="openStockModal('${r.code}')">
-        <div style="font-weight:700;font-size:13px">${r.overall === 'critical' ? '🛑' : '⚠️'} ${r.name} <span style="color:#6b7280;font-weight:400;font-size:11px">${r.code}</span></div>
-        <div style="font-size:11px;color:#6b7280;margin-top:2px">${(r.current_price || 0).toLocaleString('ko-KR')}원 · ${r.today_change >= 0 ? '+' : ''}${r.today_change}%</div>
+        <div style="font-weight:700;font-size:13px">${r.overall === 'critical' ? '🛑' : '⚠️'} ${r.name} <span style="color:var(--fg-dim);font-weight:400;font-size:11px">${r.code}</span></div>
+        <div style="font-size:11px;color:var(--fg-dim);margin-top:2px">${(r.current_price || 0).toLocaleString('ko-KR')}원 · ${r.today_change >= 0 ? '+' : ''}${r.today_change}%</div>
         <div class="mv-chips" style="margin-top:4px">${sigs}</div>
       </div>`;
     }
@@ -3079,16 +3132,16 @@ function renderPortfolioSummary(codes) {
     <div class="strength-title">📁 내 포트폴리오 (${ownedCodes.length}종목)</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;font-size:12px">
       <div style="background:#fff;padding:8px;border-radius:6px">
-        <div style="font-size:10px;color:#6b7280;font-weight:700">종합 수익률</div>
+        <div style="font-size:10px;color:var(--fg-dim);font-weight:700">종합 수익률</div>
         <div style="font-size:18px;font-weight:800;color:${retColor};margin-top:2px">${retStr}</div>
       </div>
       <div style="background:#fff;padding:8px;border-radius:6px">
-        <div style="font-size:10px;color:#6b7280;font-weight:700">승/패</div>
+        <div style="font-size:10px;color:var(--fg-dim);font-weight:700">승/패</div>
         <div style="font-size:18px;font-weight:800;margin-top:2px">
           <span style="color:#dc2626">${winCount}</span>
-          <span style="color:#9ca3af;font-size:14px"> / </span>
+          <span style="color:var(--fg-faint);font-size:14px"> / </span>
           <span style="color:#2563eb">${lossCount}</span>
-          <span style="color:#9ca3af;font-size:11px"> (${withReturn}/${ownedCodes.length})</span>
+          <span style="color:var(--fg-faint);font-size:11px"> (${withReturn}/${ownedCodes.length})</span>
         </div>
       </div>
     </div>`;
@@ -3206,7 +3259,7 @@ function renderWatchlistView() {
         const status = triggered ? `<span class="alert-triggered">🚨 도달!</span>` : '';
         alertLine = `<div class="watchlist-alert">🔔 ${w.target.toLocaleString('ko-KR')}원 ${dirText} ${status}</div>`;
       } else {
-        alertLine = `<div class="watchlist-alert" style="color:#9ca3af">알림 미설정</div>`;
+        alertLine = `<div class="watchlist-alert" style="color:var(--fg-faint)">알림 미설정</div>`;
       }
       let ownedLine = '';
       if (w.owned) {
@@ -3532,7 +3585,7 @@ function openStockModal(code) {
   // 회사 설명 — 접힘 상태로 시작 (긴 설명 화면 짤림 방지)
   if (desc) {
     html += `<details class="desc-toggle-wrap">
-      <summary>📝 기업 개요 <span style="color:#9ca3af;font-weight:400">(클릭하여 펼치기)</span></summary>
+      <summary>📝 기업 개요 <span style="color:var(--fg-faint);font-weight:400">(클릭하여 펼치기)</span></summary>
       <div>${escapeHtml(desc)}</div>
     </details>`;
   }
@@ -3561,7 +3614,7 @@ function openStockModal(code) {
 async function renderSignalTimeline(code) {
   const container = document.getElementById(`modalTimelineSection-${code}`);
   if (!container) return;
-  container.innerHTML = `<div class="detail-section"><div style="font-size:11px;color:#9ca3af">🕐 시그널 history 로드 중...</div></div>`;
+  container.innerHTML = `<div class="detail-section"><div style="font-size:11px;color:var(--fg-faint)">🕐 시그널 history 로드 중...</div></div>`;
   // 최근 60일 history 시도
   const today = new Date();
   const dates = [];
@@ -3616,8 +3669,8 @@ async function renderSignalTimeline(code) {
   }
   if (events.length === 0) {
     container.innerHTML = `<div class="detail-section">
-      <div class="label" style="font-size:11px;color:#6b7280">🕐 시그널 Timeline</div>
-      <div style="font-size:12px;color:#9ca3af;margin-top:4px">최근 60일간 평가 history 없음</div>
+      <div class="label" style="font-size:11px;color:var(--fg-dim)">🕐 시그널 Timeline</div>
+      <div style="font-size:12px;color:var(--fg-faint);margin-top:4px">최근 60일간 평가 history 없음</div>
     </div>`;
     return;
   }
@@ -3648,7 +3701,7 @@ async function renderSignalTimeline(code) {
   }
 
   let html = `<div class="detail-section">
-    <div class="label" style="font-size:11px;color:#6b7280;margin-bottom:6px">🕐 시그널 Timeline (최근 60일, ${events.length}건)</div>`;
+    <div class="label" style="font-size:11px;color:var(--fg-dim);margin-bottom:6px">🕐 시그널 Timeline (최근 60일, ${events.length}건)</div>`;
   if (pattern) {
     html += `<div style="font-size:11px;background:#f0f9ff;color:#0369a1;padding:6px 8px;border-radius:6px;margin-bottom:6px;font-weight:600">${pattern}</div>`;
   }
@@ -3662,13 +3715,13 @@ async function renderSignalTimeline(code) {
       `<span style="display:inline-block;background:${e.color}22;color:${e.color};border:1px solid ${e.color}66;font-size:10px;padding:2px 6px;border-radius:4px;margin:1px;font-weight:600">${e.label}${e.score ? ' · ' + e.score : ''}</span>`
     ).join('');
     html += `<div style="display:flex;align-items:center;gap:8px;padding:3px 0;border-bottom:1px solid #f3f4f6">
-      <span style="font-size:10px;color:#6b7280;font-family:monospace;min-width:80px">${dateF}</span>
+      <span style="font-size:10px;color:var(--fg-dim);font-family:monospace;min-width:80px">${dateF}</span>
       <span>${chips}</span>
     </div>`;
   }
   html += `</div>`;
   if (sortedDates.length > 30) {
-    html += `<div style="font-size:10px;color:#9ca3af;margin-top:4px;text-align:center">... 외 ${sortedDates.length - 30}일 더</div>`;
+    html += `<div style="font-size:10px;color:var(--fg-faint);margin-top:4px;text-align:center">... 외 ${sortedDates.length - 30}일 더</div>`;
   }
   html += `</div>`;
   container.innerHTML = html;
@@ -3678,12 +3731,12 @@ async function renderSignalTimeline(code) {
 async function renderStockChart(code) {
   const container = document.getElementById(`modalChartSection-${code}`);
   if (!container) return;
-  container.innerHTML = `<div style="padding:20px;text-align:center;color:#9ca3af;font-size:11px">📊 차트 로드 중...</div>`;
+  container.innerHTML = `<div style="padding:20px;text-align:center;color:var(--fg-faint);font-size:11px">📊 차트 로드 중...</div>`;
   let data;
   try {
     const r = await fetch(`data/charts/${code}.json?t=${Date.now()}`);
     if (!r.ok) {
-      container.innerHTML = `<div style="padding:12px;text-align:center;color:#9ca3af;font-size:11px">📊 차트 데이터 없음 (스크리너 평가 대상 아님)</div>`;
+      container.innerHTML = `<div style="padding:12px;text-align:center;color:var(--fg-faint);font-size:11px">📊 차트 데이터 없음 (스크리너 평가 대상 아님)</div>`;
       return;
     }
     data = await r.json();
@@ -3829,18 +3882,18 @@ async function renderModalScores(code) {
   const exitHit = exitData && exitData.results && exitData.results.find(r => r.code === code);
   if (!mvHit && !mmHit && !exitHit) {
     target.innerHTML = `<div class="detail-section">
-      <div class="label" style="font-size:11px;color:#6b7280">🎯 스크리너 점수</div>
-      <div style="font-size:12px;color:#9ca3af;margin-top:4px">이 종목은 미너비니/모멘텀 평가 대상에 없거나 데이터 부족합니다.</div>
+      <div class="label" style="font-size:11px;color:var(--fg-dim)">🎯 스크리너 점수</div>
+      <div style="font-size:12px;color:var(--fg-faint);margin-top:4px">이 종목은 미너비니/모멘텀 평가 대상에 없거나 데이터 부족합니다.</div>
     </div>`;
     return;
   }
   html += `<div class="detail-section">
-    <div class="label" style="font-size:11px;color:#6b7280;margin-bottom:8px">🎯 스크리너 점수 / 시그널</div>`;
+    <div class="label" style="font-size:11px;color:var(--fg-dim);margin-bottom:8px">🎯 스크리너 점수 / 시그널</div>`;
   if (mvHit) {
     const cat = mvHit.minervini_strict ? '🏆 엄격(8/8)' : (mvHit.minervini_strong ? '⭐ 우량' : '평가됨');
     html += `<div style="font-size:12px;margin:4px 0">
       <b>🎯 미너비니</b>: ${cat} · 점수 <b>${mvHit.total_score}</b>/100
-      <span style="color:#6b7280">(TT ${mvHit.tt_passed_count}/8, F ${mvHit.fund_passed_count}/3)</span>
+      <span style="color:var(--fg-dim)">(TT ${mvHit.tt_passed_count}/8, F ${mvHit.fund_passed_count}/3)</span>
     </div>`;
   }
   if (mmHit) {
@@ -4902,7 +4955,7 @@ function renderForecastBox(data) {
   }
   trustBadge = `<span style="font-size:10px;background:${trustColor};color:#fff;padding:2px 6px;border-radius:4px;margin-left:6px">${trustText}</span>`;
 
-  let html = `<div class="strength-section" style="border-left:4px solid #7c3aed;background:#f5f3ff">
+  let html = `<div class="strength-section" style="border-left:4px solid var(--accent-purple);background:var(--bg-card-tint-purple)">
     <div class="strength-title">🔮 다음 주 강세 예상 테마 ${trustBadge}</div>
     <div class="strength-meta">기준일 ${data.trading_day} · 모멘텀+자금흐름+펀더멘털 결합 · ${data.history_days_available}일 데이터 기반</div>`;
   // top 10
@@ -4920,16 +4973,16 @@ function renderForecastBox(data) {
     const hasStocks = t.stocks && t.stocks.length > 0;
     const cursorStyle = hasStocks ? 'cursor:pointer' : 'cursor:default';
     const clickAttr = hasStocks ? `onclick="showForecastThemeStocks(${i})"` : '';
-    html += `<div style="padding:8px 0;border-bottom:1px solid #e9d5ff;${cursorStyle}" ${clickAttr}>
+    html += `<div style="padding:8px 0;border-bottom:1px solid var(--border-purple);${cursorStyle}" ${clickAttr}>
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div style="flex:1;min-width:0">
-          <div style="font-weight:700;font-size:13px;color:#5b21b6">#${i+1} ${t.name} ${hasStocks ? `<span style="font-size:10px;color:#9333ea;font-weight:400">▸ ${t.stocks.length}종목</span>` : ''}</div>
-          <div style="font-size:10px;color:#6b7280;margin-top:2px">현재 ${t.current_rank}위 · ${t.current_change >= 0 ? '+' : ''}${t.current_change}%</div>
-          <div style="font-size:11px;color:#374151;margin-top:3px">${whyStr}</div>
+          <div style="font-weight:700;font-size:13px;color:var(--accent-purple-text)">#${i+1} ${t.name} ${hasStocks ? `<span style="font-size:10px;color:var(--accent-purple);font-weight:400">▸ ${t.stocks.length}종목</span>` : ''}</div>
+          <div style="font-size:10px;color:var(--fg-dim);margin-top:2px">현재 ${t.current_rank}위 · ${t.current_change >= 0 ? '+' : ''}${t.current_change}%</div>
+          <div style="font-size:11px;color:var(--fg-mid);margin-top:3px">${whyStr}</div>
         </div>
         <div style="text-align:right;margin-left:8px">
-          <div style="font-size:16px;font-weight:800;color:#7c3aed">${t.total_score}</div>
-          <div style="font-size:9px;color:#6b7280">M${t.momentum_score} F${t.flow_score} U${t.fundamental_score}</div>
+          <div style="font-size:16px;font-weight:800;color:var(--accent-purple)">${t.total_score}</div>
+          <div style="font-size:9px;color:var(--fg-dim)">M${t.momentum_score} F${t.flow_score} U${t.fundamental_score}</div>
         </div>
       </div>
     </div>`;
@@ -4937,8 +4990,8 @@ function renderForecastBox(data) {
   html += `</div>`;
   // 백테스트 결과 widget
   if (stats && stats.status === 'ok') {
-    html += `<div style="margin-top:10px;padding:8px;background:#fff;border-radius:6px;font-size:11px">
-      <b style="color:#5b21b6">📊 자체 검증 (${stats.n_archives}일치 누적)</b><br>`;
+    html += `<div style="margin-top:10px;padding:8px;background:var(--bg-card);border-radius:6px;font-size:11px;color:var(--fg-mid)">
+      <b style="color:var(--accent-purple-text)">📊 자체 검증 (${stats.n_archives}일치 누적)</b><br>`;
     if (stats.stats_7d_top5) {
       const s = stats.stats_7d_top5;
       html += `7일 후 TOP 5 적중률: <b>${s.avg_hit_rate}%</b> · 평균 등락률 ${s.avg_change_after !== null ? (s.avg_change_after >= 0 ? '+' : '') + s.avg_change_after + '%' : '—'}<br>`;
@@ -4949,7 +5002,7 @@ function renderForecastBox(data) {
     }
     html += `</div>`;
   } else {
-    html += `<div style="margin-top:10px;padding:8px;background:#fef9c3;border-radius:6px;font-size:11px;color:#92400e">
+    html += `<div style="margin-top:10px;padding:8px;background:var(--bg-card-tint-yellow);border-radius:6px;font-size:11px;color:var(--accent-yellow-text)">
       ⚠️ 자체 백테스트가 아직 충분한 데이터를 모으지 못했습니다 (최소 7일 누적 필요).
       매주 토요일 자동 검증 → 정확도 표시.
     </div>`;
@@ -4965,7 +5018,7 @@ function showForecastThemeStocks(themeIdx) {
   if (!t || !t.stocks) return;
   const modal = document.getElementById('dayRankingModal');
   modal.querySelector('#dayRankingTitle').textContent = `🔮 ${t.name} (점수 ${t.total_score}) — ${t.stocks.length}종목`;
-  let html = `<div style="font-size:11px;color:#6b7280;margin-bottom:8px">
+  let html = `<div style="font-size:11px;color:var(--fg-dim);margin-bottom:8px">
     예상 강세 점수 ${t.total_score} · 현재 ${t.current_rank}위
   </div>`;
   html += '<div style="display:flex;flex-direction:column;gap:6px;max-height:60vh;overflow-y:auto">';
@@ -4983,7 +5036,7 @@ function showForecastThemeStocks(themeIdx) {
     const cls = change > 0 ? 'up' : change < 0 ? 'down' : 'flat';
     html += `<div class="legend-item" data-stock-code="${s.code}" data-modal-row="1">
       <span class="legend-rank">${i + 1}</span>
-      <span class="legend-name">${s.name}<span style="font-size:10px;color:#9ca3af;margin-left:4px">${s.code}</span></span>
+      <span class="legend-name">${s.name}<span style="font-size:10px;color:var(--fg-faint);margin-left:4px">${s.code}</span></span>
       <span class="legend-val ${cls}">${price ? price.toLocaleString('ko-KR') + '원' : '—'}</span>
       <span class="legend-val ${cls}">${sign}${change.toFixed(2)}%</span>
     </div>`;
@@ -5096,8 +5149,8 @@ function renderMarketRegime() {
     const cls = r.above50 ? '#dc2626' : '#2563eb';
     const pctStr = (r.ma50Pct >= 0 ? '+' : '') + r.ma50Pct.toFixed(1) + '%';
     const ch5d = (r.change5d >= 0 ? '+' : '') + r.change5d.toFixed(2) + '%';
-    return `<div style="display:flex;justify-content:space-between;align-items:baseline;margin:3px 0;font-size:12px">
-      <span style="font-weight:700;color:#374151">${name}</span>
+    return `<div style="display:flex;justify-content:space-between;align-items:baseline;margin:3px 0;font-size:12px;color:var(--fg-mid)">
+      <span style="font-weight:700;color:var(--fg-strong)">${name}</span>
       <span>${r.cur.toLocaleString('ko-KR', {maximumFractionDigits: 2})}
         <span style="color:${cls};font-weight:700">${dir} MA50 ${pctStr}</span>
         · 5d <span style="color:${cls}">${ch5d}</span>
@@ -5105,15 +5158,16 @@ function renderMarketRegime() {
     </div>`;
   }
 
-  let html = `<div class="strength-section" style="border-left:4px solid ${overallColor};background:${bullish ? '#f0fdf4' : '#fef2f2'}">
+  const regimeBg = bullish ? 'var(--bg-card-tint-green)' : 'var(--bg-card-tint-red)';
+  let html = `<div class="strength-section" style="border-left:4px solid ${overallColor};background:${regimeBg}">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
       <div class="strength-title">${overallEmoji} 시장 진단</div>
       <span style="font-size:11px;font-weight:700;color:${overallColor}">${overallText}</span>
     </div>
     ${fmtIdx('KOSPI', kospi)}
     ${fmtIdx('KOSDAQ', kosdaq)}
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:6px;border-top:1px solid #e5e7eb;font-size:11px">
-      <span style="color:#6b7280">신고가: <b style="color:#dc2626">${newHighs}개</b></span>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:6px;border-top:1px solid var(--border-light);font-size:11px">
+      <span style="color:var(--fg-mid)">신고가: <b style="color:#dc2626">${newHighs}개</b></span>
       <span style="color:${envColor};font-weight:700">${envText}</span>
     </div>
   </div>`;
