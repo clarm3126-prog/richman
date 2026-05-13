@@ -677,9 +677,28 @@ def send_telegram(bot_token, chat_id, text):
         return False, f"Exception: {e}"
 
 
+SCORE_IMPROVE_THRESHOLD = 5.0  # 점수 +5 이상 향상되면 재알림 (30일 안이라도)
+
+
+def _normalize_alerted_entry(v, fallback_date=""):
+    """이전 알림 entry를 새 format {date, score}로 정규화.
+    구버전 호환:
+      - list of code (very old)
+      - {code: "YYYY-MM-DD"} (이전 dedup, score 없음)
+      - {code: {date, score}} (현재)
+    """
+    if isinstance(v, str):
+        return {"date": v, "score": 0}
+    elif isinstance(v, dict):
+        return {"date": v.get("date", fallback_date), "score": v.get("score", 0)}
+    return {"date": fallback_date, "score": 0}
+
+
 def notify_new_minervini(results):
-    """이전에 알린 적 없는 신규 strict/strong 종목 → Telegram 알림.
-    중복 방지: data/screener_alerted.json에 (code, category) 누적.
+    """신규 strict/strong + 점수 향상된 기존 종목 → Telegram 알림.
+    재알림 조건:
+    1. 30일+ 지난 종목 (기존 dedup reset)
+    2. 30일 안이라도 점수 +5 이상 향상 시 재알림 (점수 변화 표시)
     """
     bot_token = os.environ.get("TELEGRAM_BOT_TOKEN")
     chat_id = os.environ.get("TELEGRAM_CHAT_ID")
@@ -692,56 +711,67 @@ def notify_new_minervini(results):
     if alerted_path.exists():
         try:
             raw = json.loads(alerted_path.read_text(encoding="utf-8"))
-            # 구버전 (list) → 신버전 (dict {code: date}) 마이그레이션
+            today_str = datetime.now(KST).strftime("%Y-%m-%d")
             for key in ["strict", "strong"]:
                 v = raw.get(key, {})
                 if isinstance(v, list):
-                    today_str = datetime.now(KST).strftime("%Y-%m-%d")
-                    alerted[key] = {c: today_str for c in v}
+                    # very old format: list of codes
+                    alerted[key] = {c: {"date": today_str, "score": 0} for c in v}
                 elif isinstance(v, dict):
-                    alerted[key] = v
+                    alerted[key] = {c: _normalize_alerted_entry(e, today_str) for c, e in v.items()}
                 else:
                     alerted[key] = {}
         except Exception:
             pass
-    # 30일 이상 지난 entry는 dedup에서 빠짐 (재진입 알림 가능)
+
     today = datetime.now(KST)
     cutoff = today.timestamp() - DEDUP_RESET_DAYS * 86400
-    def active_set(d):
-        out = set()
-        for code, date_str in d.items():
-            try:
-                ts = datetime.strptime(date_str, "%Y-%m-%d").timestamp()
-                if ts >= cutoff:
-                    out.add(code)
-            except Exception:
-                pass
-        return out
-    strict_set = active_set(alerted["strict"])
-    strong_set = active_set(alerted["strong"])
 
-    new_strict = []
+    def get_active_entry(d, code):
+        """30일 안에 알림된 entry 반환. 30일 지났으면 None (= 만료).
+        Returns: {date, score} or None
+        """
+        e = d.get(code)
+        if not e:
+            return None
+        try:
+            ts = datetime.strptime(e["date"], "%Y-%m-%d").timestamp()
+            if ts < cutoff:
+                return None  # 만료 → 새 알림
+            return e
+        except Exception:
+            return None
+
+    new_strict = []  # [(r, prev_score_or_None)]
     new_strong = []
     for r in results:
         code = r.get("code")
         if not code:
             continue
-        if r.get("minervini_strict") and code not in strict_set:
-            new_strict.append(r)
-            strict_set.add(code)
-            strong_set.add(code)  # strict는 strong도 자동 충족
-        elif r.get("minervini_strong") and code not in strong_set:
-            new_strong.append(r)
-            strong_set.add(code)
+        new_score = r.get("total_score", 0) or 0
+        if r.get("minervini_strict"):
+            prev = get_active_entry(alerted["strict"], code)
+            if prev is None:
+                # 신규 또는 만료 후 재진입
+                new_strict.append((r, None))
+            elif new_score >= prev["score"] + SCORE_IMPROVE_THRESHOLD:
+                # 점수 향상 → 재알림
+                new_strict.append((r, prev["score"]))
+        elif r.get("minervini_strong"):
+            prev = get_active_entry(alerted["strong"], code)
+            if prev is None:
+                new_strong.append((r, None))
+            elif new_score >= prev["score"] + SCORE_IMPROVE_THRESHOLD:
+                new_strong.append((r, prev["score"]))
 
     if not new_strict and not new_strong:
-        print("  no new minervini candidates (skip telegram)")
+        print("  no new/improved minervini candidates (skip telegram)")
         return
 
-    today = datetime.now(KST).strftime("%Y-%m-%d")
-    lines = [f"🎯 *미너비니 신규 진입* — {today}\n"]
+    today_str = datetime.now(KST).strftime("%Y-%m-%d")
+    lines = [f"🎯 *미너비니 신규/개선 진입* — {today_str}\n"]
 
-    def fmt_one(r):
+    def fmt_one(r, prev_score):
         tt_pass = r.get("tt_passed_count", 0)
         fund_pass = r.get("fund_passed_count", 0)
         score = r.get("total_score", 0)
@@ -750,38 +780,45 @@ def notify_new_minervini(results):
         ch = r.get("change", 0)
         sign = "+" if ch > 0 else ""
         price = r.get("price", 0)
+        # 점수 표시 — 향상이면 변화 표시
+        if prev_score is not None:
+            improvement = score - prev_score
+            score_txt = f"점수 *{score}* (직전 {prev_score:.0f} → ▲{improvement:.0f}점 향상 🔥)"
+        else:
+            score_txt = f"점수 *{score}*"
         return (
             f"• *{r['name']}* (`{r['code']}` {r.get('market','')})\n"
-            f"  {price:,}원 ({sign}{ch:.2f}%) · TT {tt_pass}/8 · F {fund_pass}/3{rs_txt} · 점수 *{score}*"
+            f"  {price:,}원 ({sign}{ch:.2f}%) · TT {tt_pass}/8 · F {fund_pass}/3{rs_txt} · {score_txt}"
         )
 
     if new_strict:
         lines.append(f"*🏆 엄격 통과 (8/8 Trend Template) — {len(new_strict)}개*")
-        for r in new_strict[:10]:
-            lines.append(fmt_one(r))
+        for r, prev in new_strict[:10]:
+            lines.append(fmt_one(r, prev))
         if len(new_strict) > 10:
             lines.append(f"... 외 {len(new_strict) - 10}개")
         lines.append("")
     if new_strong:
         lines.append(f"*⭐ 우량 (6+/8 + 펀더멘털) — {len(new_strong)}개*")
-        for r in new_strong[:10]:
-            lines.append(fmt_one(r))
+        for r, prev in new_strong[:10]:
+            lines.append(fmt_one(r, prev))
         if len(new_strong) > 10:
             lines.append(f"... 외 {len(new_strong) - 10}개")
 
     msg = "\n".join(lines)
     ok, info = send_telegram(bot_token, chat_id, msg)
     if ok:
-        # 발송 성공 시에만 캐시 업데이트 (오늘 날짜로)
-        today_str = datetime.now(KST).strftime("%Y-%m-%d")
-        for r in new_strict:
-            alerted["strict"][r["code"]] = today_str
-            alerted["strong"][r["code"]] = today_str  # strict는 strong 자동 충족
-        for r in new_strong:
-            alerted["strong"][r["code"]] = today_str
+        # 발송 성공 시에만 캐시 업데이트 (오늘 날짜 + 점수)
+        for r, _prev in new_strict:
+            entry = {"date": today_str, "score": r.get("total_score", 0) or 0}
+            alerted["strict"][r["code"]] = entry
+            alerted["strong"][r["code"]] = entry  # strict는 strong 자동 충족
+        for r, _prev in new_strong:
+            entry = {"date": today_str, "score": r.get("total_score", 0) or 0}
+            alerted["strong"][r["code"]] = entry
         alerted["last_sent"] = datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST")
         alerted_path.write_text(json.dumps(alerted, ensure_ascii=False, indent=2), encoding="utf-8")
-        print(f"  ✅ telegram sent: strict {len(new_strict)} new, strong {len(new_strong)} new")
+        print(f"  ✅ telegram sent: strict {len(new_strict)}, strong {len(new_strong)} (incl 향상 재알림)")
     else:
         print(f"  ❌ telegram failed: {info}")
 

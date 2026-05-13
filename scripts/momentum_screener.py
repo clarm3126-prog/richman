@@ -358,8 +358,24 @@ def evaluate_momentum(stock_code, history, financials, theme_weight):
 # Telegram 알림
 # ================================
 
+SCORE_IMPROVE_THRESHOLD_MOM = 5.0  # 점수 +5 이상 향상 시 재알림
+
+
+def _normalize_mom_entry(v, fallback_date=""):
+    """momentum dedup entry 정규화 — string date / dict 모두 지원."""
+    if isinstance(v, str):
+        return {"date": v, "score": 0}
+    elif isinstance(v, dict):
+        return {"date": v.get("date", fallback_date), "score": v.get("score", 0)}
+    return {"date": fallback_date, "score": 0}
+
+
 def notify_new_momentum(results):
-    """이전에 알린 적 없는 신규 momentum_strong/pre_breakout 종목 알림."""
+    """신규 + 점수 향상된 momentum_strong/pre_breakout → Telegram.
+    재알림 조건:
+    1. 30일+ 지난 종목 (기존 dedup reset)
+    2. 30일 안이라도 점수 +5 이상 향상 시 재알림
+    """
     bot_token = os.environ.get("TELEGRAM_BOT_TOKEN")
     chat_id = os.environ.get("TELEGRAM_CHAT_ID")
     if not bot_token or not chat_id:
@@ -371,53 +387,61 @@ def notify_new_momentum(results):
     if alerted_path.exists():
         try:
             raw = json.loads(alerted_path.read_text(encoding="utf-8"))
+            today_str = datetime.now(KST).strftime("%Y-%m-%d")
             for key in ["strong", "pre_breakout"]:
                 v = raw.get(key, {})
                 if isinstance(v, list):
-                    today_str = datetime.now(KST).strftime("%Y-%m-%d")
-                    alerted[key] = {c: today_str for c in v}
+                    alerted[key] = {c: {"date": today_str, "score": 0} for c in v}
                 elif isinstance(v, dict):
-                    alerted[key] = v
+                    alerted[key] = {c: _normalize_mom_entry(e, today_str) for c, e in v.items()}
                 else:
                     alerted[key] = {}
         except Exception:
             pass
+
     today = datetime.now(KST)
     cutoff = today.timestamp() - DEDUP_RESET_DAYS * 86400
-    def active_set(d):
-        out = set()
-        for code, date_str in d.items():
-            try:
-                ts = datetime.strptime(date_str, "%Y-%m-%d").timestamp()
-                if ts >= cutoff:
-                    out.add(code)
-            except Exception:
-                pass
-        return out
-    strong_set = active_set(alerted["strong"])
-    pre_set = active_set(alerted["pre_breakout"])
 
-    new_strong = []
+    def get_active_entry(d, code):
+        e = d.get(code)
+        if not e:
+            return None
+        try:
+            ts = datetime.strptime(e["date"], "%Y-%m-%d").timestamp()
+            if ts < cutoff:
+                return None
+            return e
+        except Exception:
+            return None
+
+    new_strong = []  # [(r, prev_score_or_None)]
     new_pre = []
     for r in results:
         code = r.get("code")
         if not code:
             continue
-        if r.get("momentum_strong") and code not in strong_set:
-            new_strong.append(r)
-            strong_set.add(code)
-        elif r.get("pre_breakout") and code not in pre_set:
-            new_pre.append(r)
-            pre_set.add(code)
+        new_score = r.get("total_score", 0) or 0
+        if r.get("momentum_strong"):
+            prev = get_active_entry(alerted["strong"], code)
+            if prev is None:
+                new_strong.append((r, None))
+            elif new_score >= prev["score"] + SCORE_IMPROVE_THRESHOLD_MOM:
+                new_strong.append((r, prev["score"]))
+        elif r.get("pre_breakout"):
+            prev = get_active_entry(alerted["pre_breakout"], code)
+            if prev is None:
+                new_pre.append((r, None))
+            elif new_score >= prev["score"] + SCORE_IMPROVE_THRESHOLD_MOM:
+                new_pre.append((r, prev["score"]))
 
     if not new_strong and not new_pre:
-        print("  no new momentum candidates (skip telegram)")
+        print("  no new/improved momentum candidates (skip telegram)")
         return
 
-    today = datetime.now(KST).strftime("%Y-%m-%d")
-    lines = [f"🚀 *신규 모멘텀 진입* — {today}\n"]
+    today_str = datetime.now(KST).strftime("%Y-%m-%d")
+    lines = [f"🚀 *신규/개선 모멘텀 진입* — {today_str}\n"]
 
-    def fmt_one(r):
+    def fmt_one(r, prev_score):
         score = r.get("total_score", 0)
         days_ago = r.get("ma200_cross_days_ago")
         cross_txt = f"MA200 {days_ago}일 전 돌파" if days_ago else ""
@@ -428,37 +452,41 @@ def notify_new_momentum(results):
         ch = r.get("change", 0)
         sign = "+" if ch > 0 else ""
         price = r.get("price", 0)
+        if prev_score is not None:
+            improvement = score - prev_score
+            score_txt = f"점수 *{score}* (직전 {prev_score:.0f} → ▲{improvement:.0f}점 향상 🔥)"
+        else:
+            score_txt = f"점수 *{score}*"
         return (
             f"• *{r['name']}* (`{r['code']}` {r.get('market','')})\n"
-            f"  {price:,}원 ({sign}{ch:.2f}%) · 점수 *{score}*\n"
+            f"  {price:,}원 ({sign}{ch:.2f}%) · {score_txt}\n"
             f"  {signals}"
         )
 
     if new_strong:
         lines.append(f"*🔥 모멘텀 강세 — {len(new_strong)}개*")
-        for r in new_strong[:10]:
-            lines.append(fmt_one(r))
+        for r, prev in new_strong[:10]:
+            lines.append(fmt_one(r, prev))
         if len(new_strong) > 10:
             lines.append(f"... 외 {len(new_strong) - 10}개")
         lines.append("")
     if new_pre:
         lines.append(f"*⏳ 사전 진입 후보 (VCP 완성) — {len(new_pre)}개*")
-        for r in new_pre[:10]:
-            lines.append(fmt_one(r))
+        for r, prev in new_pre[:10]:
+            lines.append(fmt_one(r, prev))
         if len(new_pre) > 10:
             lines.append(f"... 외 {len(new_pre) - 10}개")
 
     msg = "\n".join(lines)
     ok, info = send_telegram(bot_token, chat_id, msg)
     if ok:
-        today_str = datetime.now(KST).strftime("%Y-%m-%d")
-        for r in new_strong:
-            alerted["strong"][r["code"]] = today_str
-        for r in new_pre:
-            alerted["pre_breakout"][r["code"]] = today_str
+        for r, _prev in new_strong:
+            alerted["strong"][r["code"]] = {"date": today_str, "score": r.get("total_score", 0) or 0}
+        for r, _prev in new_pre:
+            alerted["pre_breakout"][r["code"]] = {"date": today_str, "score": r.get("total_score", 0) or 0}
         alerted["last_sent"] = datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST")
         alerted_path.write_text(json.dumps(alerted, ensure_ascii=False, indent=2), encoding="utf-8")
-        print(f"  ✅ telegram sent: strong {len(new_strong)} new, pre_breakout {len(new_pre)} new")
+        print(f"  ✅ telegram sent: strong {len(new_strong)}, pre_breakout {len(new_pre)} (incl 향상 재알림)")
     else:
         print(f"  ❌ telegram failed: {info}")
 
