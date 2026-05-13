@@ -4982,7 +4982,7 @@ function renderForecastBox(data) {
         </div>
         <div style="text-align:right;margin-left:8px">
           <div style="font-size:16px;font-weight:800;color:var(--accent-purple)">${t.total_score}</div>
-          <div style="font-size:9px;color:var(--fg-dim)">M${t.momentum_score} F${t.flow_score} U${t.fundamental_score}</div>
+          <div style="font-size:9px;color:var(--fg-dim)">M${t.momentum_score} F${t.flow_score} U${t.fundamental_score} C${t.confidence_score ?? 0}</div>
         </div>
       </div>
     </div>`;
