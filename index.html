@@ -135,6 +135,35 @@
     background: #fff; border-radius: 14px; padding: 20px;
     width: 100%; max-width: 360px;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    max-height: 90vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;  /* iOS 부드러운 스크롤 */
+  }
+  /* 기업 개요 토글 (details/summary) */
+  .desc-toggle-wrap { margin-top: 14px; padding-top: 12px; border-top: 1px solid #f3f4f6; }
+  .desc-toggle-wrap > summary {
+    cursor: pointer;
+    font-size: 12px; font-weight: 700; color: #6b7280;
+    list-style: none;
+    padding: 4px 0;
+    user-select: none;
+  }
+  .desc-toggle-wrap > summary::-webkit-details-marker { display: none; }
+  .desc-toggle-wrap > summary::before {
+    content: '▶ ';
+    display: inline-block;
+    transition: transform 0.2s;
+    font-size: 9px; color: #9ca3af;
+  }
+  .desc-toggle-wrap[open] > summary::before { transform: rotate(90deg); }
+  .desc-toggle-wrap > div {
+    margin-top: 8px;
+    font-size: 13px; line-height: 1.6; color: #4b5563;
+  }
+  @media (prefers-color-scheme: dark) {
+    .desc-toggle-wrap { border-top-color: #2a2f3a; }
+    .desc-toggle-wrap > summary { color: #9ca3af; }
+    .desc-toggle-wrap > div { color: #d1d5db; }
   }
   .modal-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
   .modal-current { font-size: 13px; color: #6b7280; margin-bottom: 14px; }
@@ -3339,12 +3368,12 @@ function openStockModal(code) {
       ${returnLine}
     </div>`;
   }
-  // 회사 설명
+  // 회사 설명 — 접힘 상태로 시작 (긴 설명 화면 짤림 방지)
   if (desc) {
-    html += `<div class="detail-section">
-      <div class="label" style="font-size:11px;color:#6b7280;margin-bottom:6px">📝 기업 개요</div>
-      <div style="font-size:13px;line-height:1.6;color:#4b5563">${escapeHtml(desc)}</div>
-    </div>`;
+    html += `<details class="desc-toggle-wrap">
+      <summary>📝 기업 개요 <span style="color:#9ca3af;font-weight:400">(클릭하여 펼치기)</span></summary>
+      <div>${escapeHtml(desc)}</div>
+    </details>`;
   }
   // 차트 (placeholder; 비동기 로드)
   html += `<div id="modalChartSection-${code}" style="margin:8px 0"></div>`;
