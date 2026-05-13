@@ -868,12 +868,35 @@
     .mv-chip.fail { background: #2a2f3a; color: #6b7280; border-color: #3a414f; }
     .mv-ribbon.strict { background: #78350f; color: #fde68a; }
     .mv-ribbon.strong { background: #1e3a8a; color: #bfdbfe; }
+    .update-badge { background: #2a2f3a; border-color: #3a414f; color: #9ca3af; }
+  }
+  /* 마지막 업데이트 시간 badge — 헤더 우측 상단 floating */
+  .update-badge {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    font-size: 10px;
+    color: #6b7280;
+    background: rgba(243,244,246,0.95);
+    border: 1px solid #e5e7eb;
+    padding: 3px 9px;
+    border-radius: 10px;
+    font-weight: 500;
+    line-height: 1.4;
+    z-index: 5;
+    pointer-events: none;
+  }
+  .update-badge:empty { display: none; }
+  .update-badge .src { font-weight: 700; color: #374151; margin-right: 4px; }
+  @media (prefers-color-scheme: dark) {
+    .update-badge .src { color: #d1d5db; }
   }
 </style>
 </head>
 <body>
 
 <header>
+  <div id="updateBadge" class="update-badge"></div>
   <div class="top-nav">
     <button class="nav-btn active" data-view="strength" onclick="setView('strength')">🔥 강도</button>
     <button class="nav-btn" data-view="industry" onclick="setView('industry')">🏭 업종</button>
@@ -1692,7 +1715,91 @@ function setView(viewName) {
     }
   }
   window.scrollTo({ top: 0, behavior: 'instant' });
+  updateBadgeForView(viewName);
 }
+
+// === 📅 마지막 업데이트 시간 badge ===
+function fmtRelativeTime(ts) {
+  if (!ts) return '';
+  let d;
+  if (typeof ts === 'string') {
+    if (/^\d{8}$/.test(ts)) {
+      // YYYYMMDD
+      d = new Date(`${ts.slice(0,4)}-${ts.slice(4,6)}-${ts.slice(6,8)}T16:30:00+09:00`);
+    } else {
+      // "2026-05-12 17:30:45 KST" 같은 format
+      const m = ts.match(/(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/);
+      if (m) {
+        d = new Date(`${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]}+09:00`);
+      } else {
+        return ts;
+      }
+    }
+  } else {
+    d = new Date(ts);
+  }
+  if (isNaN(d.getTime())) return String(ts);
+  const diffMin = Math.floor((Date.now() - d.getTime()) / 60000);
+  if (diffMin < 0) return '방금';
+  if (diffMin < 1) return '방금';
+  if (diffMin < 60) return `${diffMin}분 전`;
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) return `${diffHour}시간 전`;
+  const diffDay = Math.floor(diffHour / 24);
+  if (diffDay < 7) return `${diffDay}일 전`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function updateBadgeForView(viewName) {
+  const el = document.getElementById('updateBadge');
+  if (!el) return;
+  let timestamp = null;
+  let label = '';
+  switch (viewName) {
+    case 'strength':
+    case 'industry':
+    case 'movers':
+    case 'newhighs':
+    case 'themes':
+    case 'volume':
+    case 'investor':
+    case 'watchlist':
+      timestamp = MARKET ? MARKET.updated : null;
+      label = '시세';
+      break;
+    case 'movements':
+      // theme_forecast.json 우선 (가장 최신 분석), 없으면 history latest
+      if (FORECAST_DATA && !FORECAST_DATA.__empty && FORECAST_DATA.updated) {
+        timestamp = FORECAST_DATA.updated;
+        label = '분석';
+      } else if (HISTORY_LOADED && HISTORY_LOADED.dates && HISTORY_LOADED.dates.length > 0) {
+        timestamp = HISTORY_LOADED.dates[HISTORY_LOADED.dates.length - 1];
+        label = '히스토리';
+      } else if (MARKET) {
+        timestamp = MARKET.updated;
+        label = '시세';
+      }
+      break;
+    case 'minervini':
+      timestamp = (MINERVINI_DATA && !MINERVINI_DATA.__empty) ? MINERVINI_DATA.updated : null;
+      label = '평가';
+      break;
+    case 'momentum':
+      timestamp = (MOMENTUM_DATA && !MOMENTUM_DATA.__empty) ? MOMENTUM_DATA.updated : null;
+      label = '평가';
+      break;
+  }
+  if (!timestamp) {
+    el.innerHTML = '';
+    return;
+  }
+  el.innerHTML = `<span class="src">${label}</span>${fmtRelativeTime(timestamp)}`;
+}
+
+// 1분마다 badge 자동 갱신 ('5분 전' → '6분 전')
+setInterval(() => {
+  if (state && state.currentView) updateBadgeForView(state.currentView);
+}, 60000);
 
 // === ⭐ 관심 종목 + 🔔 알림 ===
 const WATCHLIST_KEY = 'watchlist_v1';
@@ -1864,6 +1971,7 @@ function startAlertChecking() {
       MARKET = fresh;
       checkAlerts();
       if (state.currentView === 'watchlist') renderWatchlistView();
+      updateBadgeForView(state.currentView);  // 새 시세 시간 반영
     } catch {}
   }, 5 * 60 * 1000);
 }
@@ -2378,6 +2486,7 @@ function renderMinerviniView() {
   }
   loadMinerviniData().then(data => {
     if (state.currentView !== 'minervini') return;
+    updateBadgeForView('minervini');  // 데이터 도착 시 badge 갱신
     if (!data || data.__empty) {
       el.innerHTML = `<div class="strength-section"><div class="strength-loading">아직 스크리너 결과가 없습니다.<br><span style="font-size:11px">GitHub Actions가 장 마감 후 (KST 17:00) 첫 실행을 마치면 표시됩니다.</span></div></div>`;
       return;
@@ -2504,6 +2613,7 @@ function renderMomentumView() {
   }
   loadMomentumData().then(data => {
     if (state.currentView !== 'momentum') return;
+    updateBadgeForView('momentum');  // 데이터 도착 시 badge 갱신
     if (!data || data.__empty) {
       el.innerHTML = `<div class="strength-section"><div class="strength-loading">아직 모멘텀 결과가 없습니다.<br><span style="font-size:11px">GitHub Actions가 장 마감 후 (KST 17:30) 첫 실행을 마치면 표시됩니다.</span></div></div>`;
       return;
@@ -4727,6 +4837,7 @@ async function loadAndRenderMovements() {
   // 🔮 forecast box를 prepend (regime 다음, 비동기)
   loadForecastData().then(forecast => {
     if (state.currentView !== 'movements') return;
+    updateBadgeForView('movements');  // forecast 데이터 도착 시 badge 갱신
     if (!forecast) return;
     const target = document.getElementById('movements-section');
     if (!target) return;
