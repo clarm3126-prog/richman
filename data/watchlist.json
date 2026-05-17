@@ -3,7 +3,9 @@
     {
       "code": "142210",
       "name": "유니트론텍",
-      "addedAt": 1779019913377
+      "addedAt": 1779019913377,
+      "target": 6000,
+      "direction": "below"
     },
     {
       "code": "232140",
