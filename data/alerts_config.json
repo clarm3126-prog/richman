@@ -1,6 +1,12 @@
 {
   "alerts": [
     {
+      "code": "142210",
+      "name": "유니트론텍",
+      "target": 6000,
+      "direction": "below"
+    },
+    {
       "code": "232140",
       "name": "와이씨",
       "target": 24000,
