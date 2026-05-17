@@ -1032,6 +1032,20 @@
   .theme-dark .inv-amt.up, .theme-dark .inv-col-head.up { color: #fca5a5; }
   .theme-dark .inv-amt.down, .theme-dark .inv-col-head.down { color: #93c5fd; }
 
+  /* 날짜 선택 dropdown (미너비니/모멘텀) */
+  .date-select {
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border-light);
+    background: var(--bg-inset);
+    color: var(--fg-strong);
+    font-family: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+  }
+
   /* === 🆚 종목 비교 테이블 === */
   .cmp-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
   .cmp-table th, .cmp-table td {
@@ -3433,6 +3447,51 @@ async function loadMinerviniData() {
   return MINERVINI_LOADING;
 }
 
+// === 날짜 archive 로더 (미너비니/모멘텀 과거 날짜 조회) ===
+const ARCHIVE_INDEX = {};   // {screener:{dates:[]}, momentum:{dates:[]}}
+const ARCHIVE_CACHE = {};   // {screener_20260512: data}
+
+async function loadArchiveIndex(which) {
+  if (ARCHIVE_INDEX[which]) return ARCHIVE_INDEX[which];
+  const dir = which === 'screener' ? 'screener_results_history' : 'momentum_results_history';
+  try {
+    const r = await fetch(`data/${dir}/index.json?t=${Date.now()}`);
+    ARCHIVE_INDEX[which] = r.ok ? await r.json() : { dates: [] };
+  } catch { ARCHIVE_INDEX[which] = { dates: [] }; }
+  return ARCHIVE_INDEX[which];
+}
+
+async function loadArchiveByDate(which, date) {
+  const key = which + '_' + date;
+  if (ARCHIVE_CACHE[key] !== undefined) return ARCHIVE_CACHE[key];
+  const dir = which === 'screener' ? 'screener_results_history' : 'momentum_results_history';
+  try {
+    const r = await fetch(`data/${dir}/${date}.json?t=${Date.now()}`);
+    ARCHIVE_CACHE[key] = r.ok ? await r.json() : null;
+  } catch { ARCHIVE_CACHE[key] = null; }
+  return ARCHIVE_CACHE[key];
+}
+
+function dateSelectorHTML(which, currentDate) {
+  const idx = ARCHIVE_INDEX[which] || { dates: [] };
+  const fn = which === 'screener' ? 'setMinerviniDate' : 'setMomentumDate';
+  let opts = `<option value=""${!currentDate ? ' selected' : ''}>📅 최신</option>`;
+  for (const d of idx.dates) {
+    const label = `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}`;
+    opts += `<option value="${d}"${d === currentDate ? ' selected' : ''}>${label}</option>`;
+  }
+  return `<select class="date-select" onchange="${fn}(this.value)">${opts}</select>`;
+}
+
+function setMinerviniDate(d) {
+  state.minerviniDate = d || null;
+  renderMinerviniView();
+}
+function setMomentumDate(d) {
+  state.momentumDate = d || null;
+  renderMomentumView();
+}
+
 function renderMinerviniView() {
   const el = document.getElementById('strength');
   if (!el) return;
@@ -3444,6 +3503,17 @@ function renderMinerviniView() {
     loadBacktestData().then(() => {
       if (state.currentView === 'minervini') renderMinerviniView();
     });
+  }
+  // archive index 먼저 로드 (날짜 선택 dropdown용)
+  if (!ARCHIVE_INDEX['screener']) {
+    loadArchiveIndex('screener').then(() => {
+      if (state.currentView === 'minervini') renderMinerviniView();
+    });
+  }
+  // 과거 날짜 선택 시 → archive 렌더
+  if (state.minerviniDate) {
+    renderMinerviniArchive(state.minerviniDate, filter);
+    return;
   }
   loadMinerviniData().then(data => {
     if (state.currentView !== 'minervini') return;
@@ -3461,6 +3531,7 @@ function renderMinerviniView() {
     html += `<div class="strength-section">
       <div class="strength-title">🎯 미너비니 SEPA + Trend Template</div>
       <div class="strength-meta">기준일 ${data.trading_day || '—'} · 평가 ${data.total_evaluated || 0}개 · 엄격 ${data.minervini_strict_count || 0}개 · 우량 ${data.minervini_strong_count || 0}개</div>
+      <div style="margin-top:8px">${dateSelectorHTML('screener', null)}</div>
       <div class="market-filter" style="margin-top:8px">
         <button class="${filter==='strict'?'active':''}" onclick="setMinerviniFilter('strict')">엄격(8/8)</button>
         <button class="${filter==='strong'?'active':''}" onclick="setMinerviniFilter('strong')">우량(6+/8 + 펀더멘털)</button>
@@ -3563,6 +3634,75 @@ function setMinerviniFilter(f) {
   renderMinerviniView();
 }
 
+// 과거 날짜 미너비니 결과 (archive lite 데이터)
+function renderMinerviniArchive(date, filter) {
+  const el = document.getElementById('strength');
+  if (!el) return;
+  loadArchiveByDate('screener', date).then(data => {
+    if (state.currentView !== 'minervini' || state.minerviniDate !== date) return;
+    const label = `${date.slice(0,4)}-${date.slice(4,6)}-${date.slice(6,8)}`;
+    let html = `<div class="strength-section">
+      <div class="strength-title">🎯 미너비니 — ${label}</div>
+      <div class="strength-meta">📅 과거 기록 (간략 정보) · 종목 클릭 시 현재 상세</div>
+      <div style="margin-top:8px">${dateSelectorHTML('screener', date)}</div>
+      <div class="market-filter" style="margin-top:8px">
+        <button class="${filter==='strict'?'active':''}" onclick="setMinerviniFilter('strict')">엄격(8/8)</button>
+        <button class="${filter==='strong'?'active':''}" onclick="setMinerviniFilter('strong')">우량(6+/8)</button>
+        <button class="${filter==='all'?'active':''}" onclick="setMinerviniFilter('all')">전체</button>
+      </div>
+    </div>`;
+    if (!data || !data.results) {
+      html += `<div class="strength-section"><div class="strength-loading">${label} 기록이 없습니다.</div></div>`;
+      el.innerHTML = html;
+      return;
+    }
+    const all = data.results;
+    let filtered;
+    if (filter === 'strict') filtered = all.filter(r => r.minervini_strict);
+    else if (filter === 'strong') filtered = all.filter(r => r.minervini_strong);
+    else filtered = all;
+    const strictTotal = all.filter(r => r.minervini_strict).length;
+    const strongTotal = all.filter(r => r.minervini_strong).length;
+    html += `<div class="strength-section" style="padding-bottom:4px">
+      <div style="font-size:11px;color:var(--fg-dim)">엄격 ${strictTotal}개 · 우량 ${strongTotal}개</div>`;
+    if (filtered.length === 0) {
+      html += `<div class="strength-loading">해당 조건 종목 없음</div></div>`;
+    } else {
+      html += `</div><div class="strength-section">`;
+      filtered.forEach((r, i) => {
+        html += renderArchiveCard(r, i, 'minervini');
+      });
+      html += `</div>`;
+    }
+    el.innerHTML = html;
+  });
+}
+
+// archive lite 데이터용 간략 카드 (미너비니/모멘텀 공용)
+function renderArchiveCard(r, i, kind) {
+  const cls = r.change > 0 ? 'up' : r.change < 0 ? 'down' : 'flat';
+  const sign = r.change > 0 ? '+' : '';
+  let catClass = '', ribbon = '';
+  if (kind === 'minervini') {
+    if (r.minervini_strict) { catClass = 'cat-mv-strict'; ribbon = '<span class="mv-ribbon strict">엄격</span>'; }
+    else if (r.minervini_strong) { catClass = 'cat-mv-strong'; ribbon = '<span class="mv-ribbon strong">우량</span>'; }
+  } else {
+    if (r.momentum_strong) { catClass = 'cat-mom-strong'; ribbon = '<span class="mv-ribbon strict">🔥 강세</span>'; }
+    else if (r.pre_breakout) { catClass = 'cat-pre'; ribbon = '<span class="mv-ribbon strong">⏳ 사전</span>'; }
+  }
+  return `<div class="mv-card ${catClass}" data-code="${r.code}" onclick="openStockModal('${r.code}')">
+    <div class="mv-head">
+      <div class="mv-rank">#${i + 1}</div>
+      <div class="mv-name-block">
+        <div class="mv-name">${r.name} ${ribbon}</div>
+        <div class="mv-sub">${r.code} · ${r.market || ''} · ${r.price ? r.price.toLocaleString('ko-KR') : '—'}원
+          <span class="${cls}">${sign}${(r.change ?? 0).toFixed(2)}%</span></div>
+      </div>
+      <div class="mv-score"><div class="mv-score-total">${r.total_score ?? 0}</div></div>
+    </div>
+  </div>`;
+}
+
 // === 🚀 신규 모멘텀 (Stage 1→2 전환 종목) ===
 let MOMENTUM_DATA = null;
 let MOMENTUM_LOADING = null;
@@ -3593,6 +3733,17 @@ function renderMomentumView() {
       if (state.currentView === 'momentum') renderMomentumView();
     });
   }
+  // archive index 로드 (날짜 dropdown)
+  if (!ARCHIVE_INDEX['momentum']) {
+    loadArchiveIndex('momentum').then(() => {
+      if (state.currentView === 'momentum') renderMomentumView();
+    });
+  }
+  // 과거 날짜 선택 시 → archive 렌더
+  if (state.momentumDate) {
+    renderMomentumArchive(state.momentumDate, filter);
+    return;
+  }
   loadMomentumData().then(data => {
     if (state.currentView !== 'momentum') return;
     updateBadgeForView('momentum');  // 데이터 도착 시 badge 갱신
@@ -3613,6 +3764,7 @@ function renderMomentumView() {
     html += `<div class="strength-section">
       <div class="strength-title">🚀 신규 모멘텀 (Stage 1→2 전환)</div>
       <div class="strength-meta">기준일 ${data.trading_day || '—'} · ${marketTag} · 평가 ${data.total_evaluated || 0}개 · 강세 ${data.momentum_strong_count || 0}개 · 사전 ${data.pre_breakout_count || 0}개</div>
+      <div style="margin-top:8px">${dateSelectorHTML('momentum', null)}</div>
       <div class="market-filter" style="margin-top:8px">
         <button class="${filter==='strong'?'active':''}" onclick="setMomentumFilter('strong')">🔥 강세 (돌파+거래량)</button>
         <button class="${filter==='pre'?'active':''}" onclick="setMomentumFilter('pre')">⏳ 사전 (VCP 완성)</button>
@@ -3711,6 +3863,50 @@ function renderMomentumView() {
 function setMomentumFilter(f) {
   state.momentumFilter = f;
   renderMomentumView();
+}
+
+// 과거 날짜 모멘텀 결과 (archive lite 데이터)
+function renderMomentumArchive(date, filter) {
+  const el = document.getElementById('strength');
+  if (!el) return;
+  loadArchiveByDate('momentum', date).then(data => {
+    if (state.currentView !== 'momentum' || state.momentumDate !== date) return;
+    const label = `${date.slice(0,4)}-${date.slice(4,6)}-${date.slice(6,8)}`;
+    let html = `<div class="strength-section">
+      <div class="strength-title">🚀 모멘텀 — ${label}</div>
+      <div class="strength-meta">📅 과거 기록 (간략 정보) · 종목 클릭 시 현재 상세</div>
+      <div style="margin-top:8px">${dateSelectorHTML('momentum', date)}</div>
+      <div class="market-filter" style="margin-top:8px">
+        <button class="${filter==='strong'?'active':''}" onclick="setMomentumFilter('strong')">🔥 강세</button>
+        <button class="${filter==='pre'?'active':''}" onclick="setMomentumFilter('pre')">⏳ 사전</button>
+        <button class="${filter==='all'?'active':''}" onclick="setMomentumFilter('all')">전체</button>
+      </div>
+    </div>`;
+    if (!data || !data.results) {
+      html += `<div class="strength-section"><div class="strength-loading">${label} 기록이 없습니다.</div></div>`;
+      el.innerHTML = html;
+      return;
+    }
+    const all = data.results;
+    let filtered;
+    if (filter === 'strong') filtered = all.filter(r => r.momentum_strong);
+    else if (filter === 'pre') filtered = all.filter(r => r.pre_breakout);
+    else filtered = all;
+    const strongTotal = all.filter(r => r.momentum_strong).length;
+    const preTotal = all.filter(r => r.pre_breakout).length;
+    html += `<div class="strength-section" style="padding-bottom:4px">
+      <div style="font-size:11px;color:var(--fg-dim)">강세 ${strongTotal}개 · 사전 ${preTotal}개</div>`;
+    if (filtered.length === 0) {
+      html += `<div class="strength-loading">해당 조건 종목 없음</div></div>`;
+    } else {
+      html += `</div><div class="strength-section">`;
+      filtered.forEach((r, i) => {
+        html += renderArchiveCard(r, i, 'momentum');
+      });
+      html += `</div>`;
+    }
+    el.innerHTML = html;
+  });
 }
 
 // Earnings calendar 캐시
