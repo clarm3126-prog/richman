@@ -1032,6 +1032,30 @@
   .theme-dark .inv-amt.up, .theme-dark .inv-col-head.up { color: #fca5a5; }
   .theme-dark .inv-amt.down, .theme-dark .inv-col-head.down { color: #93c5fd; }
 
+  /* === 🚀 역사적 신고가 돌파 카드 === */
+  .ath-card {
+    background: var(--bg-card); border: 1px solid var(--border-light);
+    border-left: 3px solid #d97706;
+    border-radius: 10px; padding: 10px 12px; margin-bottom: 6px; cursor: pointer;
+  }
+  .ath-card:active { background: var(--bg-inset); }
+  .ath-card-head { display: flex; justify-content: space-between; align-items: flex-start; }
+  .ath-name { font-size: 13px; font-weight: 700; color: var(--fg-strong); }
+  .ath-code { font-size: 10px; color: var(--fg-dim); font-weight: 400; }
+  .ath-sub { font-size: 12px; color: var(--fg-mid); margin-top: 2px; }
+  .ath-sub .up { color: #dc2626; font-weight: 700; }
+  .ath-sub .down { color: #2563eb; font-weight: 700; }
+  .ath-volratio { font-size: 14px; font-weight: 800; color: #d97706; white-space: nowrap; }
+  .ath-tags { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
+  .ath-tag {
+    font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 8px;
+  }
+  .ath-tag.ath { background: var(--bg-card-tint-amber); color: var(--accent-amber-text); }
+  .ath-tag.sd { background: #fef3c7; color: #92400e; }
+  .theme-dark .ath-sub .up { color: #fca5a5; }
+  .theme-dark .ath-sub .down { color: #93c5fd; }
+  .theme-dark .ath-tag.sd { background: #78350f; color: #fde68a; }
+
   /* 날짜 선택 dropdown (미너비니/모멘텀) */
   .date-select {
     font-size: 12px;
@@ -5420,6 +5444,90 @@ function setMarketFilter(filter) {
 
 const colorClass = v => v > 0 ? 'up' : v < 0 ? 'down' : 'flat';
 const fmtPct = v => (v > 0 ? '+' : '') + v.toFixed(2) + '%';
+// === 🚀 역사적 신고가 돌파 (장중 A + 마감 B) ===
+let ATH_BREAKOUT_DATA = null;
+let ATH_BREAKOUT_LOADING = null;
+
+function renderAthBreakouts() {
+  const el = document.getElementById('athBreakoutSection');
+  if (!el) return;
+  el.innerHTML = `<div class="strength-section"><div class="strength-loading" style="font-size:11px">🚀 신고가 돌파 로딩 중...</div></div>`;
+  if (ATH_BREAKOUT_LOADING) {
+    ATH_BREAKOUT_LOADING.then(() => renderAthBreakouts());
+    return;
+  }
+  if (!ATH_BREAKOUT_DATA) {
+    ATH_BREAKOUT_LOADING = fetch('data/ath_breakouts.json?t=' + Date.now())
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { ATH_BREAKOUT_DATA = d || { __empty: true }; })
+      .catch(() => { ATH_BREAKOUT_DATA = { __empty: true }; })
+      .finally(() => { ATH_BREAKOUT_LOADING = null; });
+    ATH_BREAKOUT_LOADING.then(() => {
+      if (state.currentView === 'newhighs') renderAthBreakouts();
+    });
+    return;
+  }
+  const d = ATH_BREAKOUT_DATA;
+  if (d.__empty || (!d.intraday && !d.close)) {
+    el.innerHTML = `<div class="strength-section" style="border-left:4px solid #d97706;background:var(--bg-card-tint-amber)">
+      <div class="strength-title">🚀 역사적 신고가 돌파</div>
+      <div class="strength-meta">아직 돌파 종목이 없습니다.<br><span style="font-size:11px">장중 5분마다 + 마감 후 자동 감지 · ath_cache 생성 후 동작</span></div>
+    </div>`;
+    return;
+  }
+  const intraday = d.intraday || [];
+  const close = d.close || [];
+
+  const renderCard = (b, i) => {
+    const cls = b.change > 0 ? 'up' : b.change < 0 ? 'down' : 'flat';
+    const sign = b.change > 0 ? '+' : '';
+    const sd = b.supply_demand
+      ? `<span class="ath-tag sd">⭐ 수급 동반</span>` : '';
+    return `<div class="ath-card" data-code="${b.code}">
+      <div class="ath-card-head">
+        <div>
+          <div class="ath-name">#${i + 1} ${b.name} <span class="ath-code">${b.code} · ${b.market}</span></div>
+          <div class="ath-sub">${b.price.toLocaleString('ko-KR')}원 <span class="${cls}">${sign}${b.change.toFixed(2)}%</span></div>
+        </div>
+        <div class="ath-volratio">🔥 ${b.vol_ratio}x</div>
+      </div>
+      <div class="ath-tags">
+        <span class="ath-tag ath">📈 ATH 돌파</span>
+        ${sd}
+      </div>
+    </div>`;
+  };
+
+  let html = `<div class="strength-section" style="border-left:4px solid #d97706;background:var(--bg-card-tint-amber)">
+    <div class="strength-title">🚀 역사적 신고가 돌파</div>
+    <div class="strength-meta">거래량 동반 역대 최고가 돌파 · ${d.trading_day || ''} · 행 클릭 시 상세</div>
+  </div>`;
+
+  // B 마감 확정 (있으면 위에)
+  if (close.length > 0) {
+    html += `<div class="strength-section">
+      <div class="strength-title" style="font-size:13px;margin-bottom:2px">✅ 마감 확정 돌파 (${close.length})</div>
+      <div class="strength-meta" style="margin-bottom:8px">종가 기준 · 거래량 1.5배+ 확인됨</div>`;
+    close.forEach((b, i) => { html += renderCard(b, i); });
+    html += `</div>`;
+  }
+  // A 장중 돌파
+  if (intraday.length > 0) {
+    html += `<div class="strength-section">
+      <div class="strength-title" style="font-size:13px;margin-bottom:2px">⚡ 장중 돌파 (${intraday.length})</div>
+      <div class="strength-meta" style="margin-bottom:8px">장중 감지 · 거래량 1.0배+ · 5~8분 지연 가능</div>`;
+    intraday.forEach((b, i) => { html += renderCard(b, i); });
+    html += `</div>`;
+  }
+  if (close.length === 0 && intraday.length === 0) {
+    html += `<div class="strength-section"><div class="strength-loading" style="font-size:11px">오늘 돌파 종목 없음</div></div>`;
+  }
+  el.innerHTML = html;
+  el.querySelectorAll('.ath-card[data-code]').forEach(card => {
+    card.onclick = () => openStockModal(card.dataset.code);
+  });
+}
+
 function renderMarket(market) {
   const el = document.getElementById('strength');
   if (!el) return;
@@ -5614,6 +5722,8 @@ function renderMarket(market) {
 
   // ===== NEWHIGHS 뷰 =====
   if (view === 'newhighs') {
+  // --- 역사적 신고가 돌파 (placeholder, 비동기 로드) ---
+  html += `<div id="athBreakoutSection"></div>`;
   // --- 52주 신고가 ---
   html += `<div class="strength-section" id="section-newhighs">`;
   html += `<div class="strength-title" style="margin-bottom:8px">🚀 52주 신고가</div>`;
@@ -5645,6 +5755,8 @@ function renderMarket(market) {
   } // end newhighs view
 
   el.innerHTML = html;
+  // 역사적 신고가 돌파 섹션 비동기 로드
+  if (view === 'newhighs') renderAthBreakouts();
 
   // 내부 테마 행 (있을 시) → 해당 테마로 필터링
   el.querySelectorAll('.strength-row[data-theme]').forEach(row => {

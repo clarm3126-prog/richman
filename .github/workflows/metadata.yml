@@ -16,7 +16,7 @@ concurrency:
 jobs:
   metadata:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -37,11 +37,14 @@ jobs:
           DART_API_KEY: ${{ secrets.DART_API_KEY }}
         run: python scripts/fetch_metadata.py
 
+      - name: Fetch ATH cache (역사적 신고가)
+        run: python scripts/fetch_ath.py
+
       - name: Commit and push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/stock_metadata.json 2>/dev/null || true
+          git add data/stock_metadata.json data/ath_cache.json 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "No changes"
             exit 0
