@@ -1205,6 +1205,7 @@
     <button class="nav-btn" data-view="volume" onclick="setView('volume')">🔥 거래량</button>
     <button class="nav-btn" data-view="minervini" onclick="setView('minervini')">🎯 미너비니</button>
     <button class="nav-btn" data-view="momentum" onclick="setView('momentum')">🚀 모멘텀</button>
+    <button class="nav-btn" data-view="oneil" onclick="setView('oneil')">🏆 오닐</button>
     <button class="nav-btn" data-view="watchlist" onclick="setView('watchlist')">⭐ 관심</button>
     <button class="nav-btn" data-view="journal" onclick="setView('journal')">📓 일지</button>
   </div>
@@ -2119,6 +2120,9 @@ function setView(viewName) {
     document.getElementById('content').innerHTML = '';
   } else if (viewName === 'journal') {
     renderJournalView();
+    document.getElementById('content').innerHTML = '';
+  } else if (viewName === 'oneil') {
+    renderOneilView();
     document.getElementById('content').innerHTML = '';
   } else {
     if (MARKET) renderMarket(MARKET);
@@ -5444,9 +5448,25 @@ function setMarketFilter(filter) {
 
 const colorClass = v => v > 0 ? 'up' : v < 0 ? 'down' : 'flat';
 const fmtPct = v => (v > 0 ? '+' : '') + v.toFixed(2) + '%';
-// === 🚀 역사적 신고가 돌파 (장중 A + 마감 B) ===
+// === 🏆 윌리엄 오닐 — 역사적 신고가 돌파 (장중 A + 마감 B) ===
 let ATH_BREAKOUT_DATA = null;
 let ATH_BREAKOUT_LOADING = null;
+
+function renderOneilView() {
+  const el = document.getElementById('strength');
+  if (!el) return;
+  if (state.currentView !== 'oneil') return;
+  // intro + breakout placeholder
+  el.innerHTML = `<div class="strength-section" style="border-left:4px solid #d97706;background:var(--bg-card-tint-amber)">
+      <div class="strength-title">🏆 윌리엄 오닐 — 신고가 돌파 매매</div>
+      <div class="strength-meta" style="margin-top:4px;line-height:1.6">
+        CAN SLIM의 <b>N</b> = New highs. 거래량 동반 <b>역사적 신고가 돌파</b> 종목 포착.<br>
+        <span style="font-size:10px">오닐: "역대 최고가 돌파 + 평균 대비 40~50%↑ 거래량 = 가장 강력한 매수 신호"</span>
+      </div>
+    </div>
+    <div id="athBreakoutSection"></div>`;
+  renderAthBreakouts();
+}
 
 function renderAthBreakouts() {
   const el = document.getElementById('athBreakoutSection');
@@ -5463,15 +5483,14 @@ function renderAthBreakouts() {
       .catch(() => { ATH_BREAKOUT_DATA = { __empty: true }; })
       .finally(() => { ATH_BREAKOUT_LOADING = null; });
     ATH_BREAKOUT_LOADING.then(() => {
-      if (state.currentView === 'newhighs') renderAthBreakouts();
+      if (state.currentView === 'oneil') renderAthBreakouts();
     });
     return;
   }
   const d = ATH_BREAKOUT_DATA;
   if (d.__empty || (!d.intraday && !d.close)) {
-    el.innerHTML = `<div class="strength-section" style="border-left:4px solid #d97706;background:var(--bg-card-tint-amber)">
-      <div class="strength-title">🚀 역사적 신고가 돌파</div>
-      <div class="strength-meta">아직 돌파 종목이 없습니다.<br><span style="font-size:11px">장중 5분마다 + 마감 후 자동 감지 · ath_cache 생성 후 동작</span></div>
+    el.innerHTML = `<div class="strength-section">
+      <div class="strength-meta">아직 돌파 종목이 없습니다.<br><span style="font-size:11px">장중 5분마다 + 마감 후 자동 감지 · ath_cache 생성 후 동작 (Stock Metadata 워크플로우 실행 필요)</span></div>
     </div>`;
     return;
   }
@@ -5498,9 +5517,8 @@ function renderAthBreakouts() {
     </div>`;
   };
 
-  let html = `<div class="strength-section" style="border-left:4px solid #d97706;background:var(--bg-card-tint-amber)">
-    <div class="strength-title">🚀 역사적 신고가 돌파</div>
-    <div class="strength-meta">거래량 동반 역대 최고가 돌파 · ${d.trading_day || ''} · 행 클릭 시 상세</div>
+  let html = `<div class="strength-section" style="padding:8px 14px">
+    <div class="strength-meta">기준일 ${d.trading_day || ''} · ${d.updated || ''} · 행 클릭 시 상세</div>
   </div>`;
 
   // B 마감 확정 (있으면 위에)
@@ -5722,8 +5740,6 @@ function renderMarket(market) {
 
   // ===== NEWHIGHS 뷰 =====
   if (view === 'newhighs') {
-  // --- 역사적 신고가 돌파 (placeholder, 비동기 로드) ---
-  html += `<div id="athBreakoutSection"></div>`;
   // --- 52주 신고가 ---
   html += `<div class="strength-section" id="section-newhighs">`;
   html += `<div class="strength-title" style="margin-bottom:8px">🚀 52주 신고가</div>`;
@@ -5755,8 +5771,6 @@ function renderMarket(market) {
   } // end newhighs view
 
   el.innerHTML = html;
-  // 역사적 신고가 돌파 섹션 비동기 로드
-  if (view === 'newhighs') renderAthBreakouts();
 
   // 내부 테마 행 (있을 시) → 해당 테마로 필터링
   el.querySelectorAll('.strength-row[data-theme]').forEach(row => {
