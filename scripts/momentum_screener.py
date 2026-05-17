@@ -498,7 +498,9 @@ def notify_new_momentum(results):
 
 
 def notify_confluence(momentum_results):
-    """3대 전략(미너비니 + 모멘텀 + 오닐) 동시 만족 종목 → 트리플 시그널 알림.
+    """전략 합류(confluence) 알림 — 미너비니/모멘텀/오닐 중 2개+ 동시 만족.
+    🏆🏆🏆 트리플 (3/3) — 폭발 종목 (드묾)
+    🏆🏆 더블 (2/3) — 미너비니+오닐 / 미너비니+모멘텀 / 모멘텀+오닐
     momentum_screener가 체인 마지막이라 이 시점엔 3개 결과 파일 모두 존재.
     """
     today = datetime.now(KST).strftime("%Y%m%d")
@@ -506,16 +508,22 @@ def notify_confluence(momentum_results):
 
     # 1. 미너비니 (오늘 데이터만)
     mv = {}
+    stock_info = {}  # code → {name, market, price, change}
     sr_path = Path("data/screener_results.json")
     if sr_path.exists():
         try:
             sr = json.loads(sr_path.read_text(encoding="utf-8"))
             if sr.get("trading_day") == today:
                 for r in sr.get("results", []) or []:
+                    c = r["code"]
+                    stock_info.setdefault(c, {
+                        "name": r.get("name", c), "market": r.get("market", ""),
+                        "price": r.get("price", 0), "change": r.get("change", 0),
+                    })
                     if r.get("minervini_strict"):
-                        mv[r["code"]] = {"cat": "엄격", "score": r.get("total_score")}
+                        mv[c] = {"cat": "엄격", "score": r.get("total_score")}
                     elif r.get("minervini_strong"):
-                        mv[r["code"]] = {"cat": "우량", "score": r.get("total_score")}
+                        mv[c] = {"cat": "우량", "score": r.get("total_score")}
         except Exception:
             pass
 
@@ -527,49 +535,79 @@ def notify_confluence(momentum_results):
             bo = json.loads(bo_path.read_text(encoding="utf-8"))
             if bo.get("trading_day") == today:
                 for b in (bo.get("close") or bo.get("intraday") or []):
-                    oneil[b["code"]] = {"vol_ratio": b.get("vol_ratio")}
+                    c = b["code"]
+                    oneil[c] = {"vol_ratio": b.get("vol_ratio")}
+                    stock_info.setdefault(c, {
+                        "name": b.get("name", c), "market": b.get("market", ""),
+                        "price": b.get("price", 0), "change": b.get("change", 0),
+                    })
         except Exception:
             pass
 
     # 3. 모멘텀 (인자)
     mm = {}
-    info_by_code = {}
     for r in momentum_results:
-        info_by_code[r["code"]] = r
+        c = r["code"]
+        stock_info[c] = {  # 모멘텀이 가장 신선 — 덮어씀
+            "name": r.get("name", c), "market": r.get("market", ""),
+            "price": r.get("price", 0), "change": r.get("change", 0),
+        }
         if r.get("momentum_strong"):
-            mm[r["code"]] = {"cat": "강세", "score": r.get("total_score")}
+            mm[c] = {"cat": "강세", "score": r.get("total_score")}
         elif r.get("pre_breakout"):
-            mm[r["code"]] = {"cat": "사전", "score": r.get("total_score")}
+            mm[c] = {"cat": "사전", "score": r.get("total_score")}
 
-    # 트리플 교집합 — 3개 전략 모두
-    triple = []
-    for code in mv:
-        if code in mm and code in oneil:
-            r = info_by_code.get(code, {})
-            triple.append({
-                "code": code,
-                "name": r.get("name", code),
-                "market": r.get("market", ""),
-                "price": r.get("price", 0),
-                "change": r.get("change", 0),
-                "mv": mv[code],
-                "mm": mm[code],
-                "oneil": oneil[code],
-            })
-    triple.sort(key=lambda x: (x["mv"]["score"] or 0), reverse=True)
-    print(f"  confluence: {len(triple)} triple-signal stocks")
+    # 합류 검사 — 2개 이상 hit
+    triple, double = [], []
+    all_codes = set(mv) | set(mm) | set(oneil)
+    for code in all_codes:
+        hits = []
+        if code in mv:
+            hits.append("mv")
+        if code in mm:
+            hits.append("mm")
+        if code in oneil:
+            hits.append("on")
+        if len(hits) < 2:
+            continue
+        si = stock_info.get(code, {"name": code, "market": "", "price": 0, "change": 0})
+        entry = {
+            "code": code,
+            "name": si["name"], "market": si["market"],
+            "price": si["price"], "change": si["change"],
+            "hits": hits,
+            "mv": mv.get(code), "mm": mm.get(code), "oneil": oneil.get(code),
+        }
+        if len(hits) == 3:
+            triple.append(entry)
+        else:
+            double.append(entry)
+
+    # 정렬 — 더블은 미너비니+오닐 조합 우선
+    def pair_priority(e):
+        h = set(e["hits"])
+        if h == {"mv", "on"}:
+            return 0  # 가장 가치 높음
+        if h == {"mv", "mm"}:
+            return 1
+        return 2  # mm+on
+    triple.sort(key=lambda x: -(x["mv"]["score"] or 0))
+    double.sort(key=lambda x: (pair_priority(x),
+                               -((x["mv"] or x["mm"] or {}).get("score") or 0)))
+    print(f"  confluence: {len(triple)} triple, {len(double)} double")
 
     # confluence.json 저장 (frontend banner용)
     Path("data/confluence.json").write_text(json.dumps({
         "updated": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
         "trading_day": today,
         "triple": triple,
+        "double": double,
     }, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
 
-    if not triple:
+    if not triple and not double:
         return
 
-    # Telegram (14일 dedup)
+    # Telegram (14일 dedup, tier 업그레이드 시 재알림)
     bot_token = os.environ.get("TELEGRAM_BOT_TOKEN")
     chat_id = os.environ.get("TELEGRAM_CHAT_ID")
     if not bot_token or not chat_id:
@@ -578,43 +616,86 @@ def notify_confluence(momentum_results):
     alerted = {}
     if alerted_path.exists():
         try:
-            alerted = json.loads(alerted_path.read_text(encoding="utf-8"))
+            raw = json.loads(alerted_path.read_text(encoding="utf-8"))
+            # 구버전 (code: date string) 호환
+            for c, v in raw.items():
+                if isinstance(v, str):
+                    alerted[c] = {"date": v, "tier": 2}
+                elif isinstance(v, dict):
+                    alerted[c] = v
         except Exception:
             alerted = {}
     cutoff = datetime.now(KST).timestamp() - 14 * 86400
     for c in list(alerted.keys()):
         try:
-            if datetime.strptime(alerted[c], "%Y-%m-%d").timestamp() < cutoff:
+            if datetime.strptime(alerted[c]["date"], "%Y-%m-%d").timestamp() < cutoff:
                 del alerted[c]
         except Exception:
             pass
-    new_triple = [t for t in triple if t["code"] not in alerted]
-    if not new_triple:
-        print("  no new triple-signal (skip telegram)")
+
+    def is_new(code, tier):
+        prev = alerted.get(code)
+        if not prev:
+            return True
+        # tier 업그레이드 (더블 → 트리플) 시 재알림
+        return tier > prev.get("tier", 0)
+
+    new_triple = [t for t in triple if is_new(t["code"], 3)]
+    new_double = [d for d in double if is_new(d["code"], 2)]
+    if not new_triple and not new_double:
+        print("  no new confluence (skip telegram)")
         return
 
-    lines = [f"🏆🎯🚀 *트리플 시그널 — 3대 전략 동시 만족!* — {today_date}\n"]
-    lines.append("미너비니 + 모멘텀 + 오닐 모두 통과한 최강 confluence 종목:\n")
-    for t in new_triple[:10]:
-        sign = "+" if t["change"] > 0 else ""
-        lines.append(
-            f"• *{t['name']}* (`{t['code']}` {t['market']})\n"
-            f"  {t['price']:,}원 ({sign}{t['change']:.2f}%)\n"
-            f"  🎯 미너비니 {t['mv']['cat']} ({t['mv']['score']}점)\n"
-            f"  🚀 모멘텀 {t['mm']['cat']} ({t['mm']['score']}점)\n"
-            f"  🏆 오닐 역사적 신고가 돌파 (거래량 {t['oneil']['vol_ratio']}x)"
-        )
-    if len(new_triple) > 10:
-        lines.append(f"... 외 {len(new_triple) - 10}개")
+    pair_label = {
+        frozenset(["mv", "on"]): "미너비니+오닐",
+        frozenset(["mv", "mm"]): "미너비니+모멘텀",
+        frozenset(["mm", "on"]): "모멘텀+오닐",
+    }
+
+    def fmt_strats(e):
+        parts = []
+        if e.get("mv"):
+            parts.append(f"🎯 미너비니 {e['mv']['cat']} {e['mv']['score']}점")
+        if e.get("mm"):
+            parts.append(f"🚀 모멘텀 {e['mm']['cat']} {e['mm']['score']}점")
+        if e.get("oneil"):
+            parts.append(f"🏆 오닐 돌파 거래량 {e['oneil']['vol_ratio']}x")
+        return parts
+
+    lines = [f"🏆 *전략 합류 시그널* — {today_date}\n"]
+    if new_triple:
+        lines.append(f"*🏆🏆🏆 트리플 (3대 전략 모두) — {len(new_triple)}개*")
+        for t in new_triple[:8]:
+            sign = "+" if t["change"] > 0 else ""
+            lines.append(f"• *{t['name']}* (`{t['code']}` {t['market']})  {t['price']:,}원 ({sign}{t['change']:.2f}%)")
+            for p in fmt_strats(t):
+                lines.append(f"  {p}")
+        lines.append("")
+    if new_double:
+        lines.append(f"*🏆🏆 더블 (2개 전략) — {len(new_double)}개*")
+        for d in new_double[:12]:
+            label = pair_label.get(frozenset(d["hits"]), "")
+            sign = "+" if d["change"] > 0 else ""
+            strats = " · ".join(fmt_strats(d))
+            lines.append(
+                f"• *{d['name']}* (`{d['code']}` {d['market']}) [{label}]\n"
+                f"  {d['price']:,}원 ({sign}{d['change']:.2f}%)\n  {strats}"
+            )
+        if len(new_double) > 12:
+            lines.append(f"... 외 {len(new_double) - 12}개")
+
     msg = "\n".join(lines)
     ok, info = send_telegram(bot_token, chat_id, msg)
     if ok:
         for t in new_triple:
-            alerted[t["code"]] = today_date
+            alerted[t["code"]] = {"date": today_date, "tier": 3}
+        for d in new_double:
+            alerted[d["code"]] = {"date": today_date, "tier": 2}
         alerted_path.write_text(json.dumps(alerted, ensure_ascii=False, indent=2), encoding="utf-8")
-        print(f"  ✅ triple-signal telegram: {len(new_triple)} new")
-        names = [t["name"] for t in new_triple][:8]
-        log_alert("confluence", "🏆 트리플 시그널 (3대 전략 동시)", f"{len(new_triple)}개 — {', '.join(names)}")
+        print(f"  ✅ confluence telegram: {len(new_triple)} triple, {len(new_double)} double")
+        names = [x["name"] for x in (new_triple + new_double)][:8]
+        log_alert("confluence", "🏆 전략 합류 (트리플/더블)",
+                  f"트리플 {len(new_triple)} · 더블 {len(new_double)} — {', '.join(names)}")
     else:
         print(f"  ❌ confluence telegram failed: {info}")
 
