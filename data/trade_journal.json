@@ -1,0 +1,18 @@
+{
+  "trades": [
+    {
+      "id": "t17790215397864wym",
+      "code": "006340",
+      "name": "대원전선",
+      "buyDate": "2026-04-23",
+      "buyPrice": 8140,
+      "buyQty": 1478,
+      "buyReason": "역사적 신고가를 거래량 동반하며 상한가 진입",
+      "sellDate": null,
+      "sellPrice": null,
+      "sellReason": "",
+      "memo": "",
+      "createdAt": 1779021539786
+    }
+  ]
+}
