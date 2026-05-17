@@ -719,6 +719,141 @@ def fetch_52w_high_for_stock(code):
     return code, None, None
 
 
+def detect_ath_breakouts(stocks, investor_top, bot_token, chat_id):
+    """역사적 신고가 + 거래량 동반 돌파 감지 → Telegram (A 장중 / B 마감).
+    data/ath_cache.json (주간 갱신)의 ATH/평균거래량 활용.
+    A (장중): 9~16시 — 거래량 1.0배+ / B (마감): 16시+ — 거래량 1.5배+
+    """
+    ath_path = Path("data/ath_cache.json")
+    if not ath_path.exists():
+        print("  ath_cache.json 없음 — ATH 돌파 감지 skip (fetch_ath 먼저 실행 필요)")
+        return
+    try:
+        ath_cache = json.loads(ath_path.read_text(encoding="utf-8")).get("stocks", {})
+    except Exception:
+        return
+    if not ath_cache:
+        return
+
+    now = datetime.now(KST)
+    today_str = now.strftime("%Y%m%d")
+    today_date = now.strftime("%Y-%m-%d")
+    is_close = now.hour >= 16
+
+    # 수급: 외국인/기관 순매수 종목 set
+    net_buyers = set()
+    if investor_top:
+        for inv_type in ("foreign", "institution"):
+            d = investor_top.get(inv_type, {}) or {}
+            for mkt in ("KOSPI", "KOSDAQ"):
+                for s in (d.get(mkt, {}) or {}).get("buy", []) or []:
+                    if s.get("code"):
+                        net_buyers.add(s["code"])
+
+    # 돌파 후보 탐색
+    breakouts = []
+    vol_threshold = 1.5 if is_close else 1.0
+    for code, s in stocks.items():
+        info = ath_cache.get(code)
+        if not info:
+            continue
+        ath = info.get("ath", 0)
+        avg_vol = info.get("avg_vol_20d", 0)
+        price = s.get("price", 0)
+        vol = s.get("volume", 0)
+        if ath <= 0 or price <= 0:
+            continue
+        # 1. 역사적 신고가 돌파 (현재가 >= 캐시된 ATH)
+        if price < ath:
+            continue
+        # 2. 거래량 동반
+        vol_ratio = vol / avg_vol if avg_vol > 0 else 0
+        if vol_ratio < vol_threshold:
+            continue
+        breakouts.append({
+            "code": code,
+            "name": s.get("name", code),
+            "market": s.get("market", ""),
+            "price": price,
+            "change": s.get("change", 0),
+            "ath": ath,
+            "ath_date": info.get("ath_date", ""),
+            "volume": vol,
+            "vol_ratio": round(vol_ratio, 2),
+            "supply_demand": code in net_buyers,
+        })
+    breakouts.sort(key=lambda x: x["vol_ratio"], reverse=True)
+    print(f"  ATH breakouts: {len(breakouts)} ({'마감' if is_close else '장중'}, vol≥{vol_threshold}x)")
+
+    # ath_breakouts.json 저장 (frontend 탭용)
+    bo_path = Path("data/ath_breakouts.json")
+    existing = {"trading_day": today_str, "intraday": [], "close": []}
+    if bo_path.exists():
+        try:
+            existing = json.loads(bo_path.read_text(encoding="utf-8"))
+            if existing.get("trading_day") != today_str:
+                existing = {"trading_day": today_str, "intraday": [], "close": []}
+        except Exception:
+            existing = {"trading_day": today_str, "intraday": [], "close": []}
+    if is_close:
+        existing["close"] = breakouts
+    else:
+        # intraday: 누적 (code 기준 merge — 장중 한번 뜬 건 계속 표시)
+        merged = {b["code"]: b for b in existing.get("intraday", [])}
+        for b in breakouts:
+            merged[b["code"]] = b
+        existing["intraday"] = sorted(merged.values(), key=lambda x: x["vol_ratio"], reverse=True)
+    existing["trading_day"] = today_str
+    existing["updated"] = now.strftime("%Y-%m-%d %H:%M:%S KST")
+    bo_path.write_text(json.dumps(existing, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+
+    # Telegram 알림 (신규만, 7일 dedup)
+    if not bot_token or not chat_id:
+        return
+    alerted_path = Path("data/ath_breakout_alerted.json")
+    alerted = {"intraday": {}, "close": {}}
+    if alerted_path.exists():
+        try:
+            alerted = json.loads(alerted_path.read_text(encoding="utf-8"))
+            alerted.setdefault("intraday", {})
+            alerted.setdefault("close", {})
+        except Exception:
+            pass
+    cutoff = now.timestamp() - 7 * 86400
+    cat = "close" if is_close else "intraday"
+    cat_alerted = alerted[cat]
+    for c in list(cat_alerted.keys()):
+        try:
+            if datetime.strptime(cat_alerted[c], "%Y-%m-%d").timestamp() < cutoff:
+                del cat_alerted[c]
+        except Exception:
+            pass
+    new_alerts = [b for b in breakouts if b["code"] not in cat_alerted]
+    if not new_alerts:
+        return
+    header = "🚀 *역사적 신고가 돌파* (마감 확정)" if is_close else "🚀 *역사적 신고가 돌파* (장중)"
+    lines = [f"{header} — {today_date}\n"]
+    for b in new_alerts[:12]:
+        sd = " · ⭐수급 동반" if b["supply_demand"] else ""
+        sign = "+" if b["change"] > 0 else ""
+        lines.append(
+            f"• *{b['name']}* (`{b['code']}` {b['market']})\n"
+            f"  {b['price']:,}원 ({sign}{b['change']:.2f}%) · 거래량 {b['vol_ratio']}x{sd}\n"
+            f"  📈 역사적 신고가 돌파 (이전 ATH {b['ath']:,.0f}원)"
+        )
+    if len(new_alerts) > 12:
+        lines.append(f"... 외 {len(new_alerts) - 12}개")
+    msg = "\n".join(lines)
+    ok, info_msg = send_telegram(bot_token, chat_id, msg)
+    if ok:
+        for b in new_alerts:
+            cat_alerted[b["code"]] = today_date
+        alerted_path.write_text(json.dumps(alerted, ensure_ascii=False, indent=2), encoding="utf-8")
+        print(f"  ✅ ATH breakout telegram: {len(new_alerts)} new ({cat})")
+    else:
+        print(f"  ❌ ATH telegram failed: {info_msg}")
+
+
 def find_new_highs(stocks):
     """52주 신고가 종목 찾기. 캐시된 52w high 활용 + 후보 필터로 호출 절감.
     캐시 구조: data/52w_cache.json = {date: 'YYYYMMDD', high: {code: int}}
@@ -849,6 +984,11 @@ def main():
 
     print("Computing investor rankings (real net buy/sell amounts)...")
     investor_top = compute_investor_rankings(stocks, top_n_traded=80, top_n_per_list=15)
+
+    print("Detecting ATH breakouts (역사적 신고가 + 거래량)...")
+    _ath_bot = os.environ.get("TELEGRAM_BOT_TOKEN")
+    _ath_chat = os.environ.get("TELEGRAM_CHAT_ID")
+    detect_ath_breakouts(stocks, investor_top, _ath_bot, _ath_chat)
 
     print("Fetching watchlist stock history...")
     watchlist_history = fetch_watchlist_stock_history(7)
