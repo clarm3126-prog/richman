@@ -32,7 +32,7 @@ from screener import (
     fetch_all_stock_history,
     sma, send_telegram,
     load_metadata, is_pump_or_warning, is_excluded_security, DEDUP_RESET_DAYS,
-    save_chart_data,
+    save_chart_data, log_alert,
 )
 
 
@@ -487,6 +487,12 @@ def notify_new_momentum(results):
         alerted["last_sent"] = datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST")
         alerted_path.write_text(json.dumps(alerted, ensure_ascii=False, indent=2), encoding="utf-8")
         print(f"  ✅ telegram sent: strong {len(new_strong)}, pre_breakout {len(new_pre)} (incl 향상 재알림)")
+        # 알림 기록
+        names = [r["name"] for r, _ in (new_strong + new_pre)][:8]
+        summary = f"강세 {len(new_strong)}개, 사전 {len(new_pre)}개 — {', '.join(names)}"
+        if len(new_strong) + len(new_pre) > 8:
+            summary += " 외"
+        log_alert("momentum", "신규/개선 모멘텀 진입", summary)
     else:
         print(f"  ❌ telegram failed: {info}")
 

@@ -1004,6 +1004,51 @@
   .theme-dark .mv-cat-rank.cat-mom-strong { background: #7f1d1d; color: #fecaca; }
   .theme-dark .mv-cat-rank.cat-pre { background: #78350f; color: #fde68a; }
 
+  /* === 💵 매매 탭 — 순매수/순매도 2열 === */
+  .inv-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .inv-col { background: var(--bg-inset); border-radius: 8px; padding: 6px; }
+  .inv-col-head {
+    font-size: 11px; font-weight: 700; text-align: center;
+    padding: 4px 0; margin-bottom: 4px;
+  }
+  .inv-col-head.up { color: #dc2626; }
+  .inv-col-head.down { color: #2563eb; }
+  .inv-row {
+    display: flex; align-items: center; gap: 4px;
+    padding: 4px 2px; border-bottom: 1px solid var(--border-light);
+    cursor: pointer; font-size: 11px;
+  }
+  .inv-row:last-child { border-bottom: none; }
+  .inv-row:active { background: var(--border-light); }
+  .inv-rank { color: var(--fg-faint); font-weight: 700; min-width: 14px; }
+  .inv-name {
+    flex: 1; min-width: 0; color: var(--fg-strong);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .inv-amt { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .inv-amt.up { color: #dc2626; }
+  .inv-amt.down { color: #2563eb; }
+  .inv-empty { font-size: 11px; color: var(--fg-dim); text-align: center; padding: 12px 0; }
+  .theme-dark .inv-amt.up, .theme-dark .inv-col-head.up { color: #fca5a5; }
+  .theme-dark .inv-amt.down, .theme-dark .inv-col-head.down { color: #93c5fd; }
+
+  /* === 🆚 종목 비교 테이블 === */
+  .cmp-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+  .cmp-table th, .cmp-table td {
+    padding: 6px 4px; text-align: center; border-bottom: 1px solid var(--border-light);
+  }
+  .cmp-table th { font-size: 11px; font-weight: 700; color: var(--fg-strong); }
+  .cmp-table .cmp-label { text-align: left; color: var(--fg-dim); font-weight: 600; font-size: 11px; }
+  .cmp-table td { color: var(--fg-mid); }
+  .cmp-table .up { color: #dc2626; font-weight: 700; }
+  .cmp-table .down { color: #2563eb; font-weight: 700; }
+  .cmp-del {
+    border: none; background: var(--bg-inset); color: var(--fg-dim);
+    border-radius: 4px; font-size: 10px; cursor: pointer; padding: 1px 5px; margin-top: 2px;
+  }
+  .theme-dark .cmp-table .up { color: #fca5a5; }
+  .theme-dark .cmp-table .down { color: #93c5fd; }
+
   /* === 📓 매매 일지 === */
   .jr-card {
     background: var(--bg-card);
@@ -1071,11 +1116,10 @@
     pointer-events: none;
   }
   .update-badge:empty { display: none; }
-  /* 테마 토글 버튼 — 헤더 좌측 상단 */
-  .theme-toggle {
+  /* 헤더 좌측 상단 버튼들 (테마/검색/알림) */
+  .hdr-btn {
     position: absolute;
     top: 10px;
-    left: 14px;
     border: 1px solid #e5e7eb;
     background: #f3f4f6;
     border-radius: 50%;
@@ -1091,8 +1135,14 @@
     line-height: 1;
     transition: transform 0.15s;
   }
-  .theme-toggle:active { transform: scale(0.92); }
-  .theme-dark .theme-toggle { background: #2a2f3a; border-color: #3a414f; }
+  .hdr-btn:active { transform: scale(0.92); }
+  .theme-dark .hdr-btn { background: #2a2f3a; border-color: #3a414f; }
+  .theme-toggle { left: 14px; }
+  .search-btn { left: 48px; }
+  .alerthist-btn { left: 82px; }
+  .update-badge .src { font-weight: 700; color: #374151; margin-right: 4px; }
+
+  .theme-dark .update-badge .src { color: #d1d5db; }
   .update-badge .src { font-weight: 700; color: #374151; margin-right: 4px; }
   
   .theme-dark .update-badge .src { color: #d1d5db; }
@@ -1103,7 +1153,9 @@
 
 <header>
   <div id="updateBadge" class="update-badge"></div>
-  <button id="themeToggle" class="theme-toggle" onclick="cycleTheme()" title="테마 전환 (자동/라이트/다크)">🌓</button>
+  <button id="themeToggle" class="hdr-btn theme-toggle" onclick="cycleTheme()" title="테마 전환 (자동/라이트/다크)">🌓</button>
+  <button class="hdr-btn search-btn" onclick="openSearchModal()" title="종목 검색">🔍</button>
+  <button class="hdr-btn alerthist-btn" onclick="openAlertHistoryModal()" title="알림 기록">🔔</button>
   <div class="top-nav">
     <button class="nav-btn active" data-view="strength" onclick="setView('strength')">🔥 강도</button>
     <button class="nav-btn" data-view="industry" onclick="setView('industry')">🏭 업종</button>
@@ -1242,6 +1294,47 @@
       <button class="modal-btn modal-btn-clear" onclick="deleteTradeFromEdit()">삭제</button>
       <button class="modal-btn modal-btn-cancel" onclick="closeTradeEditModal()">취소</button>
       <button class="modal-btn modal-btn-save" onclick="saveTradeEdit()">저장</button>
+    </div>
+  </div>
+</div>
+
+<div id="searchModal" class="modal-overlay" onclick="if(event.target===this) closeSearchModal()">
+  <div class="modal">
+    <div class="modal-title">🔍 종목 검색</div>
+    <div class="modal-form">
+      <input type="text" id="globalSearchInput" placeholder="회사명 또는 종목코드" class="modal-input" autocomplete="off" oninput="onGlobalSearch(this.value)">
+      <div id="globalSearchResults" class="search-results" style="max-height:50vh;overflow-y:auto"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn modal-btn-cancel" onclick="closeSearchModal()">닫기</button>
+      <button class="modal-btn modal-btn-save" onclick="openCompareModal()">🆚 종목 비교</button>
+    </div>
+  </div>
+</div>
+
+<div id="compareModal" class="modal-overlay" onclick="if(event.target===this) closeCompareModal()">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-title">🆚 종목 비교</div>
+    <div class="modal-current">최대 3종목 비교 · 검색해서 추가</div>
+    <div class="modal-form">
+      <input type="text" id="compareSearchInput" placeholder="비교할 종목 검색 (회사명/코드)" class="modal-input" autocomplete="off" oninput="onCompareSearch(this.value)">
+      <div id="compareSearchResults" class="search-results"></div>
+    </div>
+    <div id="compareTable"></div>
+    <div class="modal-actions">
+      <button class="modal-btn modal-btn-clear" onclick="clearCompare()">전체 비우기</button>
+      <button class="modal-btn modal-btn-cancel" onclick="closeCompareModal()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<div id="alertHistoryModal" class="modal-overlay" onclick="if(event.target===this) closeAlertHistoryModal()">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-title">🔔 알림 기록</div>
+    <div class="modal-current">최근 Telegram 알림 history</div>
+    <div id="alertHistoryBody" style="max-height:60vh;overflow-y:auto"></div>
+    <div class="modal-actions">
+      <button class="modal-btn modal-btn-cancel" onclick="closeAlertHistoryModal()">닫기</button>
     </div>
   </div>
 </div>
@@ -2450,47 +2543,53 @@ function renderInvestorView() {
     </div>
   </div>`;
 
-  const renderRanking = (title, list, isBuy) => {
-    if (!list || list.length === 0) {
-      return `<div class="strength-section">
-        <div class="strength-title" style="margin-bottom:8px">${title}</div>
-        <div class="strength-loading">데이터 없음</div>
-      </div>`;
-    }
-    const sideLabel = isBuy ? '순매수' : '순매도';
+  // 컴팩트 순매수/순매도 column (한 화면에 들어오게 top 10)
+  const renderColumn = (list, isBuy) => {
     const cls = isBuy ? 'up' : 'down';
-    let h = `<div class="strength-section">`;
-    h += `<div class="strength-title" style="margin-bottom:8px">${title}</div>`;
-    h += `<table class="strength-table"><thead><tr><th>#</th><th>종목</th><th class="num">등락</th><th class="num">${sideLabel} 금액</th></tr></thead><tbody>`;
-    list.forEach((s, i) => {
-      const chgCls = s.change > 0 ? 'up' : s.change < 0 ? 'down' : 'flat';
-      const amount = Math.abs(s.amount);
-      h += `<tr class="strength-row" data-code="${s.code}">
-        <td>${i + 1}</td>
-        <td>${s.name}<div class="company-code" style="display:block;font-size:10px;margin-top:2px">${s.code} · ${s.market}</div></td>
-        <td class="num ${chgCls}">${fmtPct(s.change)}</td>
-        <td class="num ${cls}">${fmtMoney(amount)}</td>
-      </tr>`;
-    });
-    h += '</tbody></table></div>';
+    const sign = isBuy ? '+' : '-';
+    let h = `<div class="inv-col">
+      <div class="inv-col-head ${cls}">${isBuy ? '🔴 순매수' : '🔵 순매도'}</div>`;
+    if (!list || list.length === 0) {
+      h += `<div class="inv-empty">데이터 없음</div>`;
+    } else {
+      list.slice(0, 10).forEach((s, i) => {
+        const amount = Math.abs(s.amount);
+        h += `<div class="inv-row" data-code="${s.code}">
+          <span class="inv-rank">${i + 1}</span>
+          <span class="inv-name">${s.name}</span>
+          <span class="inv-amt ${cls}">${sign}${fmtMoney(amount)}</span>
+        </div>`;
+      });
+    }
+    h += `</div>`;
     return h;
+  };
+
+  // 투자자 그룹 — 순매수/순매도 2열 나란히 (한 화면)
+  const renderInvestorGroup = (label, emoji, market, data) => {
+    return `<div class="strength-section">
+      <div class="strength-title" style="margin-bottom:8px">${emoji} ${label} · ${market}</div>
+      <div class="inv-pair">
+        ${renderColumn(data.buy, true)}
+        ${renderColumn(data.sell, false)}
+      </div>
+    </div>`;
   };
 
   const renderMarketSection = (market) => {
     const f = (inv.foreign && inv.foreign[market]) || {buy:[], sell:[]};
     const i = (inv.institution && inv.institution[market]) || {buy:[], sell:[]};
     let h = '';
-    h += renderRanking(`🌐 외국인 ${market} 순매수 TOP`, f.buy, true);
-    h += renderRanking(`🌐 외국인 ${market} 순매도 TOP`, f.sell, false);
-    h += renderRanking(`🏛 기관 ${market} 순매수 TOP`, i.buy, true);
-    h += renderRanking(`🏛 기관 ${market} 순매도 TOP`, i.sell, false);
+    // 기관 먼저 (위로) → 외국인
+    h += renderInvestorGroup('기관', '🏛', market, i);
+    h += renderInvestorGroup('외국인', '🌐', market, f);
     return h;
   };
 
   if (mf === 'all' || mf === 'KOSPI') html += renderMarketSection('KOSPI');
   if (mf === 'all' || mf === 'KOSDAQ') html += renderMarketSection('KOSDAQ');
   el.innerHTML = html;
-  el.querySelectorAll('.strength-row[data-code]').forEach(row => {
+  el.querySelectorAll('.inv-row[data-code]').forEach(row => {
     row.onclick = () => openStockModal(row.dataset.code);
   });
 }
@@ -2851,6 +2950,183 @@ function deleteTradeFromEdit() {
   showToast('🗑 거래 삭제됨');
   autoSyncJournal();
 }
+
+// === 🔍 전역 종목 검색 ===
+function openSearchModal() {
+  const modal = document.getElementById('searchModal');
+  modal.querySelector('#globalSearchInput').value = '';
+  modal.querySelector('#globalSearchResults').innerHTML = '';
+  modal.classList.add('show');
+  setTimeout(() => modal.querySelector('#globalSearchInput').focus(), 100);
+}
+function closeSearchModal() { document.getElementById('searchModal').classList.remove('show'); }
+
+function onGlobalSearch(query) {
+  const resultsEl = document.getElementById('globalSearchResults');
+  if (!resultsEl) return;
+  const q = query.trim().toLowerCase();
+  if (!q) { resultsEl.innerHTML = ''; return; }
+  if (!MARKET) { resultsEl.innerHTML = '<div class="search-no-result">시세 로딩 중...</div>'; return; }
+  const matches = [];
+  for (const [code, s] of Object.entries(MARKET.stocks)) {
+    if (matches.length >= 30) break;
+    if (code.includes(q) || s.name.toLowerCase().includes(q)) matches.push({ code, ...s });
+  }
+  if (matches.length === 0) { resultsEl.innerHTML = '<div class="search-no-result">검색 결과 없음</div>'; return; }
+  let html = '';
+  matches.forEach(s => {
+    const cls = s.change > 0 ? 'up' : s.change < 0 ? 'down' : 'flat';
+    const sign = s.change > 0 ? '+' : '';
+    html += `<div class="search-result-item" style="cursor:pointer" onclick="closeSearchModal();openStockModal('${s.code}')">
+      <div style="flex:1;min-width:0">
+        <div class="company-name">${s.name}</div>
+        <div class="company-code">${s.code} · ${s.market} · <span class="${cls}">${sign}${s.change.toFixed(2)}%</span> · ${s.price.toLocaleString('ko-KR')}원</div>
+      </div>
+      <span class="link-btn">상세 →</span>
+    </div>`;
+  });
+  resultsEl.innerHTML = html;
+}
+
+// === 🆚 종목 비교 ===
+let COMPARE_LIST = [];  // [{code, name}]
+
+function openCompareModal() {
+  closeSearchModal();
+  const modal = document.getElementById('compareModal');
+  modal.querySelector('#compareSearchInput').value = '';
+  modal.querySelector('#compareSearchResults').innerHTML = '';
+  renderCompareTable();
+  modal.classList.add('show');
+}
+function closeCompareModal() { document.getElementById('compareModal').classList.remove('show'); }
+
+function onCompareSearch(query) {
+  const resultsEl = document.getElementById('compareSearchResults');
+  if (!resultsEl) return;
+  const q = query.trim().toLowerCase();
+  if (!q) { resultsEl.innerHTML = ''; return; }
+  if (!MARKET) { resultsEl.innerHTML = '<div class="search-no-result">시세 로딩 중...</div>'; return; }
+  const matches = [];
+  for (const [code, s] of Object.entries(MARKET.stocks)) {
+    if (matches.length >= 15) break;
+    if (code.includes(q) || s.name.toLowerCase().includes(q)) matches.push({ code, ...s });
+  }
+  if (matches.length === 0) { resultsEl.innerHTML = '<div class="search-no-result">검색 결과 없음</div>'; return; }
+  let html = '';
+  matches.forEach(s => {
+    const inList = COMPARE_LIST.some(c => c.code === s.code);
+    html += `<div class="search-result-item">
+      <div style="flex:1;min-width:0">
+        <div class="company-name">${s.name}</div>
+        <div class="company-code">${s.code} · ${s.market}</div>
+      </div>
+      <button class="link-btn" onclick="addToCompare('${s.code}','${s.name.replace(/'/g, "\\'")}')">${inList ? '✓ 추가됨' : '+ 비교'}</button>
+    </div>`;
+  });
+  resultsEl.innerHTML = html;
+}
+
+function addToCompare(code, name) {
+  if (COMPARE_LIST.some(c => c.code === code)) return;
+  if (COMPARE_LIST.length >= 3) { alert('최대 3종목까지 비교 가능합니다'); return; }
+  COMPARE_LIST.push({ code, name });
+  document.getElementById('compareSearchInput').value = '';
+  document.getElementById('compareSearchResults').innerHTML = '';
+  renderCompareTable();
+}
+
+function removeFromCompare(code) {
+  COMPARE_LIST = COMPARE_LIST.filter(c => c.code !== code);
+  renderCompareTable();
+}
+function clearCompare() { COMPARE_LIST = []; renderCompareTable(); }
+
+function renderCompareTable() {
+  const el = document.getElementById('compareTable');
+  if (!el) return;
+  if (COMPARE_LIST.length === 0) {
+    el.innerHTML = `<div style="font-size:12px;color:var(--fg-dim);text-align:center;padding:20px 0">비교할 종목을 검색해서 추가하세요 (최대 3개)</div>`;
+    return;
+  }
+  // 각 종목 데이터 수집
+  const mvData = MINERVINI_DATA && !MINERVINI_DATA.__empty ? MINERVINI_DATA : null;
+  const mmData = MOMENTUM_DATA && !MOMENTUM_DATA.__empty ? MOMENTUM_DATA : null;
+  const cols = COMPARE_LIST.map(c => {
+    const s = MARKET ? MARKET.stocks[c.code] : null;
+    const mv = mvData && mvData.results ? mvData.results.find(r => r.code === c.code) : null;
+    const mm = mmData && mmData.results ? mmData.results.find(r => r.code === c.code) : null;
+    return { ...c, s, mv, mm };
+  });
+  // 행 정의: [라벨, 값 추출 함수]
+  const rows = [
+    ['현재가', d => d.s ? d.s.price.toLocaleString('ko-KR') + '원' : '—'],
+    ['등락률', d => {
+      if (!d.s) return '—';
+      const cls = d.s.change > 0 ? 'up' : d.s.change < 0 ? 'down' : 'flat';
+      const sign = d.s.change > 0 ? '+' : '';
+      return `<span class="${cls}">${sign}${d.s.change.toFixed(2)}%</span>`;
+    }],
+    ['거래량', d => d.s ? fmtVolume(d.s.volume) : '—'],
+    ['🎯 미너비니', d => d.mv ? `${d.mv.minervini_strict ? 'strict' : d.mv.minervini_strong ? 'strong' : '평가'} ${d.mv.total_score}점` : '—'],
+    ['  TT 통과', d => d.mv ? `${d.mv.tt_passed_count}/8` : '—'],
+    ['🚀 모멘텀', d => d.mm ? `${d.mm.momentum_strong ? '강세' : d.mm.pre_breakout ? '사전' : '평가'} ${d.mm.total_score}점` : '—'],
+    ['  RS', d => d.mv && d.mv.trend_template && d.mv.trend_template._rs_value != null ? d.mv.trend_template._rs_value : '—'],
+  ];
+  let html = `<table class="cmp-table"><thead><tr><th></th>`;
+  cols.forEach(d => {
+    html += `<th>${d.name}<br><button class="cmp-del" onclick="removeFromCompare('${d.code}')">✕</button></th>`;
+  });
+  html += `</tr></thead><tbody>`;
+  rows.forEach(([label, fn]) => {
+    html += `<tr><td class="cmp-label">${label}</td>`;
+    cols.forEach(d => { html += `<td>${fn(d)}</td>`; });
+    html += `</tr>`;
+  });
+  html += `</tbody></table>`;
+  html += `<div style="font-size:10px;color:var(--fg-dim);margin-top:6px">미너비니/모멘텀 점수는 해당 탭 데이터 로드 후 표시됩니다</div>`;
+  el.innerHTML = html;
+  // 미너비니/모멘텀 데이터 없으면 백그라운드 로드 후 재렌더
+  if (!mvData) loadMinerviniData().then(() => { if (document.getElementById('compareModal').classList.contains('show')) renderCompareTable(); });
+  if (!mmData) loadMomentumData().then(() => { if (document.getElementById('compareModal').classList.contains('show')) renderCompareTable(); });
+}
+
+// === 🔔 알림 기록 ===
+function openAlertHistoryModal() {
+  const modal = document.getElementById('alertHistoryModal');
+  const body = modal.querySelector('#alertHistoryBody');
+  body.innerHTML = `<div style="font-size:12px;color:var(--fg-dim);padding:16px;text-align:center">로딩 중...</div>`;
+  modal.classList.add('show');
+  fetch('data/alert_log.json?t=' + Date.now())
+    .then(r => r.ok ? r.json() : null)
+    .then(data => {
+      if (!document.getElementById('alertHistoryModal').classList.contains('show')) return;
+      if (!data || !data.alerts || data.alerts.length === 0) {
+        body.innerHTML = `<div style="font-size:12px;color:var(--fg-dim);padding:20px;text-align:center">
+          아직 알림 기록이 없습니다.<br>
+          <span style="font-size:11px">스크리너가 신규 종목을 찾으면 여기에 기록됩니다.</span>
+        </div>`;
+        return;
+      }
+      const typeEmoji = { minervini: '🎯', momentum: '🚀', exit: '🛑', earnings: '📊' };
+      let html = '<div style="display:flex;flex-direction:column;gap:6px;padding:4px 0">';
+      // 최신순
+      data.alerts.slice().reverse().forEach(a => {
+        const emoji = typeEmoji[a.type] || '🔔';
+        html += `<div style="padding:8px;background:var(--bg-inset);border-radius:6px">
+          <div style="font-size:12px;font-weight:700;color:var(--fg-strong)">${emoji} ${a.title || a.type}</div>
+          <div style="font-size:10px;color:var(--fg-dim);margin-top:2px">${a.datetime || a.date || ''}</div>
+          <div style="font-size:11px;color:var(--fg-mid);margin-top:3px;line-height:1.5">${escapeHtml(a.summary || '')}</div>
+        </div>`;
+      });
+      html += '</div>';
+      body.innerHTML = html;
+    })
+    .catch(() => {
+      body.innerHTML = `<div style="font-size:12px;color:var(--fg-dim);padding:20px;text-align:center">알림 기록 로드 실패</div>`;
+    });
+}
+function closeAlertHistoryModal() { document.getElementById('alertHistoryModal').classList.remove('show'); }
 
 function renderVolumeView() {
   const el = document.getElementById('strength');
