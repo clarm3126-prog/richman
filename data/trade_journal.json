@@ -8,10 +8,10 @@
       "buyPrice": 8140,
       "buyQty": 1478,
       "buyReason": "역사적 신고가를 거래량 동반하며 상한가 진입",
-      "sellDate": null,
-      "sellPrice": null,
-      "sellReason": "",
-      "memo": "",
+      "sellDate": "2026-05-04",
+      "sellPrice": 17500,
+      "sellReason": "RIS 90 이상 진입.\n상승 추세로 계속 올리다가 -5%하락 후 다시 반등하며 이제 점점 매도 물량이 나오고 있다고 판단.",
+      "memo": "이 종목은 2만원까지 오르며 내가 너무 일찍 팔았나 후회했지만 점점 윗고리를 동반하며 올려서 힘을 잃고 있다고 판단함.",
       "createdAt": 1779021539786
     }
   ]
