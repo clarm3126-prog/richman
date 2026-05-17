@@ -22,9 +22,9 @@
       "buyPrice": 89000,
       "buyQty": 181,
       "buyReason": "전선테마로 거래량을 동반하여 상한가를 진입해 전고점인 10만원 이상 갈 수 있다고 판단",
-      "sellDate": null,
-      "sellPrice": null,
-      "sellReason": "",
+      "sellDate": "2026-05-15",
+      "sellPrice": 69800,
+      "sellReason": "다음날 신고가에 도달하여 상승추세로 예상했으나 테마힘이 없어지고 계속 된 하락세/ 7만원 지지선 이탈로 매도",
       "memo": "",
       "createdAt": 1779021935735
     }
