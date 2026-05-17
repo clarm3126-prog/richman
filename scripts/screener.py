@@ -680,6 +680,35 @@ def send_telegram(bot_token, chat_id, text):
 SCORE_IMPROVE_THRESHOLD = 5.0  # 점수 +5 이상 향상되면 재알림 (30일 안이라도)
 
 
+def log_alert(alert_type, title, summary):
+    """발송한 Telegram 알림을 data/alert_log.json에 기록 (frontend 알림 기록용).
+    alert_type: minervini / momentum / exit / earnings
+    최근 100건만 유지.
+    """
+    log_path = Path("data/alert_log.json")
+    log = {"alerts": []}
+    if log_path.exists():
+        try:
+            log = json.loads(log_path.read_text(encoding="utf-8"))
+            if not isinstance(log.get("alerts"), list):
+                log = {"alerts": []}
+        except Exception:
+            log = {"alerts": []}
+    log["alerts"].append({
+        "type": alert_type,
+        "title": title,
+        "summary": summary,
+        "datetime": datetime.now(KST).strftime("%Y-%m-%d %H:%M"),
+        "date": datetime.now(KST).strftime("%Y-%m-%d"),
+    })
+    # 최근 100건만
+    log["alerts"] = log["alerts"][-100:]
+    try:
+        log_path.write_text(json.dumps(log, ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception as e:
+        print(f"  alert_log write failed: {e}")
+
+
 def _normalize_alerted_entry(v, fallback_date=""):
     """이전 알림 entry를 새 format {date, score}로 정규화.
     구버전 호환:
@@ -819,6 +848,12 @@ def notify_new_minervini(results):
         alerted["last_sent"] = datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST")
         alerted_path.write_text(json.dumps(alerted, ensure_ascii=False, indent=2), encoding="utf-8")
         print(f"  ✅ telegram sent: strict {len(new_strict)}, strong {len(new_strong)} (incl 향상 재알림)")
+        # 알림 기록
+        names = [r["name"] for r, _ in (new_strict + new_strong)][:8]
+        summary = f"엄격 {len(new_strict)}개, 우량 {len(new_strong)}개 — {', '.join(names)}"
+        if len(new_strict) + len(new_strong) > 8:
+            summary += " 외"
+        log_alert("minervini", "미너비니 신규/개선 진입", summary)
     else:
         print(f"  ❌ telegram failed: {info}")
 

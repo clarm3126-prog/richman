@@ -31,7 +31,7 @@ DART_KEY = os.environ.get("DART_API_KEY", "")
 DART_BASE = "https://opendart.fss.or.kr/api"
 
 sys.path.insert(0, str(Path(__file__).parent))
-from screener import send_telegram, DEDUP_RESET_DAYS
+from screener import send_telegram, DEDUP_RESET_DAYS, log_alert
 
 
 def fetch_dart_disclosures(bgn_de, end_de, keyword=None, max_pages=5):
@@ -449,6 +449,8 @@ def notify_earnings(my_disclosures, financials_cache=None):
         alerted["last_sent"] = datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST")
         alerted_path.write_text(json.dumps(alerted, ensure_ascii=False, indent=2), encoding="utf-8")
         print(f"  ✅ telegram sent: {len(new_items)} new earnings disclosures")
+        names = [d["name"] for d in new_items][:8]
+        log_alert("earnings", "관심 종목 실적 공시", f"{len(new_items)}건 — {', '.join(names)}")
     else:
         print(f"  ❌ telegram failed: {info}")
 

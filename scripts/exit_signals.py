@@ -22,7 +22,7 @@ KST = pytz.timezone("Asia/Seoul")
 sys.path.insert(0, str(Path(__file__).parent))
 from screener import (
     fetch_all_stock_history,
-    sma, send_telegram, DEDUP_RESET_DAYS,
+    sma, send_telegram, DEDUP_RESET_DAYS, log_alert,
 )
 
 
@@ -415,6 +415,9 @@ def notify_exit_signals(results):
         alerted["last_sent"] = datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST")
         alerted_path.write_text(json.dumps(alerted, ensure_ascii=False, indent=2), encoding="utf-8")
         print(f"  ✅ telegram sent: critical {len(new_critical)} new, warning {len(new_warning)} new")
+        names = [e["name"] for e in (new_critical + new_warning)][:8]
+        summary = f"위험 {len(new_critical)}건, 주의 {len(new_warning)}건 — {', '.join(names)}"
+        log_alert("exit", "보유 종목 매도 시그널", summary)
     else:
         print(f"  ❌ telegram failed: {info}")
 
