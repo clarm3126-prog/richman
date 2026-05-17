@@ -103,7 +103,7 @@
     margin-bottom: 12px;
   }
   @media (min-width: 600px) {
-    .top-nav { grid-template-columns: repeat(11, 1fr); }
+    .top-nav { grid-template-columns: repeat(6, 1fr); }
   }
   .nav-btn {
     padding: 10px 4px;
@@ -1003,7 +1003,57 @@
   .theme-dark .mv-cat-rank.cat-mv-strong { background: #1e3a8a; color: #bfdbfe; }
   .theme-dark .mv-cat-rank.cat-mom-strong { background: #7f1d1d; color: #fecaca; }
   .theme-dark .mv-cat-rank.cat-pre { background: #78350f; color: #fde68a; }
-  
+
+  /* === 📓 매매 일지 === */
+  .jr-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+  }
+  .jr-card.open { border-left: 4px solid #d97706; background: var(--bg-card-tint-amber); }
+  .jr-card.win { border-left: 4px solid #dc2626; }
+  .jr-card.loss { border-left: 4px solid #2563eb; }
+  .jr-head { display: flex; justify-content: space-between; align-items: flex-start; }
+  .jr-name { font-size: 14px; font-weight: 700; color: var(--fg-strong); }
+  .jr-code { font-size: 11px; color: var(--fg-dim); margin-top: 1px; }
+  .jr-return { font-size: 16px; font-weight: 800; text-align: right; }
+  .jr-return.up { color: #dc2626; }
+  .jr-return.down { color: #2563eb; }
+  .jr-return.flat { color: var(--fg-dim); }
+  .jr-status { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; }
+  .jr-status.open { background: #fef3c7; color: #92400e; }
+  .jr-status.closed { background: var(--bg-inset); color: var(--fg-dim); }
+  .jr-row {
+    display: flex; gap: 6px; font-size: 12px; margin-top: 6px;
+    color: var(--fg-mid);
+  }
+  .jr-row .lbl { font-weight: 700; color: var(--fg-dim); min-width: 38px; }
+  .jr-reason {
+    font-size: 12px; color: var(--fg-mid); line-height: 1.5;
+    background: var(--bg-inset); border-radius: 6px;
+    padding: 6px 8px; margin-top: 6px;
+  }
+  .jr-reason .lbl { font-weight: 700; color: var(--fg-strong); }
+  .jr-actions { display: flex; gap: 6px; margin-top: 8px; }
+  .jr-actions button {
+    flex: 1; padding: 6px; font-size: 11px; font-weight: 600;
+    border-radius: 6px; cursor: pointer; font-family: inherit;
+    border: 1px solid var(--border-light); background: var(--bg-inset);
+    color: var(--fg-mid);
+  }
+  .jr-actions button.primary { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+  .theme-dark .jr-actions button.primary { background: #e5e7eb; color: #0f1115; }
+  .jr-stat-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 8px;
+  }
+  .jr-stat {
+    background: var(--bg-card); border-radius: 6px; padding: 8px;
+  }
+  .jr-stat-label { font-size: 10px; color: var(--fg-dim); font-weight: 700; }
+  .jr-stat-value { font-size: 18px; font-weight: 800; margin-top: 2px; color: var(--fg-strong); }
+
   /* 마지막 업데이트 시간 badge — 헤더 우측 상단 floating */
   .update-badge {
     position: absolute;
@@ -1066,6 +1116,7 @@
     <button class="nav-btn" data-view="minervini" onclick="setView('minervini')">🎯 미너비니</button>
     <button class="nav-btn" data-view="momentum" onclick="setView('momentum')">🚀 모멘텀</button>
     <button class="nav-btn" data-view="watchlist" onclick="setView('watchlist')">⭐ 관심</button>
+    <button class="nav-btn" data-view="journal" onclick="setView('journal')">📓 일지</button>
   </div>
   <input type="text" class="search-box" id="search" placeholder="회사명·종목코드·키워드 검색">
   <button class="tabs-toggle" id="tabsToggle" onclick="toggleTabs()">
@@ -1119,6 +1170,79 @@
       <button class="modal-btn modal-btn-save" onclick="saveOwnedModal()">저장</button>
     </div>
     <div class="modal-note">매입가를 등록하면 -7% 손절선, +20% MA21 trail, +50% MA50 trail 자동 알림.<br>📱 Telegram 매도 시그널은 <b>보유 종목에만</b> 발송됩니다.</div>
+  </div>
+</div>
+
+<div id="tradeBuyModal" class="modal-overlay" onclick="if(event.target===this) closeTradeBuyModal()">
+  <div class="modal">
+    <div class="modal-title" id="tradeBuyTitle">🛒 매수 기록</div>
+    <div class="modal-form">
+      <label class="modal-label">종목 검색</label>
+      <input type="text" id="tradeBuySearch" placeholder="회사명 또는 종목코드" class="modal-input" autocomplete="off" oninput="onTradeBuySearch(this.value)">
+      <div id="tradeBuySearchResults" class="search-results"></div>
+      <div id="tradeBuySelected" style="font-size:13px;font-weight:700;color:var(--accent-purple);margin:6px 0;min-height:18px"></div>
+      <label class="modal-label">매수일</label>
+      <input type="date" id="tradeBuyDate" class="modal-input">
+      <label class="modal-label">매수가 (원)</label>
+      <input type="text" id="tradeBuyPrice" inputmode="numeric" placeholder="예: 22000" class="modal-input">
+      <label class="modal-label">수량 (주) <span style="color:var(--fg-faint);font-weight:400">선택사항</span></label>
+      <input type="text" id="tradeBuyQty" inputmode="numeric" placeholder="예: 100" class="modal-input">
+      <label class="modal-label">매수 이유</label>
+      <textarea id="tradeBuyReason" class="modal-input" rows="3" placeholder="예: 미너비니 strict 통과, 반도체장비 테마 강세전환, VCP 베이스 깔끔"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn modal-btn-cancel" onclick="closeTradeBuyModal()">취소</button>
+      <button class="modal-btn modal-btn-save" onclick="saveTradeBuy()">저장</button>
+    </div>
+  </div>
+</div>
+
+<div id="tradeSellModal" class="modal-overlay" onclick="if(event.target===this) closeTradeSellModal()">
+  <div class="modal">
+    <div class="modal-title">💰 매도 기록</div>
+    <div class="modal-current" id="tradeSellCurrent"></div>
+    <div class="modal-form">
+      <label class="modal-label">매도일</label>
+      <input type="date" id="tradeSellDate" class="modal-input">
+      <label class="modal-label">매도가 (원)</label>
+      <input type="text" id="tradeSellPrice" inputmode="numeric" placeholder="예: 26000" class="modal-input">
+      <label class="modal-label">매도 이유</label>
+      <textarea id="tradeSellReason" class="modal-input" rows="3" placeholder="예: MA50 거래량 동반 이탈, 목표 수익 +18% 달성"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn modal-btn-cancel" onclick="closeTradeSellModal()">취소</button>
+      <button class="modal-btn modal-btn-save" onclick="saveTradeSell()">저장</button>
+    </div>
+  </div>
+</div>
+
+<div id="tradeEditModal" class="modal-overlay" onclick="if(event.target===this) closeTradeEditModal()">
+  <div class="modal">
+    <div class="modal-title">✏️ 거래 수정</div>
+    <div class="modal-current" id="tradeEditCurrent"></div>
+    <div class="modal-form">
+      <label class="modal-label">매수일</label>
+      <input type="date" id="tradeEditBuyDate" class="modal-input">
+      <label class="modal-label">매수가 (원)</label>
+      <input type="text" id="tradeEditBuyPrice" inputmode="numeric" class="modal-input">
+      <label class="modal-label">수량 (주)</label>
+      <input type="text" id="tradeEditQty" inputmode="numeric" class="modal-input">
+      <label class="modal-label">매수 이유</label>
+      <textarea id="tradeEditBuyReason" class="modal-input" rows="3"></textarea>
+      <label class="modal-label">매도일 <span style="color:var(--fg-faint);font-weight:400">(보유 중이면 비움)</span></label>
+      <input type="date" id="tradeEditSellDate" class="modal-input">
+      <label class="modal-label">매도가 (원)</label>
+      <input type="text" id="tradeEditSellPrice" inputmode="numeric" class="modal-input">
+      <label class="modal-label">매도 이유</label>
+      <textarea id="tradeEditSellReason" class="modal-input" rows="3"></textarea>
+      <label class="modal-label">메모</label>
+      <textarea id="tradeEditMemo" class="modal-input" rows="2" placeholder="복기 메모 (이 거래에서 배운 점)"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn modal-btn-clear" onclick="deleteTradeFromEdit()">삭제</button>
+      <button class="modal-btn modal-btn-cancel" onclick="closeTradeEditModal()">취소</button>
+      <button class="modal-btn modal-btn-save" onclick="saveTradeEdit()">저장</button>
+    </div>
   </div>
 </div>
 
@@ -1862,6 +1986,9 @@ function setView(viewName) {
   } else if (viewName === 'momentum') {
     renderMomentumView();
     document.getElementById('content').innerHTML = '';
+  } else if (viewName === 'journal') {
+    renderJournalView();
+    document.getElementById('content').innerHTML = '';
   } else {
     if (MARKET) renderMarket(MARKET);
     renderContent();
@@ -2366,6 +2493,363 @@ function renderInvestorView() {
   el.querySelectorAll('.strength-row[data-code]').forEach(row => {
     row.onclick = () => openStockModal(row.dataset.code);
   });
+}
+
+// === 📓 매매 일지 ===
+const JOURNAL_KEY = 'trade_journal_v1';
+let JOURNAL = [];
+
+function loadJournal() {
+  try {
+    JOURNAL = JSON.parse(localStorage.getItem(JOURNAL_KEY) || '[]');
+    if (!Array.isArray(JOURNAL)) JOURNAL = [];
+  } catch { JOURNAL = []; }
+}
+
+function saveJournal() {
+  localStorage.setItem(JOURNAL_KEY, JSON.stringify(JOURNAL));
+}
+
+async function syncJournalFromGitHub() {
+  // 다른 기기에서 작성한 일지 복원 (id 기준 merge)
+  try {
+    const r = await fetch('data/trade_journal.json?t=' + Date.now());
+    if (!r.ok) return false;
+    const cfg = await r.json();
+    const remote = cfg.trades || [];
+    const localIds = new Set(JOURNAL.map(t => t.id));
+    let changed = false;
+    for (const t of remote) {
+      if (!localIds.has(t.id)) {
+        JOURNAL.push(t);
+        changed = true;
+      }
+    }
+    if (changed) saveJournal();
+    return changed;
+  } catch { return false; }
+}
+
+async function autoSyncJournal() {
+  if (!getPat()) return;
+  const res = await pushFileToGitHub('data/trade_journal.json',
+    { trades: JOURNAL }, `Update trade journal (${JOURNAL.length}건)`);
+  if (res.ok) showToast('📓 일지 동기화됨');
+}
+
+function tradeReturn(t) {
+  // 수익률 % 계산. 매도 완료면 sellPrice, 보유 중이면 현재가
+  if (!t.buyPrice) return null;
+  let exitPrice;
+  if (t.sellPrice) {
+    exitPrice = t.sellPrice;
+  } else {
+    const s = MARKET ? MARKET.stocks[t.code] : null;
+    if (!s) return null;
+    exitPrice = s.price;
+  }
+  return (exitPrice - t.buyPrice) / t.buyPrice * 100;
+}
+
+function renderJournalView() {
+  const el = document.getElementById('strength');
+  if (!el) return;
+  if (state.currentView !== 'journal') return;
+
+  // 통계 계산
+  const closed = JOURNAL.filter(t => t.sellDate && t.sellPrice);
+  const open = JOURNAL.filter(t => !t.sellDate || !t.sellPrice);
+  let winCount = 0, lossCount = 0, sumReturn = 0;
+  for (const t of closed) {
+    const ret = tradeReturn(t);
+    if (ret == null) continue;
+    sumReturn += ret;
+    if (ret > 0) winCount++;
+    else if (ret < 0) lossCount++;
+  }
+  const winRate = closed.length > 0 ? Math.round(winCount / closed.length * 100) : 0;
+  const avgReturn = closed.length > 0 ? (sumReturn / closed.length) : 0;
+  const hasPat = !!getPat();
+
+  let html = `<div class="strength-section">
+    <div class="strength-header">
+      <div>
+        <div class="strength-title">📓 매매 일지 ${JOURNAL.length > 0 ? `(${JOURNAL.length}건)` : ''}</div>
+        <div class="strength-meta">매수/매도 시점 + 이유 기록 · 복기용</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        ${hasPat ? `<button class="refresh-btn" onclick="autoSyncJournal()">🚀 동기화</button>` : ''}
+        <button class="refresh-btn" onclick="openTradeBuyModal()">+ 매수 기록</button>
+      </div>
+    </div>`;
+
+  if (JOURNAL.length === 0) {
+    html += `<div class="strength-loading">기록된 거래가 없습니다.<br>
+      <span style="font-size:11px">우측 상단 '+ 매수 기록'으로 첫 거래를 기록하세요</span></div>`;
+  } else {
+    // 통계 박스
+    const avgCls = avgReturn >= 0 ? 'up' : 'down';
+    const avgSign = avgReturn >= 0 ? '+' : '';
+    html += `<div class="jr-stat-grid">
+      <div class="jr-stat">
+        <div class="jr-stat-label">승률 (종료 ${closed.length}건)</div>
+        <div class="jr-stat-value">${winRate}%
+          <span style="font-size:12px;color:var(--fg-dim)">(승 ${winCount} / 패 ${lossCount})</span>
+        </div>
+      </div>
+      <div class="jr-stat">
+        <div class="jr-stat-label">평균 수익률 (종료)</div>
+        <div class="jr-stat-value ${avgCls}">${avgSign}${avgReturn.toFixed(2)}%</div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--fg-dim);margin-top:6px">📌 보유 중 ${open.length}건 · ✅ 매도 완료 ${closed.length}건</div>`;
+  }
+  html += `</div>`;
+
+  // 거래 카드 — 보유 중 먼저, 그 다음 매도 완료 (최신순)
+  const sorted = [...JOURNAL].sort((a, b) => {
+    const aOpen = !a.sellDate ? 1 : 0;
+    const bOpen = !b.sellDate ? 1 : 0;
+    if (aOpen !== bOpen) return bOpen - aOpen;  // 보유 중 먼저
+    const aDate = a.sellDate || a.buyDate || '';
+    const bDate = b.sellDate || b.buyDate || '';
+    return bDate.localeCompare(aDate);  // 최신순
+  });
+
+  if (sorted.length > 0) {
+    html += `<div class="strength-section">`;
+    for (const t of sorted) {
+      const isOpen = !t.sellDate || !t.sellPrice;
+      const ret = tradeReturn(t);
+      let cardCls = 'jr-card';
+      let retHtml = '';
+      if (ret != null) {
+        const retCls = ret > 0 ? 'up' : ret < 0 ? 'down' : 'flat';
+        const retSign = ret > 0 ? '+' : '';
+        retHtml = `<div class="jr-return ${retCls}">${retSign}${ret.toFixed(2)}%</div>`;
+        if (isOpen) cardCls += ' open';
+        else cardCls += ret >= 0 ? ' win' : ' loss';
+      } else {
+        if (isOpen) cardCls += ' open';
+      }
+      const statusBadge = isOpen
+        ? `<span class="jr-status open">📌 보유 중</span>`
+        : `<span class="jr-status closed">✅ 매도 완료</span>`;
+      // 수익금 계산 (수량 있으면)
+      let profitTxt = '';
+      if (ret != null && t.buyQty) {
+        const exitP = t.sellPrice || (MARKET && MARKET.stocks[t.code] ? MARKET.stocks[t.code].price : 0);
+        const profit = (exitP - t.buyPrice) * t.buyQty;
+        const pSign = profit >= 0 ? '+' : '';
+        profitTxt = ` · 손익 ${pSign}${profit.toLocaleString('ko-KR')}원`;
+      }
+
+      html += `<div class="${cardCls}">
+        <div class="jr-head">
+          <div>
+            <div class="jr-name">${t.name} ${statusBadge}</div>
+            <div class="jr-code">${t.code}${t.buyQty ? ` · ${t.buyQty}주` : ''}</div>
+          </div>
+          ${retHtml}
+        </div>
+        <div class="jr-row"><span class="lbl">매수</span>${t.buyDate || '—'} · ${t.buyPrice ? t.buyPrice.toLocaleString('ko-KR') + '원' : '—'}${profitTxt}</div>`;
+      if (!isOpen) {
+        html += `<div class="jr-row"><span class="lbl">매도</span>${t.sellDate} · ${t.sellPrice.toLocaleString('ko-KR')}원</div>`;
+      }
+      if (t.buyReason) {
+        html += `<div class="jr-reason"><span class="lbl">📥 매수 이유:</span> ${escapeHtml(t.buyReason)}</div>`;
+      }
+      if (t.sellReason) {
+        html += `<div class="jr-reason"><span class="lbl">📤 매도 이유:</span> ${escapeHtml(t.sellReason)}</div>`;
+      }
+      if (t.memo) {
+        html += `<div class="jr-reason"><span class="lbl">📝 메모:</span> ${escapeHtml(t.memo)}</div>`;
+      }
+      html += `<div class="jr-actions">`;
+      if (isOpen) {
+        html += `<button class="primary" onclick="openTradeSellModal('${t.id}')">💰 매도 기록</button>`;
+      }
+      html += `<button onclick="openTradeEditModal('${t.id}')">✏️ 수정</button>
+        <button onclick="openStockModal('${t.code}')">📊 종목</button>
+      </div>`;
+      html += `</div>`;
+    }
+    html += `</div>`;
+  }
+
+  el.innerHTML = html;
+}
+
+// --- 매수 기록 modal ---
+let tradeBuySelectedStock = null;
+
+function openTradeBuyModal() {
+  tradeBuySelectedStock = null;
+  const modal = document.getElementById('tradeBuyModal');
+  modal.querySelector('#tradeBuyTitle').textContent = '🛒 매수 기록';
+  modal.querySelector('#tradeBuySearch').value = '';
+  modal.querySelector('#tradeBuySearchResults').innerHTML = '';
+  modal.querySelector('#tradeBuySelected').textContent = '';
+  modal.querySelector('#tradeBuyDate').value = new Date().toISOString().slice(0, 10);
+  modal.querySelector('#tradeBuyPrice').value = '';
+  modal.querySelector('#tradeBuyQty').value = '';
+  modal.querySelector('#tradeBuyReason').value = '';
+  modal.classList.add('show');
+}
+function closeTradeBuyModal() { document.getElementById('tradeBuyModal').classList.remove('show'); }
+
+function onTradeBuySearch(query) {
+  const resultsEl = document.getElementById('tradeBuySearchResults');
+  if (!resultsEl) return;
+  const q = query.trim().toLowerCase();
+  if (!q) { resultsEl.innerHTML = ''; return; }
+  if (!MARKET) { resultsEl.innerHTML = '<div class="search-no-result">시세 로딩 중...</div>'; return; }
+  const matches = [];
+  for (const [code, s] of Object.entries(MARKET.stocks)) {
+    if (matches.length >= 20) break;
+    if (code.includes(q) || s.name.toLowerCase().includes(q)) matches.push({ code, ...s });
+  }
+  if (matches.length === 0) { resultsEl.innerHTML = '<div class="search-no-result">검색 결과 없음</div>'; return; }
+  let html = '';
+  matches.forEach(s => {
+    html += `<div class="search-result-item" style="cursor:pointer" onclick="selectTradeBuyStock('${s.code}','${s.name.replace(/'/g, "\\'")}',${s.price})">
+      <div style="flex:1;min-width:0">
+        <div class="company-name">${s.name}</div>
+        <div class="company-code">${s.code} · ${s.market} · ${s.price.toLocaleString('ko-KR')}원</div>
+      </div>
+      <span class="link-btn">선택</span>
+    </div>`;
+  });
+  resultsEl.innerHTML = html;
+}
+
+function selectTradeBuyStock(code, name, price) {
+  tradeBuySelectedStock = { code, name };
+  const modal = document.getElementById('tradeBuyModal');
+  modal.querySelector('#tradeBuySelected').textContent = `✅ ${name} (${code})`;
+  modal.querySelector('#tradeBuySearchResults').innerHTML = '';
+  modal.querySelector('#tradeBuySearch').value = name;
+  // 현재가 자동 입력 (참고용)
+  if (price && !modal.querySelector('#tradeBuyPrice').value) {
+    modal.querySelector('#tradeBuyPrice').value = price;
+  }
+}
+
+function saveTradeBuy() {
+  if (!tradeBuySelectedStock) { alert('종목을 검색해서 선택하세요'); return; }
+  const modal = document.getElementById('tradeBuyModal');
+  const buyDate = modal.querySelector('#tradeBuyDate').value;
+  const buyPrice = parseInt(modal.querySelector('#tradeBuyPrice').value.replace(/[^\d]/g, ''), 10);
+  const buyQtyStr = modal.querySelector('#tradeBuyQty').value.replace(/[^\d]/g, '');
+  const buyQty = buyQtyStr ? parseInt(buyQtyStr, 10) : null;
+  const buyReason = modal.querySelector('#tradeBuyReason').value.trim();
+  if (!buyDate || !buyPrice || buyPrice <= 0) { alert('매수일과 매수가를 올바르게 입력하세요'); return; }
+  JOURNAL.push({
+    id: 't' + Date.now() + Math.random().toString(36).slice(2, 6),
+    code: tradeBuySelectedStock.code,
+    name: tradeBuySelectedStock.name,
+    buyDate, buyPrice, buyQty,
+    buyReason,
+    sellDate: null, sellPrice: null, sellReason: '',
+    memo: '',
+    createdAt: Date.now(),
+  });
+  saveJournal();
+  closeTradeBuyModal();
+  renderJournalView();
+  showToast('🛒 매수 기록 저장');
+  autoSyncJournal();
+}
+
+// --- 매도 기록 modal ---
+function openTradeSellModal(id) {
+  const t = JOURNAL.find(x => x.id === id);
+  if (!t) return;
+  const modal = document.getElementById('tradeSellModal');
+  modal.dataset.id = id;
+  modal.querySelector('#tradeSellCurrent').textContent = `${t.name} (${t.code}) · 매수 ${t.buyPrice.toLocaleString('ko-KR')}원`;
+  modal.querySelector('#tradeSellDate').value = new Date().toISOString().slice(0, 10);
+  const cur = MARKET ? MARKET.stocks[t.code] : null;
+  modal.querySelector('#tradeSellPrice').value = cur ? cur.price : '';
+  modal.querySelector('#tradeSellReason').value = '';
+  modal.classList.add('show');
+}
+function closeTradeSellModal() { document.getElementById('tradeSellModal').classList.remove('show'); }
+
+function saveTradeSell() {
+  const modal = document.getElementById('tradeSellModal');
+  const id = modal.dataset.id;
+  const t = JOURNAL.find(x => x.id === id);
+  if (!t) return;
+  const sellDate = modal.querySelector('#tradeSellDate').value;
+  const sellPrice = parseInt(modal.querySelector('#tradeSellPrice').value.replace(/[^\d]/g, ''), 10);
+  const sellReason = modal.querySelector('#tradeSellReason').value.trim();
+  if (!sellDate || !sellPrice || sellPrice <= 0) { alert('매도일과 매도가를 올바르게 입력하세요'); return; }
+  t.sellDate = sellDate;
+  t.sellPrice = sellPrice;
+  t.sellReason = sellReason;
+  saveJournal();
+  closeTradeSellModal();
+  renderJournalView();
+  showToast('💰 매도 기록 저장');
+  autoSyncJournal();
+}
+
+// --- 거래 수정 modal ---
+function openTradeEditModal(id) {
+  const t = JOURNAL.find(x => x.id === id);
+  if (!t) return;
+  const modal = document.getElementById('tradeEditModal');
+  modal.dataset.id = id;
+  modal.querySelector('#tradeEditCurrent').textContent = `${t.name} (${t.code})`;
+  modal.querySelector('#tradeEditBuyDate').value = t.buyDate || '';
+  modal.querySelector('#tradeEditBuyPrice').value = t.buyPrice || '';
+  modal.querySelector('#tradeEditQty').value = t.buyQty || '';
+  modal.querySelector('#tradeEditBuyReason').value = t.buyReason || '';
+  modal.querySelector('#tradeEditSellDate').value = t.sellDate || '';
+  modal.querySelector('#tradeEditSellPrice').value = t.sellPrice || '';
+  modal.querySelector('#tradeEditSellReason').value = t.sellReason || '';
+  modal.querySelector('#tradeEditMemo').value = t.memo || '';
+  modal.classList.add('show');
+}
+function closeTradeEditModal() { document.getElementById('tradeEditModal').classList.remove('show'); }
+
+function saveTradeEdit() {
+  const modal = document.getElementById('tradeEditModal');
+  const id = modal.dataset.id;
+  const t = JOURNAL.find(x => x.id === id);
+  if (!t) return;
+  const buyDate = modal.querySelector('#tradeEditBuyDate').value;
+  const buyPrice = parseInt(modal.querySelector('#tradeEditBuyPrice').value.replace(/[^\d]/g, ''), 10);
+  if (!buyDate || !buyPrice) { alert('매수일/매수가는 필수입니다'); return; }
+  const qtyStr = modal.querySelector('#tradeEditQty').value.replace(/[^\d]/g, '');
+  const sellDate = modal.querySelector('#tradeEditSellDate').value;
+  const sellPriceStr = modal.querySelector('#tradeEditSellPrice').value.replace(/[^\d]/g, '');
+  t.buyDate = buyDate;
+  t.buyPrice = buyPrice;
+  t.buyQty = qtyStr ? parseInt(qtyStr, 10) : null;
+  t.buyReason = modal.querySelector('#tradeEditBuyReason').value.trim();
+  t.sellDate = sellDate || null;
+  t.sellPrice = sellPriceStr ? parseInt(sellPriceStr, 10) : null;
+  t.sellReason = modal.querySelector('#tradeEditSellReason').value.trim();
+  t.memo = modal.querySelector('#tradeEditMemo').value.trim();
+  saveJournal();
+  closeTradeEditModal();
+  renderJournalView();
+  showToast('✏️ 거래 수정 완료');
+  autoSyncJournal();
+}
+
+function deleteTradeFromEdit() {
+  const modal = document.getElementById('tradeEditModal');
+  const id = modal.dataset.id;
+  if (!confirm('이 거래 기록을 삭제하시겠습니까?')) return;
+  JOURNAL = JOURNAL.filter(x => x.id !== id);
+  saveJournal();
+  closeTradeEditModal();
+  renderJournalView();
+  showToast('🗑 거래 삭제됨');
+  autoSyncJournal();
 }
 
 function renderVolumeView() {
@@ -5383,9 +5867,12 @@ async function initMarket() {
   el.innerHTML = `<div class="strength-section"><div class="strength-loading">⏳ 시장 데이터 불러오는 중...</div></div>`;
   try {
     loadWatchlist();
+    loadJournal();
     MARKET = await loadMarket();
     await loadDescriptions();
     await syncWatchlistFromGitHub();
+    await syncJournalFromGitHub();
+    if (state.currentView === 'journal') renderJournalView();
     // 캘린더 사용 가능하도록 history 미리 로드 (background, 중복 방지)
     HISTORY_LOADING = loadHistoryRange(60);
     HISTORY_LOADING.then(loaded => { if (loaded) HISTORY_LOADED = loaded; });
