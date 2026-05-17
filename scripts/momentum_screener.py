@@ -497,6 +497,128 @@ def notify_new_momentum(results):
         print(f"  ❌ telegram failed: {info}")
 
 
+def notify_confluence(momentum_results):
+    """3대 전략(미너비니 + 모멘텀 + 오닐) 동시 만족 종목 → 트리플 시그널 알림.
+    momentum_screener가 체인 마지막이라 이 시점엔 3개 결과 파일 모두 존재.
+    """
+    today = datetime.now(KST).strftime("%Y%m%d")
+    today_date = datetime.now(KST).strftime("%Y-%m-%d")
+
+    # 1. 미너비니 (오늘 데이터만)
+    mv = {}
+    sr_path = Path("data/screener_results.json")
+    if sr_path.exists():
+        try:
+            sr = json.loads(sr_path.read_text(encoding="utf-8"))
+            if sr.get("trading_day") == today:
+                for r in sr.get("results", []) or []:
+                    if r.get("minervini_strict"):
+                        mv[r["code"]] = {"cat": "엄격", "score": r.get("total_score")}
+                    elif r.get("minervini_strong"):
+                        mv[r["code"]] = {"cat": "우량", "score": r.get("total_score")}
+        except Exception:
+            pass
+
+    # 2. 오닐 ATH 돌파 (오늘 데이터만)
+    oneil = {}
+    bo_path = Path("data/ath_breakouts.json")
+    if bo_path.exists():
+        try:
+            bo = json.loads(bo_path.read_text(encoding="utf-8"))
+            if bo.get("trading_day") == today:
+                for b in (bo.get("close") or bo.get("intraday") or []):
+                    oneil[b["code"]] = {"vol_ratio": b.get("vol_ratio")}
+        except Exception:
+            pass
+
+    # 3. 모멘텀 (인자)
+    mm = {}
+    info_by_code = {}
+    for r in momentum_results:
+        info_by_code[r["code"]] = r
+        if r.get("momentum_strong"):
+            mm[r["code"]] = {"cat": "강세", "score": r.get("total_score")}
+        elif r.get("pre_breakout"):
+            mm[r["code"]] = {"cat": "사전", "score": r.get("total_score")}
+
+    # 트리플 교집합 — 3개 전략 모두
+    triple = []
+    for code in mv:
+        if code in mm and code in oneil:
+            r = info_by_code.get(code, {})
+            triple.append({
+                "code": code,
+                "name": r.get("name", code),
+                "market": r.get("market", ""),
+                "price": r.get("price", 0),
+                "change": r.get("change", 0),
+                "mv": mv[code],
+                "mm": mm[code],
+                "oneil": oneil[code],
+            })
+    triple.sort(key=lambda x: (x["mv"]["score"] or 0), reverse=True)
+    print(f"  confluence: {len(triple)} triple-signal stocks")
+
+    # confluence.json 저장 (frontend banner용)
+    Path("data/confluence.json").write_text(json.dumps({
+        "updated": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
+        "trading_day": today,
+        "triple": triple,
+    }, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+
+    if not triple:
+        return
+
+    # Telegram (14일 dedup)
+    bot_token = os.environ.get("TELEGRAM_BOT_TOKEN")
+    chat_id = os.environ.get("TELEGRAM_CHAT_ID")
+    if not bot_token or not chat_id:
+        return
+    alerted_path = Path("data/confluence_alerted.json")
+    alerted = {}
+    if alerted_path.exists():
+        try:
+            alerted = json.loads(alerted_path.read_text(encoding="utf-8"))
+        except Exception:
+            alerted = {}
+    cutoff = datetime.now(KST).timestamp() - 14 * 86400
+    for c in list(alerted.keys()):
+        try:
+            if datetime.strptime(alerted[c], "%Y-%m-%d").timestamp() < cutoff:
+                del alerted[c]
+        except Exception:
+            pass
+    new_triple = [t for t in triple if t["code"] not in alerted]
+    if not new_triple:
+        print("  no new triple-signal (skip telegram)")
+        return
+
+    lines = [f"🏆🎯🚀 *트리플 시그널 — 3대 전략 동시 만족!* — {today_date}\n"]
+    lines.append("미너비니 + 모멘텀 + 오닐 모두 통과한 최강 confluence 종목:\n")
+    for t in new_triple[:10]:
+        sign = "+" if t["change"] > 0 else ""
+        lines.append(
+            f"• *{t['name']}* (`{t['code']}` {t['market']})\n"
+            f"  {t['price']:,}원 ({sign}{t['change']:.2f}%)\n"
+            f"  🎯 미너비니 {t['mv']['cat']} ({t['mv']['score']}점)\n"
+            f"  🚀 모멘텀 {t['mm']['cat']} ({t['mm']['score']}점)\n"
+            f"  🏆 오닐 역사적 신고가 돌파 (거래량 {t['oneil']['vol_ratio']}x)"
+        )
+    if len(new_triple) > 10:
+        lines.append(f"... 외 {len(new_triple) - 10}개")
+    msg = "\n".join(lines)
+    ok, info = send_telegram(bot_token, chat_id, msg)
+    if ok:
+        for t in new_triple:
+            alerted[t["code"]] = today_date
+        alerted_path.write_text(json.dumps(alerted, ensure_ascii=False, indent=2), encoding="utf-8")
+        print(f"  ✅ triple-signal telegram: {len(new_triple)} new")
+        names = [t["name"] for t in new_triple][:8]
+        log_alert("confluence", "🏆 트리플 시그널 (3대 전략 동시)", f"{len(new_triple)}개 — {', '.join(names)}")
+    else:
+        print(f"  ❌ confluence telegram failed: {info}")
+
+
 # ================================
 # 메인
 # ================================
@@ -646,6 +768,10 @@ def main():
     # 10. Telegram 알림
     print("\n[Telegram] 신규 모멘텀 종목 알림...")
     notify_new_momentum(results)
+
+    # 11. 트리플 시그널 (미너비니+모멘텀+오닐 동시 만족)
+    print("\n[Confluence] 3대 전략 교집합 검사...")
+    notify_confluence(results)
 
 
 if __name__ == "__main__":
