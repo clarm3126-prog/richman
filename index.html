@@ -3962,7 +3962,7 @@ function renderEarningsBanner(watchlistCodes) {
   if (mine.length === 0) return '';
   let html = `<div class="strength-section" style="border-left:4px solid #0369a1">
     <div class="strength-title">📊 관심 종목 실적 공시</div>
-    <div class="strength-meta">최근 7일 · ${mine.length}건</div>
+    <div class="strength-meta">최근 45일 · ${mine.length}건</div>
     <div style="margin-top:8px">`;
   for (const d of mine.slice(0, 10)) {
     const isProv = (d.report_nm || '').includes('잠정');
