@@ -62,9 +62,11 @@ def is_excluded_security(name, code=""):
         if n.startswith(p):
             return True, "ETF"
 
-    # 2. ETN
-    if " ETN" in n or n.startswith("ETN ") or "ETN(H)" in n or "(H)ETN" in n:
-        return True, "ETN"
+    # 2. ETN / 파생상품 — ETN/선물/합성/레버리지/인버스 (일반 주식 아님)
+    # 이 키워드들은 한국 시장에서 ETF/ETN 상품에만 등장 (일반주 0건 확인)
+    for kw in ("ETN", "선물", "합성", "레버리지", "인버스"):
+        if kw in n:
+            return True, "ETN/파생"
 
     # 3. SPAC (스팩)
     if "스팩" in n or "SPAC" in n.upper():
