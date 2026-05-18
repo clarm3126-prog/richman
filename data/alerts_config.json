@@ -29,12 +29,6 @@
       "name": "대한해운",
       "target": 2000,
       "direction": "below"
-    },
-    {
-      "code": "006340",
-      "name": "대원전선",
-      "target": 15000,
-      "direction": "below"
     }
   ]
 }
