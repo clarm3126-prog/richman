@@ -3590,76 +3590,7 @@ function renderMinerviniView() {
       allStrong.forEach((r, i) => { strongRankMap[r.code] = i + 1; });
       html += `<div class="strength-section">`;
       filtered.slice(0, 50).forEach((r, i) => {
-        const tt = r.trend_template || {};
-        const fund = r.fundamentals || {};
-        const setup = r.setup || {};
-        const cls = r.change > 0 ? 'up' : r.change < 0 ? 'down' : 'flat';
-        const sign = r.change > 0 ? '+' : '';
-        // 카테고리 클래스 + percentile rank
-        let cardCat = '', rankBadge = '';
-        if (r.minervini_strict && strictRankMap[r.code]) {
-          cardCat = 'cat-mv-strict';
-          const rk = strictRankMap[r.code];
-          const pct = Math.max(1, Math.round(rk / allStrict.length * 100));
-          rankBadge = `<span class="mv-cat-rank cat-mv-strict">🏆 엄격 ${allStrict.length}개 중 #${rk} (상위 ${pct}%)</span>`;
-        } else if (r.minervini_strong && strongRankMap[r.code]) {
-          cardCat = 'cat-mv-strong';
-          const rk = strongRankMap[r.code];
-          const pct = Math.max(1, Math.round(rk / allStrong.length * 100));
-          rankBadge = `<span class="mv-cat-rank cat-mv-strong">⭐ 우량 ${allStrong.length}개 중 #${rk} (상위 ${pct}%)</span>`;
-        }
-        const ttIcons = [
-          ['MA50↑', tt.price_above_ma50],
-          ['MA150↑', tt.price_above_ma150],
-          ['MA200↑', tt.price_above_ma200],
-          ['50>150', tt.ma50_above_ma150],
-          ['150>200', tt.ma150_above_ma200],
-          ['200추세', tt.ma200_uptrend],
-          ['52w고점-25%', tt.within_25pct_of_52w_high],
-          ['52w저점+25%', tt.above_25pct_from_52w_low],
-          ['RS70+', tt.rs_rating_70plus],
-        ].map(([name, ok]) => `<span class="mv-chip ${ok?'pass':'fail'}">${name}</span>`).join('');
-        const fundIcons = [
-          [`EPS YoY ${fund.eps_growth_q_yoy ?? '—'}%`, fund.eps_growth_25pct],
-          [`EPS가속`, fund.eps_accelerating],
-          [`매출 YoY ${fund.sales_growth_q_yoy ?? '—'}%`, fund.sales_growth_15pct],
-          [`OPM(Q) ${fund.op_margin_q ?? 0}%`, fund.op_margin_q_10pct],
-          [`OPM(연) ${fund.op_margin_annual ?? 0}%`, fund.op_margin_annual_10pct],
-          [`OPM(3년) ${fund.op_margin_3y_avg ?? 0}%`, fund.op_margin_3y_avg_20pct],
-        ].map(([name, ok]) => `<span class="mv-chip ${ok?'pass':'fail'}">${name}</span>`).join('');
-        const setupIcons = [
-          ['5일타이트', setup['5day_tightness_10pct']],
-          ['5일 시-종 5%', setup['5day_open_close_5pct']],
-          ['거래대금 70억', setup.trade_value_7B_1x],
-          ['임펄스 +25%', setup.impulse_25pct_20d],
-        ].map(([name, ok]) => `<span class="mv-chip ${ok?'pass':'fail'}">${name}</span>`).join('');
-        const rsVal = tt._rs_value !== null && tt._rs_value !== undefined ? `RS ${tt._rs_value}` : '';
-        const ribbon = r.minervini_strict
-          ? `<span class="mv-ribbon strict">엄격 통과</span>`
-          : (r.minervini_strong ? `<span class="mv-ribbon strong">우량</span>` : '');
-        html += `
-          <div class="mv-card ${cardCat}" data-code="${r.code}" onclick="openStockModal('${r.code}')">
-            <div class="mv-head">
-              <div class="mv-rank">#${i + 1}</div>
-              <div class="mv-name-block">
-                <div class="mv-name">${r.name} ${ribbon}</div>
-                <div class="mv-sub">${r.code} · ${r.market || ''} · ${r.price ? r.price.toLocaleString('ko-KR') : '—'}원
-                  <span class="${cls}">${sign}${(r.change ?? 0).toFixed(2)}%</span>
-                  · ${rsVal}</div>
-                ${rankBadge}
-              </div>
-              <div class="mv-score">
-                <div class="mv-score-total">${r.total_score ?? 0}</div>
-                <div class="mv-score-detail">TT ${r.tt_score}/40 · S ${r.setup_score}/20 · F ${r.fund_score}/40</div>
-              </div>
-            </div>
-            <div class="mv-section-label">Trend Template (${r.tt_passed_count}/8)</div>
-            <div class="mv-chips">${ttIcons}</div>
-            <div class="mv-section-label">Fundamentals (${r.fund_passed_count}/3 핵심)</div>
-            <div class="mv-chips">${fundIcons}</div>
-            <div class="mv-section-label">Setup / Liquidity</div>
-            <div class="mv-chips">${setupIcons}</div>
-          </div>`;
+        html += renderMinerviniCardHTML(r, i, strictRankMap, strongRankMap, allStrict.length, allStrong.length);
       });
       html += `</div>`;
     }
@@ -3672,7 +3603,80 @@ function setMinerviniFilter(f) {
   renderMinerviniView();
 }
 
-// 과거 날짜 미너비니 결과 (archive lite 데이터)
+// 미너비니 상세 카드 HTML (live + archive 공용)
+function renderMinerviniCardHTML(r, idx, strictRankMap, strongRankMap, allStrictLen, allStrongLen) {
+  const tt = r.trend_template || {};
+  const fund = r.fundamentals || {};
+  const setup = r.setup || {};
+  const cls = r.change > 0 ? 'up' : r.change < 0 ? 'down' : 'flat';
+  const sign = r.change > 0 ? '+' : '';
+  let cardCat = '', rankBadge = '';
+  if (r.minervini_strict && strictRankMap[r.code]) {
+    cardCat = 'cat-mv-strict';
+    const rk = strictRankMap[r.code];
+    const pct = Math.max(1, Math.round(rk / allStrictLen * 100));
+    rankBadge = `<span class="mv-cat-rank cat-mv-strict">🏆 엄격 ${allStrictLen}개 중 #${rk} (상위 ${pct}%)</span>`;
+  } else if (r.minervini_strong && strongRankMap[r.code]) {
+    cardCat = 'cat-mv-strong';
+    const rk = strongRankMap[r.code];
+    const pct = Math.max(1, Math.round(rk / allStrongLen * 100));
+    rankBadge = `<span class="mv-cat-rank cat-mv-strong">⭐ 우량 ${allStrongLen}개 중 #${rk} (상위 ${pct}%)</span>`;
+  }
+  const ttIcons = [
+    ['MA50↑', tt.price_above_ma50],
+    ['MA150↑', tt.price_above_ma150],
+    ['MA200↑', tt.price_above_ma200],
+    ['50>150', tt.ma50_above_ma150],
+    ['150>200', tt.ma150_above_ma200],
+    ['200추세', tt.ma200_uptrend],
+    ['52w고점-25%', tt.within_25pct_of_52w_high],
+    ['52w저점+25%', tt.above_25pct_from_52w_low],
+    ['RS70+', tt.rs_rating_70plus],
+  ].map(([name, ok]) => `<span class="mv-chip ${ok?'pass':'fail'}">${name}</span>`).join('');
+  const fundIcons = [
+    [`EPS YoY ${fund.eps_growth_q_yoy ?? '—'}%`, fund.eps_growth_25pct],
+    [`EPS가속`, fund.eps_accelerating],
+    [`매출 YoY ${fund.sales_growth_q_yoy ?? '—'}%`, fund.sales_growth_15pct],
+    [`OPM(Q) ${fund.op_margin_q ?? 0}%`, fund.op_margin_q_10pct],
+    [`OPM(연) ${fund.op_margin_annual ?? 0}%`, fund.op_margin_annual_10pct],
+    [`OPM(3년) ${fund.op_margin_3y_avg ?? 0}%`, fund.op_margin_3y_avg_20pct],
+  ].map(([name, ok]) => `<span class="mv-chip ${ok?'pass':'fail'}">${name}</span>`).join('');
+  const setupIcons = [
+    ['5일타이트', setup['5day_tightness_10pct']],
+    ['5일 시-종 5%', setup['5day_open_close_5pct']],
+    ['거래대금 70억', setup.trade_value_7B_1x],
+    ['임펄스 +25%', setup.impulse_25pct_20d],
+  ].map(([name, ok]) => `<span class="mv-chip ${ok?'pass':'fail'}">${name}</span>`).join('');
+  const rsVal = tt._rs_value !== null && tt._rs_value !== undefined ? `RS ${tt._rs_value}` : '';
+  const ribbon = r.minervini_strict
+    ? `<span class="mv-ribbon strict">엄격 통과</span>`
+    : (r.minervini_strong ? `<span class="mv-ribbon strong">우량</span>` : '');
+  return `
+    <div class="mv-card ${cardCat}" data-code="${r.code}" onclick="openStockModal('${r.code}')">
+      <div class="mv-head">
+        <div class="mv-rank">#${idx + 1}</div>
+        <div class="mv-name-block">
+          <div class="mv-name">${r.name} ${ribbon}</div>
+          <div class="mv-sub">${r.code} · ${r.market || ''} · ${r.price ? r.price.toLocaleString('ko-KR') : '—'}원
+            <span class="${cls}">${sign}${(r.change ?? 0).toFixed(2)}%</span>
+            · ${rsVal}</div>
+          ${rankBadge}
+        </div>
+        <div class="mv-score">
+          <div class="mv-score-total">${r.total_score ?? 0}</div>
+          <div class="mv-score-detail">TT ${r.tt_score ?? '—'}/40 · S ${r.setup_score ?? '—'}/20 · F ${r.fund_score ?? '—'}/40</div>
+        </div>
+      </div>
+      <div class="mv-section-label">Trend Template (${r.tt_passed_count ?? '—'}/8)</div>
+      <div class="mv-chips">${ttIcons}</div>
+      <div class="mv-section-label">Fundamentals (${r.fund_passed_count ?? '—'}/3 핵심)</div>
+      <div class="mv-chips">${fundIcons}</div>
+      <div class="mv-section-label">Setup / Liquidity</div>
+      <div class="mv-chips">${setupIcons}</div>
+    </div>`;
+}
+
+// 과거 날짜 미너비니 결과 (archive)
 function renderMinerviniArchive(date, filter) {
   const el = document.getElementById('strength');
   if (!el) return;
@@ -3681,7 +3685,7 @@ function renderMinerviniArchive(date, filter) {
     const label = `${date.slice(0,4)}-${date.slice(4,6)}-${date.slice(6,8)}`;
     let html = `<div class="strength-section">
       <div class="strength-title">🎯 미너비니 — ${label}</div>
-      <div class="strength-meta">📅 과거 기록 (간략 정보) · 종목 클릭 시 현재 상세</div>
+      <div class="strength-meta">📅 과거 기록 · 종목 클릭 시 현재 상세</div>
       <div style="margin-top:8px">${dateSelectorHTML('screener', date)}</div>
       <div class="market-filter" style="margin-top:8px">
         <button class="${filter==='strict'?'active':''}" onclick="setMinerviniFilter('strict')">엄격(8/8)</button>
@@ -3699,16 +3703,22 @@ function renderMinerviniArchive(date, filter) {
     if (filter === 'strict') filtered = all.filter(r => r.minervini_strict);
     else if (filter === 'strong') filtered = all.filter(r => r.minervini_strong);
     else filtered = all;
-    const strictTotal = all.filter(r => r.minervini_strict).length;
-    const strongTotal = all.filter(r => r.minervini_strong).length;
+    const allStrict = all.filter(r => r.minervini_strict);
+    const allStrong = all.filter(r => r.minervini_strong);
+    const strictRankMap = {}; allStrict.forEach((r, i) => { strictRankMap[r.code] = i + 1; });
+    const strongRankMap = {}; allStrong.forEach((r, i) => { strongRankMap[r.code] = i + 1; });
+    // 구버전 archive(상세 없음) 호환 — trend_template 있으면 상세 카드
+    const detailed = all.some(r => r.trend_template);
     html += `<div class="strength-section" style="padding-bottom:4px">
-      <div style="font-size:11px;color:var(--fg-dim)">엄격 ${strictTotal}개 · 우량 ${strongTotal}개</div>`;
+      <div style="font-size:11px;color:var(--fg-dim)">엄격 ${allStrict.length}개 · 우량 ${allStrong.length}개${detailed ? '' : ' · (구버전 기록 — 간략 정보)'}</div>`;
     if (filtered.length === 0) {
       html += `<div class="strength-loading">해당 조건 종목 없음</div></div>`;
     } else {
       html += `</div><div class="strength-section">`;
-      filtered.forEach((r, i) => {
-        html += renderArchiveCard(r, i, 'minervini');
+      filtered.slice(0, 50).forEach((r, i) => {
+        html += detailed
+          ? renderMinerviniCardHTML(r, i, strictRankMap, strongRankMap, allStrict.length, allStrong.length)
+          : renderArchiveCard(r, i, 'minervini');
       });
       html += `</div>`;
     }
@@ -3834,63 +3844,7 @@ function renderMomentumView() {
       allPre.forEach((r, i) => { preRankMap[r.code] = i + 1; });
       html += `<div class="strength-section">`;
       filtered.slice(0, 50).forEach((r, i) => {
-        const cls = r.change > 0 ? 'up' : r.change < 0 ? 'down' : 'flat';
-        const sign = r.change > 0 ? '+' : '';
-        const techIcons = [
-          [r.ma200_cross_days_ago ? `MA200 ${r.ma200_cross_days_ago}일전 돌파` : 'MA200 돌파', r.ma200_cross_recent],
-          ['VCP 완성', r.vcp_contracting],
-          ['Tight 10일', r.tight_action],
-          [`거래량 ${r.vol_ratio}x`, r.volume_surge_2x],
-          ['Pivot 돌파', r.pivot_breakout],
-          ['Higher Lows', r.higher_lows],
-        ].map(([n, ok]) => `<span class="mv-chip ${ok?'pass':'fail'}">${n}</span>`).join('');
-        const flowIcons = [
-          [`거래량 ${r.vol_ratio}x`, r.volume_surge_15x],
-          [`테마 강세 (W ${r.theme_weight})`, r.theme_rising],
-          [`Pocket Pivot 🤫`, r.pocket_pivot],
-        ].map(([n, ok]) => `<span class="mv-chip ${ok?'pass':'fail'}">${n}</span>`).join('');
-        const epsTxt = r.eps_growth_recent !== null ? `EPS ${r.eps_growth_recent}%` : 'EPS —';
-        const fundIcons = [
-          [`${epsTxt} 가속화`, r.eps_accelerating],
-        ].map(([n, ok]) => `<span class="mv-chip ${ok?'pass':'fail'}">${n}</span>`).join('');
-        const ribbon = r.momentum_strong
-          ? `<span class="mv-ribbon strict">🔥 강세</span>`
-          : (r.pre_breakout ? `<span class="mv-ribbon strong">⏳ 사전</span>` : '');
-        // 카테고리 클래스 + percentile rank
-        let cardCat = '', rankBadge = '';
-        if (r.momentum_strong && momStrongRankMap[r.code]) {
-          cardCat = 'cat-mom-strong';
-          const rk = momStrongRankMap[r.code];
-          const pct = Math.max(1, Math.round(rk / allMomStrong.length * 100));
-          rankBadge = `<span class="mv-cat-rank cat-mom-strong">🔥 강세 ${allMomStrong.length}개 중 #${rk} (상위 ${pct}%)</span>`;
-        } else if (r.pre_breakout && preRankMap[r.code]) {
-          cardCat = 'cat-pre';
-          const rk = preRankMap[r.code];
-          const pct = Math.max(1, Math.round(rk / allPre.length * 100));
-          rankBadge = `<span class="mv-cat-rank cat-pre">⏳ 사전 ${allPre.length}개 중 #${rk} (상위 ${pct}%)</span>`;
-        }
-        html += `
-          <div class="mv-card ${cardCat}" data-code="${r.code}" onclick="openStockModal('${r.code}')">
-            <div class="mv-head">
-              <div class="mv-rank">#${i + 1}</div>
-              <div class="mv-name-block">
-                <div class="mv-name">${r.name} ${ribbon}</div>
-                <div class="mv-sub">${r.code} · ${r.market || ''} · ${r.price ? r.price.toLocaleString('ko-KR') : '—'}원
-                  <span class="${cls}">${sign}${(r.change ?? 0).toFixed(2)}%</span></div>
-                ${rankBadge}
-              </div>
-              <div class="mv-score">
-                <div class="mv-score-total">${r.total_score ?? 0}</div>
-                <div class="mv-score-detail">기술 ${r.technical_score}/60 · 자금 ${r.flow_score}/20 · 펀 ${r.fund_score}/20</div>
-              </div>
-            </div>
-            <div class="mv-section-label">기술 신호</div>
-            <div class="mv-chips">${techIcons}</div>
-            <div class="mv-section-label">자금흐름</div>
-            <div class="mv-chips">${flowIcons}</div>
-            <div class="mv-section-label">펀더멘털</div>
-            <div class="mv-chips">${fundIcons}</div>
-          </div>`;
+        html += renderMomentumCardHTML(r, i, momStrongRankMap, preRankMap, allMomStrong.length, allPre.length);
       });
       html += `</div>`;
     }
@@ -3903,7 +3857,67 @@ function setMomentumFilter(f) {
   renderMomentumView();
 }
 
-// 과거 날짜 모멘텀 결과 (archive lite 데이터)
+// 모멘텀 상세 카드 HTML (live + archive 공용)
+function renderMomentumCardHTML(r, idx, momStrongRankMap, preRankMap, allMomStrongLen, allPreLen) {
+  const cls = r.change > 0 ? 'up' : r.change < 0 ? 'down' : 'flat';
+  const sign = r.change > 0 ? '+' : '';
+  const techIcons = [
+    [r.ma200_cross_days_ago ? `MA200 ${r.ma200_cross_days_ago}일전 돌파` : 'MA200 돌파', r.ma200_cross_recent],
+    ['VCP 완성', r.vcp_contracting],
+    ['Tight 10일', r.tight_action],
+    [`거래량 ${r.vol_ratio}x`, r.volume_surge_2x],
+    ['Pivot 돌파', r.pivot_breakout],
+    ['Higher Lows', r.higher_lows],
+  ].map(([n, ok]) => `<span class="mv-chip ${ok?'pass':'fail'}">${n}</span>`).join('');
+  const flowIcons = [
+    [`거래량 ${r.vol_ratio}x`, r.volume_surge_15x],
+    [`테마 강세 (W ${r.theme_weight})`, r.theme_rising],
+    [`Pocket Pivot 🤫`, r.pocket_pivot],
+  ].map(([n, ok]) => `<span class="mv-chip ${ok?'pass':'fail'}">${n}</span>`).join('');
+  const epsTxt = (r.eps_growth_recent !== null && r.eps_growth_recent !== undefined) ? `EPS ${r.eps_growth_recent}%` : 'EPS —';
+  const fundIcons = [
+    [`${epsTxt} 가속화`, r.eps_accelerating],
+  ].map(([n, ok]) => `<span class="mv-chip ${ok?'pass':'fail'}">${n}</span>`).join('');
+  const ribbon = r.momentum_strong
+    ? `<span class="mv-ribbon strict">🔥 강세</span>`
+    : (r.pre_breakout ? `<span class="mv-ribbon strong">⏳ 사전</span>` : '');
+  let cardCat = '', rankBadge = '';
+  if (r.momentum_strong && momStrongRankMap[r.code]) {
+    cardCat = 'cat-mom-strong';
+    const rk = momStrongRankMap[r.code];
+    const pct = Math.max(1, Math.round(rk / allMomStrongLen * 100));
+    rankBadge = `<span class="mv-cat-rank cat-mom-strong">🔥 강세 ${allMomStrongLen}개 중 #${rk} (상위 ${pct}%)</span>`;
+  } else if (r.pre_breakout && preRankMap[r.code]) {
+    cardCat = 'cat-pre';
+    const rk = preRankMap[r.code];
+    const pct = Math.max(1, Math.round(rk / allPreLen * 100));
+    rankBadge = `<span class="mv-cat-rank cat-pre">⏳ 사전 ${allPreLen}개 중 #${rk} (상위 ${pct}%)</span>`;
+  }
+  return `
+    <div class="mv-card ${cardCat}" data-code="${r.code}" onclick="openStockModal('${r.code}')">
+      <div class="mv-head">
+        <div class="mv-rank">#${idx + 1}</div>
+        <div class="mv-name-block">
+          <div class="mv-name">${r.name} ${ribbon}</div>
+          <div class="mv-sub">${r.code} · ${r.market || ''} · ${r.price ? r.price.toLocaleString('ko-KR') : '—'}원
+            <span class="${cls}">${sign}${(r.change ?? 0).toFixed(2)}%</span></div>
+          ${rankBadge}
+        </div>
+        <div class="mv-score">
+          <div class="mv-score-total">${r.total_score ?? 0}</div>
+          <div class="mv-score-detail">기술 ${r.technical_score ?? '—'}/60 · 자금 ${r.flow_score ?? '—'}/20 · 펀 ${r.fund_score ?? '—'}/20</div>
+        </div>
+      </div>
+      <div class="mv-section-label">기술 신호</div>
+      <div class="mv-chips">${techIcons}</div>
+      <div class="mv-section-label">자금흐름</div>
+      <div class="mv-chips">${flowIcons}</div>
+      <div class="mv-section-label">펀더멘털</div>
+      <div class="mv-chips">${fundIcons}</div>
+    </div>`;
+}
+
+// 과거 날짜 모멘텀 결과 (archive)
 function renderMomentumArchive(date, filter) {
   const el = document.getElementById('strength');
   if (!el) return;
@@ -3912,7 +3926,7 @@ function renderMomentumArchive(date, filter) {
     const label = `${date.slice(0,4)}-${date.slice(4,6)}-${date.slice(6,8)}`;
     let html = `<div class="strength-section">
       <div class="strength-title">🚀 모멘텀 — ${label}</div>
-      <div class="strength-meta">📅 과거 기록 (간략 정보) · 종목 클릭 시 현재 상세</div>
+      <div class="strength-meta">📅 과거 기록 · 종목 클릭 시 현재 상세</div>
       <div style="margin-top:8px">${dateSelectorHTML('momentum', date)}</div>
       <div class="market-filter" style="margin-top:8px">
         <button class="${filter==='strong'?'active':''}" onclick="setMomentumFilter('strong')">🔥 강세</button>
@@ -3930,16 +3944,22 @@ function renderMomentumArchive(date, filter) {
     if (filter === 'strong') filtered = all.filter(r => r.momentum_strong);
     else if (filter === 'pre') filtered = all.filter(r => r.pre_breakout);
     else filtered = all;
-    const strongTotal = all.filter(r => r.momentum_strong).length;
-    const preTotal = all.filter(r => r.pre_breakout).length;
+    const allMomStrong = all.filter(r => r.momentum_strong);
+    const allPre = all.filter(r => r.pre_breakout);
+    const momStrongRankMap = {}; allMomStrong.forEach((r, i) => { momStrongRankMap[r.code] = i + 1; });
+    const preRankMap = {}; allPre.forEach((r, i) => { preRankMap[r.code] = i + 1; });
+    // 구버전 archive(상세 없음) 호환 — technical_score 있으면 상세 카드
+    const detailed = all.some(r => r.technical_score !== undefined);
     html += `<div class="strength-section" style="padding-bottom:4px">
-      <div style="font-size:11px;color:var(--fg-dim)">강세 ${strongTotal}개 · 사전 ${preTotal}개</div>`;
+      <div style="font-size:11px;color:var(--fg-dim)">강세 ${allMomStrong.length}개 · 사전 ${allPre.length}개${detailed ? '' : ' · (구버전 기록 — 간략 정보)'}</div>`;
     if (filtered.length === 0) {
       html += `<div class="strength-loading">해당 조건 종목 없음</div></div>`;
     } else {
       html += `</div><div class="strength-section">`;
-      filtered.forEach((r, i) => {
-        html += renderArchiveCard(r, i, 'momentum');
+      filtered.slice(0, 50).forEach((r, i) => {
+        html += detailed
+          ? renderMomentumCardHTML(r, i, momStrongRankMap, preRankMap, allMomStrong.length, allPre.length)
+          : renderArchiveCard(r, i, 'momentum');
       });
       html += `</div>`;
     }
