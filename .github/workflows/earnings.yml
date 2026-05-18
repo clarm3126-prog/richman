@@ -46,7 +46,9 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/earnings_calendar.json data/earnings_alerted.json data/alert_log.json 2>/dev/null || true
+          for f in data/earnings_calendar.json data/earnings_alerted.json data/alert_log.json; do
+            git add "$f" 2>/dev/null || true
+          done
           if git diff --cached --quiet; then
             echo "No changes"
             exit 0
