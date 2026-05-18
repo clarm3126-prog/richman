@@ -3972,6 +3972,17 @@ function restoreEarningsItems() {
   localStorage.removeItem(EARNINGS_HIDDEN_KEY);
   renderWatchlistView();
 }
+function unhideEarningsItem(rcept) {
+  const s = getHiddenEarnings();
+  s.delete(rcept);
+  localStorage.setItem(EARNINGS_HIDDEN_KEY, JSON.stringify([...s]));
+  renderWatchlistView();
+}
+let earningsHiddenExpanded = false;
+function toggleEarningsHiddenList() {
+  earningsHiddenExpanded = !earningsHiddenExpanded;
+  renderWatchlistView();
+}
 function toggleEarningsBanner(off) {
   if (off) localStorage.setItem(EARNINGS_BANNER_KEY, '1');
   else localStorage.removeItem(EARNINGS_BANNER_KEY);
@@ -4020,7 +4031,22 @@ function renderEarningsBanner(watchlistCodes) {
     </div>`;
   }
   if (hiddenCount > 0) {
-    html += `<div style="margin-top:8px"><button class="refresh-btn" onclick="restoreEarningsItems()">숨긴 ${hiddenCount}개 다시 보기</button></div>`;
+    const hiddenItems = mine.filter(d => hidden.has(d.rcept_no));
+    html += `<div style="margin-top:8px">
+      <button class="refresh-btn" onclick="toggleEarningsHiddenList()">숨긴 공시 ${hiddenCount}개 ${earningsHiddenExpanded ? '▴ 접기' : '▾ 펼치기'}</button>`;
+    if (earningsHiddenExpanded) {
+      html += `<div style="margin-top:6px;padding-top:6px;border-top:1px dashed #d1d5db">`;
+      for (const d of hiddenItems) {
+        const isProv = (d.report_nm || '').includes('잠정');
+        html += `<div style="padding:5px 0;display:flex;justify-content:space-between;gap:8px;align-items:center">
+          <span style="min-width:0;font-size:11px;color:var(--fg-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${isProv ? '🚨' : '📋'} ${d.name} · ${d.report_nm}</span>
+          <button class="refresh-btn" style="flex:none" onclick="unhideEarningsItem('${d.rcept_no}')">다시 표시</button>
+        </div>`;
+      }
+      html += `<div style="margin-top:6px;text-align:right"><button class="refresh-btn" onclick="restoreEarningsItems()">전체 다시 보기</button></div>`;
+      html += `</div>`;
+    }
+    html += `</div>`;
   }
   html += `</div></div>`;
   return html;
