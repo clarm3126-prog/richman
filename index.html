@@ -4044,21 +4044,45 @@ async function loadExitSignals() {
   return EXIT_SIGNALS_LOADING;
 }
 
+// 매도 시그널 숨김 상태 (localStorage) — 거래일+종목 기준이라 다음날 재발생 시 다시 표시
+const EXIT_HIDDEN_KEY = 'exit_hidden';
+function getHiddenExit() {
+  try { return new Set(JSON.parse(localStorage.getItem(EXIT_HIDDEN_KEY) || '[]')); }
+  catch { return new Set(); }
+}
+function hideExitSignal(key) {
+  const s = getHiddenExit();
+  s.add(key);
+  localStorage.setItem(EXIT_HIDDEN_KEY, JSON.stringify([...s]));
+  renderWatchlistView();
+}
+function restoreExitSignals() {
+  localStorage.removeItem(EXIT_HIDDEN_KEY);
+  renderWatchlistView();
+}
+
 function renderExitSignalsBanner(watchlistCodes) {
   // 보유/관심 구분해서 표시. Telegram은 보유만 발송됨.
   if (!EXIT_SIGNALS_DATA || EXIT_SIGNALS_DATA.__empty || !EXIT_SIGNALS_DATA.results) return '';
   const wlSet = new Set(watchlistCodes);
+  const day = EXIT_SIGNALS_DATA.trading_day || '';
+  const hidden = getHiddenExit();
   const ownedCrit = [], ownedWarn = [];
   const wlCrit = [], wlWarn = [];
+  let hiddenCount = 0;
   for (const r of EXIT_SIGNALS_DATA.results) {
     if (!wlSet.has(r.code)) continue;
+    if (r.overall !== 'critical' && r.overall !== 'warning') continue;
+    if (hidden.has(day + '_' + r.code)) { hiddenCount++; continue; }
     const isOwned = WATCHLIST[r.code] && WATCHLIST[r.code].owned;
     if (r.overall === 'critical') (isOwned ? ownedCrit : wlCrit).push(r);
-    else if (r.overall === 'warning') (isOwned ? ownedWarn : wlWarn).push(r);
+    else (isOwned ? ownedWarn : wlWarn).push(r);
   }
   const hasOwned = ownedCrit.length + ownedWarn.length > 0;
   const hasWl = wlCrit.length + wlWarn.length > 0;
-  if (!hasOwned && !hasWl) return '';
+  if (!hasOwned && !hasWl && hiddenCount === 0) return '';
+  const dismissBtn = (r) =>
+    `<button onclick="hideExitSignal('${day}_${r.code}')" title="이 시그널 숨기기" style="flex:none;background:none;border:none;color:var(--fg-dim);font-size:18px;line-height:1;cursor:pointer;padding:0 4px">×</button>`;
   let html = '';
   // 보유 종목 (빨강 강조 — Telegram 알림 보내짐)
   if (hasOwned) {
@@ -4077,10 +4101,13 @@ function renderExitSignalsBanner(watchlistCodes) {
       const sigs = (r.signals || []).map(s =>
         `<span class="mv-chip ${s.severity === 'critical' ? 'fail' : 'pass'}" style="background:${s.severity === 'critical' ? '#fee2e2' : '#fef3c7'};color:${s.severity === 'critical' ? '#991b1b' : '#92400e'};border-color:${s.severity === 'critical' ? '#fca5a5' : '#fcd34d'}">${s.label}</span>`
       ).join('');
-      html += `<div style="padding:8px 0;border-bottom:1px solid #fee2e2;cursor:pointer" onclick="openStockModal('${r.code}')">
-        <div style="font-weight:700;font-size:13px">${r.overall === 'critical' ? '🛑' : '⚠️'} ${r.name} <span style="color:var(--fg-dim);font-weight:400;font-size:11px">${r.code}</span> 📌</div>
-        <div style="font-size:11px;color:var(--fg-dim);margin-top:2px">${(r.current_price || 0).toLocaleString('ko-KR')}원 · ${r.today_change >= 0 ? '+' : ''}${r.today_change}%${retLine}</div>
-        <div class="mv-chips" style="margin-top:4px">${sigs}</div>
+      html += `<div style="padding:8px 0;border-bottom:1px solid #fee2e2;display:flex;justify-content:space-between;gap:8px">
+        <div style="min-width:0;cursor:pointer" onclick="openStockModal('${r.code}')">
+          <div style="font-weight:700;font-size:13px">${r.overall === 'critical' ? '🛑' : '⚠️'} ${r.name} <span style="color:var(--fg-dim);font-weight:400;font-size:11px">${r.code}</span> 📌</div>
+          <div style="font-size:11px;color:var(--fg-dim);margin-top:2px">${(r.current_price || 0).toLocaleString('ko-KR')}원 · ${r.today_change >= 0 ? '+' : ''}${r.today_change}%${retLine}</div>
+          <div class="mv-chips" style="margin-top:4px">${sigs}</div>
+        </div>
+        ${dismissBtn(r)}
       </div>`;
     }
     html += `</div></div>`;
@@ -4095,13 +4122,22 @@ function renderExitSignalsBanner(watchlistCodes) {
       const sigs = (r.signals || []).map(s =>
         `<span class="mv-chip ${s.severity === 'critical' ? 'fail' : 'pass'}" style="background:${s.severity === 'critical' ? '#fee2e2' : '#fef3c7'};color:${s.severity === 'critical' ? '#991b1b' : '#92400e'};border-color:${s.severity === 'critical' ? '#fca5a5' : '#fcd34d'}">${s.label}</span>`
       ).join('');
-      html += `<div style="padding:8px 0;border-bottom:1px solid #fef3c7;cursor:pointer" onclick="openStockModal('${r.code}')">
-        <div style="font-weight:700;font-size:13px">${r.overall === 'critical' ? '🛑' : '⚠️'} ${r.name} <span style="color:var(--fg-dim);font-weight:400;font-size:11px">${r.code}</span></div>
-        <div style="font-size:11px;color:var(--fg-dim);margin-top:2px">${(r.current_price || 0).toLocaleString('ko-KR')}원 · ${r.today_change >= 0 ? '+' : ''}${r.today_change}%</div>
-        <div class="mv-chips" style="margin-top:4px">${sigs}</div>
+      html += `<div style="padding:8px 0;border-bottom:1px solid #fef3c7;display:flex;justify-content:space-between;gap:8px">
+        <div style="min-width:0;cursor:pointer" onclick="openStockModal('${r.code}')">
+          <div style="font-weight:700;font-size:13px">${r.overall === 'critical' ? '🛑' : '⚠️'} ${r.name} <span style="color:var(--fg-dim);font-weight:400;font-size:11px">${r.code}</span></div>
+          <div style="font-size:11px;color:var(--fg-dim);margin-top:2px">${(r.current_price || 0).toLocaleString('ko-KR')}원 · ${r.today_change >= 0 ? '+' : ''}${r.today_change}%</div>
+          <div class="mv-chips" style="margin-top:4px">${sigs}</div>
+        </div>
+        ${dismissBtn(r)}
       </div>`;
     }
     html += `</div></div>`;
+  }
+  // 숨긴 시그널 복원
+  if (hiddenCount > 0) {
+    html += `<div class="strength-section" style="padding:8px 14px;text-align:center">
+      <button class="refresh-btn" onclick="restoreExitSignals()">숨긴 매도 시그널 ${hiddenCount}개 다시 보기</button>
+    </div>`;
   }
   return html;
 }
