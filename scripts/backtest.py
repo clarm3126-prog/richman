@@ -201,6 +201,35 @@ def save_current_screener_to_history():
                 json.dumps({"dates": dates}, separators=(",", ":")), encoding="utf-8")
         except Exception as e:
             print(f"  history save failed: {src}: {e}")
+
+    # 오닐 ATH 돌파 archive — 구조가 달라서 별도 처리 (frontend 날짜 선택용)
+    ath_src = Path("data/ath_breakouts.json")
+    if ath_src.exists():
+        try:
+            data = json.loads(ath_src.read_text(encoding="utf-8"))
+            day = data.get("trading_day", today)
+            d = Path("data/ath_breakouts_history")
+            d.mkdir(parents=True, exist_ok=True)
+            dst_path = d / f"{day}.json"
+            # 돌파 종목이 하나라도 있을 때만 archive (빈 날은 캘린더에서 제외)
+            if (data.get("close") or data.get("intraday")) and not dst_path.exists():
+                lite = {
+                    "trading_day": day,
+                    "updated": data.get("updated", ""),
+                    "intraday": data.get("intraday", []),
+                    "close": data.get("close", []),
+                }
+                dst_path.write_text(json.dumps(lite, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+                saved.append(str(dst_path))
+            dates = sorted(
+                [f.stem for f in d.glob("*.json") if f.stem != "index"],
+                reverse=True,
+            )
+            (d / "index.json").write_text(
+                json.dumps({"dates": dates}, separators=(",", ":")), encoding="utf-8")
+        except Exception as e:
+            print(f"  ath history save failed: {e}")
+
     if saved:
         print(f"  archived to history: {saved}")
 
