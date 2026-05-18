@@ -34,8 +34,10 @@ sys.path.insert(0, str(Path(__file__).parent))
 from screener import send_telegram, DEDUP_RESET_DAYS, log_alert
 
 
-def fetch_dart_disclosures(bgn_de, end_de, keyword=None, max_pages=5):
-    """DART 공시검색 (특정 기간)."""
+def fetch_dart_disclosures(bgn_de, end_de, keyword=None, max_pages=5, pblntf_ty=None):
+    """DART 공시검색 (특정 기간).
+    pblntf_ty: 공시유형 필터 ('A'=정기공시 등). None이면 전체.
+    """
     if not DART_KEY:
         return []
     out = []
@@ -48,6 +50,8 @@ def fetch_dart_disclosures(bgn_de, end_de, keyword=None, max_pages=5):
             "page_no": page,
             "page_count": 100,
         }
+        if pblntf_ty:
+            params["pblntf_ty"] = pblntf_ty
         try:
             r = requests.get(url, params=params, timeout=10)
             data = r.json()
@@ -463,28 +467,46 @@ def main():
         return
 
     today = datetime.now(KST)
-    bgn_de = (today - timedelta(days=7)).strftime("%Y%m%d")
     end_de = today.strftime("%Y%m%d")
+    # 잠정실적 surprise 알림 — 최근 7일 (시의성)
+    bgn_de = (today - timedelta(days=7)).strftime("%Y%m%d")
+    # 정기보고서 캘린더 — 최근 45일 (분기 실적 시즌 전체 cover)
+    cal_bgn = (today - timedelta(days=45)).strftime("%Y%m%d")
 
-    print(f"  fetching disclosures {bgn_de} ~ {end_de}...")
-    items = fetch_dart_disclosures(bgn_de, end_de, max_pages=10)
-    print(f"  total disclosures: {len(items)}")
+    # 정기공시(A) = 분기/반기/사업보고서 — 45일, 유형 필터로 페이지 수 절감
+    print(f"  fetching periodic reports {cal_bgn} ~ {end_de} (정기공시)...")
+    periodic_items = fetch_dart_disclosures(cal_bgn, end_de, max_pages=100, pblntf_ty="A")
+    print(f"  periodic disclosures: {len(periodic_items)}")
 
-    # 전체 실적 관련 공시 추출 — frontend calendar용 (정기보고서 포함)
-    all_earnings = parse_earnings_disclosures(items, surprise_only=False)
+    # 최근 7일 전체 공시 — 잠정실적/손익구조 변경 catch
+    print(f"  fetching recent disclosures {bgn_de} ~ {end_de}...")
+    recent_items = fetch_dart_disclosures(bgn_de, end_de, max_pages=20)
+    print(f"  recent disclosures: {len(recent_items)}")
+
+    # 전체 실적 관련 공시 추출 — frontend calendar용 (정기보고서 45일 + 잠정실적 7일)
+    earnings_periodic = parse_earnings_disclosures(periodic_items, surprise_only=False)
+    earnings_recent = parse_earnings_disclosures(recent_items, surprise_only=False)
+    seen = set()
+    all_earnings = []
+    for d in earnings_periodic + earnings_recent:
+        if d["rcept_no"] in seen:
+            continue
+        seen.add(d["rcept_no"])
+        all_earnings.append(d)
+    all_earnings.sort(key=lambda x: x.get("rcept_dt", ""), reverse=True)
     print(f"  all earnings disclosures (frontend): {len(all_earnings)}")
 
     # 저장 (모든 실적 공시, frontend에서 필터링)
     out_path = Path("data/earnings_calendar.json")
     out_path.write_text(json.dumps({
         "updated": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
-        "period": {"from": bgn_de, "to": end_de},
+        "period": {"from": cal_bgn, "to": end_de},
         "disclosures": all_earnings,
     }, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     print(f"\n✅ Saved earnings_calendar.json ({len(all_earnings)} items)")
 
     # Telegram 알림 — surprise만 (잠정실적 한정), 관심 + strict만
-    surprise_earnings = parse_earnings_disclosures(items, surprise_only=True)
+    surprise_earnings = parse_earnings_disclosures(recent_items, surprise_only=True)
     print(f"  surprise disclosures (잠정실적): {len(surprise_earnings)}")
     target_codes = collect_target_codes()
     print(f"  target stocks (관심 + strict): {len(target_codes)}")
