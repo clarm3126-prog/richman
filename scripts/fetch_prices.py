@@ -750,9 +750,14 @@ def detect_ath_breakouts(stocks, investor_top, bot_token, chat_id):
                     if s.get("code"):
                         net_buyers.add(s["code"])
 
-    # 돌파 후보 탐색
+    # ATH 돌파 후보 탐색
+    # ATH_MIN_BASE_DAYS: 역대 고점이 이만큼 오래된 것만 = 진짜 베이스 돌파.
+    # 고점이 최근이면 = 이미 계속 신고가 달리는 종목 → 제외 (chasing 방지)
+    ATH_MIN_BASE_DAYS = 60
     breakouts = []
+    skipped_runner = 0
     vol_threshold = 1.5 if is_close else 1.0
+    today_d = now.date()
     for code, s in stocks.items():
         info = ath_cache.get(code)
         if not info:
@@ -766,7 +771,19 @@ def detect_ath_breakouts(stocks, investor_top, bot_token, chat_id):
         # 1. 역사적 신고가 돌파 (현재가 >= 캐시된 ATH)
         if price < ath:
             continue
-        # 2. 거래량 동반
+        # 2. 베이스 신선도 — 역대 고점이 60일+ 오래된 것만 (이미 달리는 종목 제외)
+        ath_date_str = info.get("ath_date", "")
+        if not ath_date_str:
+            continue
+        try:
+            ath_dt = datetime.strptime(ath_date_str, "%Y%m%d").date()
+            base_days = (today_d - ath_dt).days
+        except Exception:
+            continue
+        if base_days < ATH_MIN_BASE_DAYS:
+            skipped_runner += 1
+            continue
+        # 3. 거래량 동반
         vol_ratio = vol / avg_vol if avg_vol > 0 else 0
         if vol_ratio < vol_threshold:
             continue
@@ -777,13 +794,14 @@ def detect_ath_breakouts(stocks, investor_top, bot_token, chat_id):
             "price": price,
             "change": s.get("change", 0),
             "ath": ath,
-            "ath_date": info.get("ath_date", ""),
+            "ath_date": ath_date_str,
+            "base_days": base_days,
             "volume": vol,
             "vol_ratio": round(vol_ratio, 2),
             "supply_demand": code in net_buyers,
         })
     breakouts.sort(key=lambda x: x["vol_ratio"], reverse=True)
-    print(f"  ATH breakouts: {len(breakouts)} ({'마감' if is_close else '장중'}, vol≥{vol_threshold}x)")
+    print(f"  ATH breakouts: {len(breakouts)} ({'마감' if is_close else '장중'}, vol≥{vol_threshold}x) · 이미 달리는 종목 {skipped_runner}개 제외")
 
     # ath_breakouts.json 저장 (frontend 탭용)
     bo_path = Path("data/ath_breakouts.json")
@@ -836,10 +854,12 @@ def detect_ath_breakouts(stocks, investor_top, bot_token, chat_id):
     for b in new_alerts[:12]:
         sd = " · ⭐수급 동반" if b["supply_demand"] else ""
         sign = "+" if b["change"] > 0 else ""
+        base_d = b.get("base_days", 0)
+        base_txt = f"{base_d // 30}개월" if base_d >= 30 else f"{base_d}일"
         lines.append(
             f"• *{b['name']}* (`{b['code']}` {b['market']})\n"
             f"  {b['price']:,}원 ({sign}{b['change']:.2f}%) · 거래량 {b['vol_ratio']}x{sd}\n"
-            f"  📈 역사적 신고가 돌파 (이전 ATH {b['ath']:,.0f}원)"
+            f"  📈 {base_txt}만의 역사적 신고가 돌파 (이전 ATH {b['ath']:,.0f}원)"
         )
     if len(new_alerts) > 12:
         lines.append(f"... 외 {len(new_alerts) - 12}개")

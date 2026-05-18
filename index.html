@@ -5511,7 +5511,7 @@ function renderAthBreakouts() {
         <div class="ath-volratio">🔥 ${b.vol_ratio}x</div>
       </div>
       <div class="ath-tags">
-        <span class="ath-tag ath">📈 ATH 돌파</span>
+        <span class="ath-tag ath">📈 ${b.base_days ? (b.base_days >= 30 ? Math.floor(b.base_days/30)+'개월' : b.base_days+'일') + '만의 ' : ''}ATH 돌파</span>
         ${sd}
       </div>
     </div>`;
