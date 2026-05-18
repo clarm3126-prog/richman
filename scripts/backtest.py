@@ -171,26 +171,12 @@ def save_current_screener_to_history():
             d.mkdir(parents=True, exist_ok=True)
             dst_path = d / f"{day}.json"
             if not dst_path.exists():
-                # 가벼운 버전: 점수 + 핵심 필드 (frontend 날짜 선택 표시용)
-                lite = {
+                # 전체 상세 (기술 신호/펀더멘털/setup 등 모두 포함) — top 100, 과거 조회용
+                archive = {
                     "trading_day": day,
-                    "results": [
-                        {
-                            "code": r["code"],
-                            "name": r.get("name"),
-                            "market": r.get("market", ""),
-                            "price": r.get("price") or r.get("current_price"),
-                            "change": r.get("change", 0),
-                            "minervini_strict": r.get("minervini_strict", False),
-                            "minervini_strong": r.get("minervini_strong", False),
-                            "momentum_strong": r.get("momentum_strong", False),
-                            "pre_breakout": r.get("pre_breakout", False),
-                            "total_score": r.get("total_score"),
-                        }
-                        for r in (data.get("results") or [])[:100]
-                    ],
+                    "results": (data.get("results") or [])[:100],
                 }
-                dst_path.write_text(json.dumps(lite, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+                dst_path.write_text(json.dumps(archive, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
                 saved.append(str(dst_path))
             # index.json 갱신 — 사용 가능 날짜 목록 (frontend 날짜 선택용)
             dates = sorted(
