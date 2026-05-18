@@ -13,6 +13,9 @@ import pytz
 import requests
 from bs4 import BeautifulSoup
 
+sys.path.insert(0, str(Path(__file__).parent))
+from screener import is_excluded_security
+
 KST = pytz.timezone("Asia/Seoul")
 HEADERS = {
     "User-Agent": (
@@ -761,6 +764,10 @@ def detect_ath_breakouts(stocks, investor_top, bot_token, chat_id):
     for code, s in stocks.items():
         info = ath_cache.get(code)
         if not info:
+            continue
+        # ETF/ETN/선물/합성/SPAC/우선주 등 제외 (캐시가 오래돼도 실시간 필터)
+        excl, _ = is_excluded_security(s.get("name", ""), code)
+        if excl:
             continue
         ath = info.get("ath", 0)
         avg_vol = info.get("avg_vol_20d", 0)
