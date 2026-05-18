@@ -3476,12 +3476,17 @@ async function loadMinerviniData() {
 }
 
 // === 날짜 archive 로더 (미너비니/모멘텀 과거 날짜 조회) ===
-const ARCHIVE_INDEX = {};   // {screener:{dates:[]}, momentum:{dates:[]}}
+const ARCHIVE_INDEX = {};   // {screener:{dates:[]}, momentum:{dates:[]}, oneil:{dates:[]}}
 const ARCHIVE_CACHE = {};   // {screener_20260512: data}
+const ARCHIVE_DIRS = {
+  screener: 'screener_results_history',
+  momentum: 'momentum_results_history',
+  oneil: 'ath_breakouts_history',
+};
 
 async function loadArchiveIndex(which) {
   if (ARCHIVE_INDEX[which]) return ARCHIVE_INDEX[which];
-  const dir = which === 'screener' ? 'screener_results_history' : 'momentum_results_history';
+  const dir = ARCHIVE_DIRS[which] || 'screener_results_history';
   try {
     const r = await fetch(`data/${dir}/index.json?t=${Date.now()}`);
     ARCHIVE_INDEX[which] = r.ok ? await r.json() : { dates: [] };
@@ -3492,7 +3497,7 @@ async function loadArchiveIndex(which) {
 async function loadArchiveByDate(which, date) {
   const key = which + '_' + date;
   if (ARCHIVE_CACHE[key] !== undefined) return ARCHIVE_CACHE[key];
-  const dir = which === 'screener' ? 'screener_results_history' : 'momentum_results_history';
+  const dir = ARCHIVE_DIRS[which] || 'screener_results_history';
   try {
     const r = await fetch(`data/${dir}/${date}.json?t=${Date.now()}`);
     ARCHIVE_CACHE[key] = r.ok ? await r.json() : null;
@@ -3502,7 +3507,8 @@ async function loadArchiveByDate(which, date) {
 
 function dateSelectorHTML(which, currentDate) {
   const idx = ARCHIVE_INDEX[which] || { dates: [] };
-  const fn = which === 'screener' ? 'setMinerviniDate' : 'setMomentumDate';
+  const fn = which === 'screener' ? 'setMinerviniDate'
+    : which === 'momentum' ? 'setMomentumDate' : 'setOneilDate';
   let opts = `<option value=""${!currentDate ? ' selected' : ''}>📅 최신</option>`;
   for (const d of idx.dates) {
     const label = `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}`;
@@ -3518,6 +3524,10 @@ function setMinerviniDate(d) {
 function setMomentumDate(d) {
   state.momentumDate = d || null;
   renderMomentumView();
+}
+function setOneilDate(d) {
+  state.oneilDate = d || null;
+  renderAthBreakouts();
 }
 
 function renderMinerviniView() {
@@ -5583,6 +5593,23 @@ function renderOneilView() {
 function renderAthBreakouts() {
   const el = document.getElementById('athBreakoutSection');
   if (!el) return;
+  // archive index 로드 (날짜 선택 dropdown용)
+  if (!ARCHIVE_INDEX['oneil']) {
+    loadArchiveIndex('oneil').then(() => {
+      if (state.currentView === 'oneil') renderAthBreakouts();
+    });
+  }
+  // 과거 날짜 선택 시 → archive 렌더
+  if (state.oneilDate) {
+    const reqDate = state.oneilDate;
+    el.innerHTML = `<div class="strength-section"><div class="strength-loading" style="font-size:11px">🚀 ${reqDate} 돌파 로딩 중...</div></div>`;
+    loadArchiveByDate('oneil', reqDate).then(data => {
+      if (state.currentView !== 'oneil' || state.oneilDate !== reqDate) return;
+      renderAthBreakoutData(el, data, reqDate);
+    });
+    return;
+  }
+  // 최신 데이터
   el.innerHTML = `<div class="strength-section"><div class="strength-loading" style="font-size:11px">🚀 신고가 돌파 로딩 중...</div></div>`;
   if (ATH_BREAKOUT_LOADING) {
     ATH_BREAKOUT_LOADING.then(() => renderAthBreakouts());
@@ -5599,10 +5626,17 @@ function renderAthBreakouts() {
     });
     return;
   }
-  const d = ATH_BREAKOUT_DATA;
-  if (d.__empty || (!d.intraday && !d.close)) {
-    el.innerHTML = `<div class="strength-section">
-      <div class="strength-meta">아직 돌파 종목이 없습니다.<br><span style="font-size:11px">장중 5분마다 + 마감 후 자동 감지 · ath_cache 생성 후 동작 (Stock Metadata 워크플로우 실행 필요)</span></div>
+  renderAthBreakoutData(el, ATH_BREAKOUT_DATA, null);
+}
+
+function renderAthBreakoutData(el, d, archiveDate) {
+  const selector = `<div style="margin-bottom:6px">${dateSelectorHTML('oneil', archiveDate)}</div>`;
+  if (!d || d.__empty || (!d.intraday && !d.close)) {
+    el.innerHTML = `<div class="strength-section" style="padding:8px 14px">
+      ${selector}
+      <div class="strength-meta">${archiveDate
+        ? '이 날짜에는 돌파 종목 기록이 없습니다.'
+        : '아직 돌파 종목이 없습니다.<br><span style="font-size:11px">장중 5분마다 + 마감 후 자동 감지 · ath_cache 생성 후 동작 (Stock Metadata 워크플로우 실행 필요)</span>'}</div>
     </div>`;
     return;
   }
@@ -5630,7 +5664,8 @@ function renderAthBreakouts() {
   };
 
   let html = `<div class="strength-section" style="padding:8px 14px">
-    <div class="strength-meta">기준일 ${d.trading_day || ''} · ${d.updated || ''} · 행 클릭 시 상세</div>
+    ${selector}
+    <div class="strength-meta">기준일 ${d.trading_day || archiveDate || ''} · ${d.updated || ''}${archiveDate ? ' · 📅 과거 기록' : ''} · 행 클릭 시 상세</div>
   </div>`;
 
   // B 마감 확정 (있으면 위에)
@@ -5650,7 +5685,7 @@ function renderAthBreakouts() {
     html += `</div>`;
   }
   if (close.length === 0 && intraday.length === 0) {
-    html += `<div class="strength-section"><div class="strength-loading" style="font-size:11px">오늘 돌파 종목 없음</div></div>`;
+    html += `<div class="strength-section"><div class="strength-loading" style="font-size:11px">돌파 종목 없음</div></div>`;
   }
   el.innerHTML = html;
   el.querySelectorAll('.ath-card[data-code]').forEach(card => {

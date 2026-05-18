@@ -43,7 +43,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          for f in data/backtest_stats.json data/screener_results_history data/momentum_results_history; do
+          for f in data/backtest_stats.json data/screener_results_history data/momentum_results_history data/ath_breakouts_history; do
             git add "$f" 2>/dev/null || true
           done
           if git diff --cached --quiet; then
