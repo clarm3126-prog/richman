@@ -24,6 +24,9 @@ import traceback
 from datetime import datetime, timedelta
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).parent))
+from screener import is_excluded_security
+
 import pytz
 import requests
 
@@ -116,14 +119,20 @@ def main():
     market = json.loads(market_path.read_text(encoding="utf-8"))
     stocks = market.get("stocks", {})
 
-    # 거래대금 상위 1800개 (사실상 활발한 종목 전체)
-    sorted_stocks = sorted(
-        [(c, s) for c, s in stocks.items() if s.get("price", 0) > 0 and s.get("volume", 0) > 1000],
-        key=lambda x: x[1]["price"] * x[1]["volume"],
-        reverse=True,
-    )[:1800]
-    codes = [c for c, _ in sorted_stocks]
-    print(f"  target: top {len(codes)} stocks by trading value")
+    # 거래대금 상위 1800개 — ETF/ETN/SPAC/우선주/채권 제외 (일반 주식만)
+    candidates = []
+    excluded_n = 0
+    for c, s in stocks.items():
+        if s.get("price", 0) <= 0 or s.get("volume", 0) <= 1000:
+            continue
+        excl, _ = is_excluded_security(s.get("name", ""), c)
+        if excl:
+            excluded_n += 1
+            continue
+        candidates.append((c, s))
+    candidates.sort(key=lambda x: x[1]["price"] * x[1]["volume"], reverse=True)
+    codes = [c for c, _ in candidates[:1800]]
+    print(f"  target: top {len(codes)} stocks (ETF/우선주 등 {excluded_n}개 제외)")
 
     ath_data = fetch_all_ath(codes)
 
