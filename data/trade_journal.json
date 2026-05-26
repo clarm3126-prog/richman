@@ -36,9 +36,9 @@
       "buyPrice": 17328,
       "buyQty": 1744,
       "buyReason": "양자보안 테마가 떠오르며 고점 대비 조정 후 다시 상승 추세라 판단하여 매수 진행",
-      "sellDate": null,
-      "sellPrice": null,
-      "sellReason": "",
+      "sellDate": "2026-05-26",
+      "sellPrice": 27550,
+      "sellReason": "상한가 도달 후 이탈하는 그림이 많이 보여 상한가에서 매도 후 다시 잡으려고 했지만 상한가 이탈 그림이 안 보임",
       "memo": "",
       "createdAt": 1779022180281
     }
