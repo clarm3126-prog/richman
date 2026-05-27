@@ -1206,6 +1206,7 @@
     <button class="nav-btn" data-view="minervini" onclick="setView('minervini')">🎯 미너비니</button>
     <button class="nav-btn" data-view="momentum" onclick="setView('momentum')">🚀 모멘텀</button>
     <button class="nav-btn" data-view="oneil" onclick="setView('oneil')">🏆 오닐</button>
+    <button class="nav-btn" data-view="us" onclick="setView('us')">🇺🇸 미국주식</button>
     <button class="nav-btn" data-view="watchlist" onclick="setView('watchlist')">⭐ 관심</button>
     <button class="nav-btn" data-view="journal" onclick="setView('journal')">📓 일지</button>
   </div>
@@ -2123,6 +2124,9 @@ function setView(viewName) {
     document.getElementById('content').innerHTML = '';
   } else if (viewName === 'oneil') {
     renderOneilView();
+    document.getElementById('content').innerHTML = '';
+  } else if (viewName === 'us') {
+    renderUsView();
     document.getElementById('content').innerHTML = '';
   } else {
     if (MARKET) renderMarket(MARKET);
@@ -4658,6 +4662,11 @@ async function autoSyncIfPossible() {
 }
 
 function openStockModal(code) {
+  // 미국 티커(영문 심볼)는 Yahoo Finance로 (한국 시세 데이터 없음)
+  if (code && !/^\d{6}$/.test(code)) {
+    window.open('https://finance.yahoo.com/quote/' + encodeURIComponent(code), '_blank', 'noopener');
+    return;
+  }
   const s = MARKET ? MARKET.stocks[code] : null;
   const desc = STOCK_DESC[code] || (STOCK_DESC_FNGUIDE && STOCK_DESC_FNGUIDE[code]) || '';
   const watched = isWatched(code);
@@ -5710,6 +5719,130 @@ function renderAthBreakoutData(el, d, archiveDate) {
   el.innerHTML = html;
   el.querySelectorAll('.ath-card[data-code]').forEach(card => {
     card.onclick = () => openStockModal(card.dataset.code);
+  });
+}
+
+// === 🇺🇸 미국주식 (미너비니 / 모멘텀 / 오닐) ===
+let US_DATA = null;
+let US_LOADING = null;
+function loadUsData() {
+  if (US_DATA) return Promise.resolve(US_DATA);
+  if (US_LOADING) return US_LOADING;
+  US_LOADING = fetch('data/us_results.json?t=' + Date.now())
+    .then(r => r.ok ? r.json() : null)
+    .then(d => { US_DATA = d || { __empty: true }; return US_DATA; })
+    .catch(() => { US_DATA = { __empty: true }; return US_DATA; })
+    .finally(() => { US_LOADING = null; });
+  return US_LOADING;
+}
+function setUsTab(t) { state.usTab = t; renderUsView(); }
+function setUsMvFilter(f) { state.usMvFilter = f; renderUsView(); }
+function setUsMomFilter(f) { state.usMomFilter = f; renderUsView(); }
+
+function renderUsMinervini(mv) {
+  const all = mv.results || [];
+  const filter = state.usMvFilter || 'strong';
+  const filtered = filter === 'strict' ? all.filter(r => r.minervini_strict)
+    : filter === 'strong' ? all.filter(r => r.minervini_strong) : all;
+  const allStrict = all.filter(r => r.minervini_strict);
+  const allStrong = all.filter(r => r.minervini_strong);
+  const strictRankMap = {}; allStrict.forEach((r, i) => { strictRankMap[r.code] = i + 1; });
+  const strongRankMap = {}; allStrong.forEach((r, i) => { strongRankMap[r.code] = i + 1; });
+  let h = `<div class="strength-section" style="padding-bottom:4px">
+    <div style="font-size:11px;color:var(--fg-dim)">엄격 ${allStrict.length}개 · 우량 ${allStrong.length}개 (평가 ${mv.total_evaluated || all.length})</div>
+    <div class="market-filter" style="margin-top:8px">
+      <button class="${filter==='strict'?'active':''}" onclick="setUsMvFilter('strict')">엄격(8/8)</button>
+      <button class="${filter==='strong'?'active':''}" onclick="setUsMvFilter('strong')">우량(6+/8 + 펀더멘털)</button>
+      <button class="${filter==='all'?'active':''}" onclick="setUsMvFilter('all')">전체</button>
+    </div></div>`;
+  if (!filtered.length) return h + `<div class="strength-section"><div class="strength-loading">조건에 맞는 종목이 없습니다.</div></div>`;
+  h += `<div class="strength-section">`;
+  filtered.slice(0, 50).forEach((r, i) => {
+    h += renderMinerviniCardHTML(r, i, strictRankMap, strongRankMap, allStrict.length, allStrong.length);
+  });
+  return h + `</div>`;
+}
+
+function renderUsMomentum(mom) {
+  const all = mom.results || [];
+  const filter = state.usMomFilter || 'strong';
+  const filtered = filter === 'strong' ? all.filter(r => r.momentum_strong)
+    : filter === 'pre' ? all.filter(r => r.pre_breakout) : all;
+  const allMomStrong = all.filter(r => r.momentum_strong);
+  const allPre = all.filter(r => r.pre_breakout);
+  const momStrongRankMap = {}; allMomStrong.forEach((r, i) => { momStrongRankMap[r.code] = i + 1; });
+  const preRankMap = {}; allPre.forEach((r, i) => { preRankMap[r.code] = i + 1; });
+  let h = `<div class="strength-section" style="padding-bottom:4px">
+    <div style="font-size:11px;color:var(--fg-dim)">강세 ${allMomStrong.length}개 · 사전 ${allPre.length}개 (평가 ${mom.total_evaluated || all.length})</div>
+    <div class="market-filter" style="margin-top:8px">
+      <button class="${filter==='strong'?'active':''}" onclick="setUsMomFilter('strong')">🔥 강세</button>
+      <button class="${filter==='pre'?'active':''}" onclick="setUsMomFilter('pre')">⏳ 사전</button>
+      <button class="${filter==='all'?'active':''}" onclick="setUsMomFilter('all')">전체</button>
+    </div></div>`;
+  if (!filtered.length) return h + `<div class="strength-section"><div class="strength-loading">조건에 맞는 종목이 없습니다.</div></div>`;
+  h += `<div class="strength-section">`;
+  filtered.slice(0, 50).forEach((r, i) => {
+    h += renderMomentumCardHTML(r, i, momStrongRankMap, preRankMap, allMomStrong.length, allPre.length);
+  });
+  return h + `</div>`;
+}
+
+function renderUsOneil(oneil) {
+  const close = (oneil && oneil.close) || [];
+  let h = `<div class="strength-section" style="padding-bottom:4px">
+    <div style="font-size:11px;color:var(--fg-dim)">역사적 신고가 돌파 · 거래량 1.5배+ · 베이스 60일+ · ${close.length}건</div></div>`;
+  if (!close.length) return h + `<div class="strength-section"><div class="strength-loading">오늘 돌파 종목 없음</div></div>`;
+  h += `<div class="strength-section">`;
+  close.forEach((b, i) => {
+    const cls = b.change > 0 ? 'up' : b.change < 0 ? 'down' : 'flat';
+    const sign = b.change > 0 ? '+' : '';
+    const baseTxt = b.base_days ? (b.base_days >= 30 ? Math.floor(b.base_days / 30) + '개월' : b.base_days + '일') + '만의 ' : '';
+    h += `<div class="ath-card" data-code="${b.code}">
+      <div class="ath-card-head">
+        <div>
+          <div class="ath-name">#${i + 1} ${b.name} <span class="ath-code">${b.code} · US</span></div>
+          <div class="ath-sub">$${b.price.toLocaleString('en-US')} <span class="${cls}">${sign}${b.change.toFixed(2)}%</span></div>
+        </div>
+        <div class="ath-volratio">🔥 ${b.vol_ratio}x</div>
+      </div>
+      <div class="ath-tags"><span class="ath-tag ath">📈 ${baseTxt}ATH 돌파</span></div>
+    </div>`;
+  });
+  return h + `</div>`;
+}
+
+function renderUsView() {
+  const el = document.getElementById('strength');
+  if (!el || state.currentView !== 'us') return;
+  if (!US_DATA && !US_LOADING) {
+    el.innerHTML = `<div class="strength-section"><div class="strength-loading">🇺🇸 미국주식 로딩 중...</div></div>`;
+    loadUsData().then(() => { if (state.currentView === 'us') renderUsView(); });
+    return;
+  }
+  if (!US_DATA) { el.innerHTML = `<div class="strength-section"><div class="strength-loading">로딩 중...</div></div>`; return; }
+  const tab = state.usTab || 'minervini';
+  const d = US_DATA;
+  const empty = d.__empty;
+  let html = `<div class="strength-section" style="border-left:4px solid #1d4ed8;background:var(--bg-card-tint-blue,#eff6ff)">
+      <div class="strength-title">🇺🇸 미국주식 — S&P500 + 나스닥100</div>
+      <div class="strength-meta" style="margin-top:4px">${empty ? '결과 대기 중' : `기준일 ${d.trading_day || ''} · ${d.updated || ''}`} · 종목 클릭 시 Yahoo Finance</div>
+      <div class="market-filter" style="margin-top:8px">
+        <button class="${tab==='minervini'?'active':''}" onclick="setUsTab('minervini')">🎯 미너비니</button>
+        <button class="${tab==='momentum'?'active':''}" onclick="setUsTab('momentum')">🚀 모멘텀</button>
+        <button class="${tab==='oneil'?'active':''}" onclick="setUsTab('oneil')">🏆 오닐</button>
+      </div>
+    </div>`;
+  if (empty) {
+    html += `<div class="strength-section"><div class="strength-loading">아직 미국 스크리너 결과가 없습니다.<br><span style="font-size:11px">미국 장 마감 후 (KST 익일 아침 07시경) 자동 실행됩니다.</span></div></div>`;
+    el.innerHTML = html;
+    return;
+  }
+  if (tab === 'minervini') html += renderUsMinervini(d.minervini || {});
+  else if (tab === 'momentum') html += renderUsMomentum(d.momentum || {});
+  else html += renderUsOneil(d.oneil || {});
+  el.innerHTML = html;
+  el.querySelectorAll('.mv-card[data-code], .ath-card[data-code]').forEach(c => {
+    c.onclick = () => openStockModal(c.dataset.code);
   });
 }
 
