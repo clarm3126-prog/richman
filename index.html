@@ -2132,14 +2132,16 @@ function setView(viewName) {
     if (MARKET) renderMarket(MARKET);
     renderContent();
     if (viewName === 'movements') loadAndRenderMovements();
-    // 테마별 view: rising_themes 데이터 (MOMENTUM_DATA) 비동기 로드 후 재렌더
-    if (viewName === 'themes' && !MOMENTUM_DATA && !MOMENTUM_LOADING) {
-      loadMomentumData().then(() => {
-        if (state.currentView === 'themes') {
-          renderTabs();   // 테마 탭 list 갱신
-          renderContent(); // 내용 재렌더
-        }
-      });
+    // 테마별 view: rising_themes(MOMENTUM_DATA) + 테마 멤버 캐시 비동기 로드 후 재렌더
+    if (viewName === 'themes') {
+      const needs = [];
+      if (!MOMENTUM_DATA && !MOMENTUM_LOADING) needs.push(loadMomentumData());
+      if (!THEME_MEMBERS && !THEME_MEMBERS_LOADING) needs.push(loadThemeMembers());
+      if (needs.length) {
+        Promise.all(needs).then(() => {
+          if (state.currentView === 'themes') render();  // 탭 + 내용 재렌더
+        });
+      }
     }
   }
   window.scrollTo({ top: 0, behavior: 'instant' });
@@ -5358,6 +5360,33 @@ function toggleDesc(wrap) {
   }
 }
 
+// 테마 멤버 캐시 (theme_no → [codes]) — naver_themes의 stocks가 비었을 때 폴백
+let THEME_MEMBERS = null;
+let THEME_MEMBERS_LOADING = null;
+function loadThemeMembers() {
+  if (THEME_MEMBERS) return Promise.resolve(THEME_MEMBERS);
+  if (THEME_MEMBERS_LOADING) return THEME_MEMBERS_LOADING;
+  THEME_MEMBERS_LOADING = fetch('data/theme_members_cache.json?t=' + Date.now())
+    .then(r => r.ok ? r.json() : null)
+    .then(d => { THEME_MEMBERS = (d && d.themes) || {}; return THEME_MEMBERS; })
+    .catch(() => { THEME_MEMBERS = {}; return THEME_MEMBERS; })
+    .finally(() => { THEME_MEMBERS_LOADING = null; });
+  return THEME_MEMBERS_LOADING;
+}
+// 테마 멤버 코드 리스트 → companies (이름은 MARKET.stocks에서 해석)
+function themeCompaniesFromCache(themeNo, themeName) {
+  const codes = (THEME_MEMBERS && THEME_MEMBERS[themeNo]) || [];
+  return codes.map((code, j) => {
+    const s = MARKET ? MARKET.stocks[code] : null;
+    return {
+      code,
+      name: (s && s.name) || code,
+      role: j < 3 ? '핵심주' : '관련주',
+      description: getStockDescription(code, `${themeName} 관련주`),
+    };
+  });
+}
+
 function getAllThemes() {
   const myThemes = DATA.themes;
   const naverHot = [];
@@ -5366,50 +5395,55 @@ function getAllThemes() {
   const seenThemeNos = new Set();
 
   // 1. 🔥 강세 전환 테마 (자금흐름 탭의 forecast box와 동일 데이터)
-  // momentum_results.json의 rising_themes 사용 (각각 stocks 멤버 포함)
+  // momentum_results.json의 rising_themes 사용 (stocks 없으면 캐시 폴백)
   if (MOMENTUM_DATA && !MOMENTUM_DATA.__empty && MOMENTUM_DATA.rising_themes) {
     MOMENTUM_DATA.rising_themes.forEach((rt) => {
-      if (!rt.no || !rt.stocks || rt.stocks.length === 0) return;
-      if (seenThemeNos.has(rt.no)) return;
+      if (!rt.no || seenThemeNos.has(rt.no)) return;
+      const companies = (rt.stocks && rt.stocks.length > 0)
+        ? rt.stocks.map((s, j) => ({
+            code: s.code,
+            name: s.name,
+            role: j < 3 ? '핵심주' : '관련주',
+            description: getStockDescription(s.code, `${rt.name} 관련주 (강세 전환)`),
+          }))
+        : themeCompaniesFromCache(rt.no, rt.name);
+      if (!companies.length) return;
       seenThemeNos.add(rt.no);
       risingHot.push({
         name: `🔥 ${rt.name}`,
         description: `강세 전환 테마 · ${rt.old_rank}위 → ${rt.recent_rank}위 (▲${rt.delta}) · 자동 추가`,
         isNaver: true,
         themeNo: rt.no,
-        companies: rt.stocks.map((s, j) => ({
-          code: s.code,
-          name: s.name,
-          role: j < 3 ? '핵심주' : '관련주',
-          description: getStockDescription(s.code, `${rt.name} 관련주 (강세 전환)`),
-        })),
+        companies,
       });
     });
   }
 
-  // 2. 네이버 현재 강세 테마 top 10 (dedup)
+  // 2. 네이버 현재 강세 테마 top 20 — stocks 비어있으면 멤버 캐시로 폴백
   if (MARKET && MARKET.naver_themes) {
     const uniq = MARKET.naver_themes.filter(t => {
       if (seenThemeNos.has(t.no)) return false;
       seenThemeNos.add(t.no);
       return true;
     });
-    uniq.slice(0, 10).forEach((nt, i) => {
-      if (nt.stocks && nt.stocks.length > 0) {
-        const sign = nt.change > 0 ? '+' : '';
-        naverHot.push({
-          name: `📊 ${nt.name}`,
-          description: `네이버 강세 테마 #${i + 1} · ${sign}${nt.change.toFixed(2)}% · ↑${nt.rise} ↓${nt.fall}`,
-          isNaver: true,
-          themeNo: nt.no,
-          companies: nt.stocks.map((s, j) => ({
+    uniq.slice(0, 20).forEach((nt, i) => {
+      const companies = (nt.stocks && nt.stocks.length > 0)
+        ? nt.stocks.map((s, j) => ({
             code: s.code,
             name: s.name,
             role: j < 3 ? '핵심주' : '관련주',
             description: getStockDescription(s.code, `${nt.name} 관련주`),
-          })),
-        });
-      }
+          }))
+        : themeCompaniesFromCache(nt.no, nt.name);
+      if (!companies.length) return;
+      const sign = nt.change > 0 ? '+' : '';
+      naverHot.push({
+        name: `📊 ${nt.name}`,
+        description: `네이버 강세 테마 #${i + 1} · ${sign}${nt.change.toFixed(2)}% · ↑${nt.rise} ↓${nt.fall}`,
+        isNaver: true,
+        themeNo: nt.no,
+        companies,
+      });
     });
   }
   const industryHot = [];
