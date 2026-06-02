@@ -1,1 +1,1 @@
-{"updated":"2026-06-01 23:16:24 KST","trading_day":"20260601","triple":[],"double":[{"code":"018260","name":"삼성에스디에스","market":"KOSPI","price":362000,"change":21.07,"hits":["mm","on"],"mv":null,"mm":{"cat":"강세","score":55},"oneil":{"vol_ratio":3.25}}]}
+{"updated":"2026-06-02 21:40:24 KST","trading_day":"20260602","triple":[],"double":[{"code":"126730","name":"코칩","market":"KOSDAQ","price":24700,"change":-1.98,"hits":["mv","mm"],"mv":{"cat":"우량","score":65.0},"mm":{"cat":"강세","score":60},"oneil":null}]}
