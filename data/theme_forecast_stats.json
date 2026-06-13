@@ -1,27 +1,32 @@
 {
-  "updated": "2026-06-06 13:51:29 KST",
+  "updated": "2026-06-13 14:18:13 KST",
   "status": "ok",
-  "n_archives": 18,
-  "n_eligible_7d": 13,
-  "n_eligible_14d": 10,
-  "n_eligible_30d": 0,
+  "n_archives": 23,
+  "n_eligible_7d": 18,
+  "n_eligible_14d": 13,
+  "n_eligible_30d": 4,
   "stats_7d_top5": {
-    "n_periods": 13,
+    "n_periods": 18,
     "days_forward": 7,
-    "avg_hit_rate": 13.8,
-    "avg_change_after": -0.63
+    "avg_hit_rate": 13.3,
+    "avg_change_after": -0.65
   },
   "stats_7d_top10": {
-    "n_periods": 13,
+    "n_periods": 18,
     "days_forward": 7,
-    "avg_hit_rate": 11.5,
-    "avg_change_after": -0.8
+    "avg_hit_rate": 12.2,
+    "avg_change_after": -0.76
   },
   "stats_14d_top5": {
-    "n_periods": 10,
+    "n_periods": 13,
     "days_forward": 14,
     "avg_hit_rate": 20.0,
-    "avg_change_after": -0.32
+    "avg_change_after": -0.6
   },
-  "stats_30d_top5": null
+  "stats_30d_top5": {
+    "n_periods": 4,
+    "days_forward": 30,
+    "avg_hit_rate": 10.0,
+    "avg_change_after": -0.52
+  }
 }
