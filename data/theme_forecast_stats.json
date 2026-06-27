@@ -1,32 +1,32 @@
 {
-  "updated": "2026-06-20 14:09:13 KST",
+  "updated": "2026-06-27 13:49:38 KST",
   "status": "ok",
-  "n_archives": 27,
-  "n_eligible_7d": 23,
-  "n_eligible_14d": 18,
-  "n_eligible_30d": 9,
+  "n_archives": 32,
+  "n_eligible_7d": 27,
+  "n_eligible_14d": 23,
+  "n_eligible_30d": 12,
   "stats_7d_top5": {
-    "n_periods": 23,
+    "n_periods": 27,
     "days_forward": 7,
-    "avg_hit_rate": 11.3,
-    "avg_change_after": -0.37
+    "avg_hit_rate": 11.9,
+    "avg_change_after": -0.66
   },
   "stats_7d_top10": {
-    "n_periods": 23,
+    "n_periods": 27,
     "days_forward": 7,
-    "avg_hit_rate": 11.7,
-    "avg_change_after": -0.41
+    "avg_hit_rate": 11.1,
+    "avg_change_after": -0.76
   },
   "stats_14d_top5": {
-    "n_periods": 18,
+    "n_periods": 23,
     "days_forward": 14,
-    "avg_hit_rate": 17.8,
-    "avg_change_after": -0.4
+    "avg_hit_rate": 16.5,
+    "avg_change_after": -0.48
   },
   "stats_30d_top5": {
-    "n_periods": 9,
+    "n_periods": 12,
     "days_forward": 30,
-    "avg_hit_rate": 11.1,
-    "avg_change_after": -0.31
+    "avg_hit_rate": 8.3,
+    "avg_change_after": -0.47
   }
 }
