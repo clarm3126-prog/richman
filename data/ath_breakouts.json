@@ -1,1 +1,1 @@
-{"trading_day":"20260820","intraday":[],"close":[],"updated":"2026-08-20 12:08:27 KST"}
+{"trading_day":"20260820","intraday":[{"code":"098120","name":"마이크로컨텍솔","market":"KOSDAQ","price":41150,"change":-0.72,"ath":40550.0,"ath_date":"20260513","base_days":99,"volume":302085,"vol_ratio":4.35,"supply_demand":true}],"close":[],"updated":"2026-08-20 12:56:15 KST"}
