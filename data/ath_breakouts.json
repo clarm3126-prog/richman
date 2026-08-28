@@ -1,1 +1,1 @@
-{"trading_day":"20260828","intraday":[],"close":[],"updated":"2026-08-28 03:23:50 KST"}
+{"trading_day":"20260828","intraday":[],"close":[{"code":"192820","name":"코스맥스","market":"KOSPI","price":303000,"change":7.07,"ath":287000.0,"ath_date":"20250625","base_days":429,"volume":328483,"vol_ratio":2.19,"supply_demand":false}],"updated":"2026-08-28 17:19:37 KST"}
