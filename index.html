@@ -2765,6 +2765,7 @@ function renderInvestorView() {
 }
 
 // === 📓 매매 일지 ===
+const TELEGRAM_BOT_USERNAME = '@stage2_note_bot';  // 예: @richman_alert_bot
 const JOURNAL_KEY = 'trade_journal_v1';
 let JOURNAL = [];
 
@@ -4541,7 +4542,9 @@ function renderWatchlistView() {
       <div class="strength-title">⭐ 관심 종목 ${codes.length > 0 ? `(${codes.length})` : ''}</div>
       <div class="strength-meta">★ 종목 추가 · 가격 도달 시 Telegram 알림 ${hasPat ? '🚀' : ''}</div>
     </div>
-    <div style="display:flex;gap:6px"></div>
+    <div style="display:flex;gap:6px">
+      <button class="refresh-btn" onclick="openTelegramLinkModal()" title="텔레그램 알림 연결">📱 알림</button>
+    </div>
   </div>`;
   if (codes.length === 0) {
     html += `<div class="strength-loading">관심 종목이 없습니다.<br>
@@ -7079,6 +7082,42 @@ async function migrateLocalToAccount() {
   saveWatchlist();
   localStorage.setItem('migrated_to_account', '1');
   showToast(`✅ ${nTrade}건 계정으로 이관 완료`, 4000);
+}
+
+// === 📱 텔레그램 알림 연결 ===
+async function openTelegramLinkModal() {
+  if (!window.CURRENT_USER) {
+    alert('텔레그램 알림을 받으려면 먼저 로그인해주세요.\n(헤더의 👤 버튼)');
+    return;
+  }
+  let code = '', linked = false;
+  try {
+    const { data, error } = await window.sb.from('profiles')
+      .select('link_code, telegram_chat_id').single();
+    if (error) throw error;
+    code = data.link_code || '';
+    linked = !!data.telegram_chat_id;
+  } catch (e) {
+    alert('연결 코드를 불러오지 못했습니다. 새로고침 후 다시 시도해주세요.');
+    return;
+  }
+
+  if (linked) {
+    alert('✅ 텔레그램이 이미 연결되어 있습니다.\n\n관심 종목에 목표가를 설정하면 도달 시 알림이 전송됩니다.');
+    return;
+  }
+
+  const msg = '📱 텔레그램 알림 연결\n\n' +
+    '1) 텔레그램에서 ' + TELEGRAM_BOT_USERNAME + ' 을 검색해 대화를 시작하세요\n' +
+    '2) 아래 6자리 코드를 그대로 보내세요\n\n' +
+    '      ' + code + '\n\n' +
+    '연결까지 최대 5분 걸립니다.\n확인을 누르면 코드가 복사됩니다.';
+  if (confirm(msg)) {
+    try {
+      await navigator.clipboard.writeText(code);
+      showToast('📋 코드 복사됨: ' + code, 4000);
+    } catch { showToast('코드: ' + code, 6000); }
+  }
 }
 
 async function initMarket() {
