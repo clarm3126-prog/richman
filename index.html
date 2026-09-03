@@ -34,7 +34,7 @@
     --fg-strong: #1a1a1a;
     --fg-mid: #4b5563;
     --fg-dim: #6b7280;
-    --fg-faint: #9ca3af;
+    --fg-faint: #767f8c;
     --bg-card: #fff;
     --bg-card-tint-purple: #f5f3ff;
     --bg-card-tint-green: #f0fdf4;
@@ -59,8 +59,8 @@
   .theme-dark {
     --fg-strong: #e5e7eb;
     --fg-mid: #d1d5db;
-    --fg-dim: #9ca3af;
-    --fg-faint: #6b7280;
+    --fg-dim: #b0b8c4;
+    --fg-faint: #8b94a3;
     --bg-card: #1a1d23;
     --bg-card-tint-purple: #1f1640;
     --bg-card-tint-green: #0a2e1a;
@@ -222,7 +222,7 @@
     content: '▶ ';
     display: inline-block;
     transition: transform 0.2s;
-    font-size: 9px; color: #9ca3af;
+    font-size: 11px; color: var(--fg-dim);
   }
   .desc-toggle-wrap[open] > summary::before { transform: rotate(90deg); }
   .desc-toggle-wrap > div {
@@ -375,21 +375,21 @@
     margin-left: 3px;
     font-variant-numeric: tabular-nums;
     flex-shrink: 0;
-    font-size: 10px;
+    font-size:11px;
   }
   @media (max-width: 599px) {
     .heatmap-day { height: 72px; padding: 1px; }
-    .day-num { font-size: 9px; padding: 0 2px; }
-    .day-theme { font-size: 9px; padding: 0 2px; }
+    .day-num { font-size:11px; padding: 0 2px; }
+    .day-theme { font-size:11px; padding: 0 2px; }
     .day-theme-pct { display: none; }
   }
   .heatmap-legend {
     display: flex; align-items: center; gap: 4px;
-    font-size: 10px; color: #6b7280; margin-top: 8px; justify-content: flex-end;
+    font-size:11px; color: #6b7280; margin-top: 8px; justify-content: flex-end;
   }
   .heatmap-legend-box { width: 12px; height: 12px; border-radius: 2px; }
   .heatmap-day-header {
-    text-align: center; font-size: 10px; font-weight: 600; color: #9ca3af; padding: 2px;
+    text-align: center; font-size:11px; font-weight: 600; color: #9ca3af; padding: 2px;
   }
   .heatmap-day.day-off {
     background: transparent !important;
@@ -407,7 +407,7 @@
     background: transparent !important;
     color: #d1d5db;
     cursor: default;
-    font-size: 10px;
+    font-size:11px;
     padding: 4px;
   }
   .heatmap-day.other-month:hover { box-shadow: none; }
@@ -841,16 +841,16 @@
     color: #059669;
     font-variant-numeric: tabular-nums;
   }
-  .mv-score-detail { font-size: 10px; color: #6b7280; margin-top: 2px; }
+  .mv-score-detail { font-size:11px; color: #6b7280; margin-top: 2px; }
   .mv-section-label {
-    font-size: 10px; font-weight: 700; color: #6b7280;
+    font-size:11px; font-weight: 700; color: #6b7280;
     margin: 8px 0 4px;
     text-transform: uppercase;
     letter-spacing: 0.04em;
   }
   .mv-chips { display: flex; flex-wrap: wrap; gap: 4px; }
   .mv-chip {
-    font-size: 10px; padding: 3px 7px; border-radius: 10px;
+    font-size:11px; padding: 3px 7px; border-radius: 10px;
     font-weight: 600;
     border: 1px solid transparent;
     white-space: nowrap;
@@ -860,7 +860,7 @@
   .mv-ribbon {
     display: inline-block;
     margin-left: 6px;
-    font-size: 10px; font-weight: 700;
+    font-size:11px; font-weight: 700;
     padding: 2px 6px;
     border-radius: 4px;
     vertical-align: middle;
@@ -880,7 +880,7 @@
   /* 카테고리 percentile rank badge */
   .mv-cat-rank {
     display: inline-block;
-    font-size: 10px;
+    font-size:11px;
     padding: 2px 7px;
     border-radius: 10px;
     margin-top: 3px;
@@ -1041,14 +1041,14 @@
   .ath-card:active { background: var(--bg-inset); }
   .ath-card-head { display: flex; justify-content: space-between; align-items: flex-start; }
   .ath-name { font-size: 13px; font-weight: 700; color: var(--fg-strong); }
-  .ath-code { font-size: 10px; color: var(--fg-dim); font-weight: 400; }
+  .ath-code { font-size:11px; color: var(--fg-dim); font-weight: 400; }
   .ath-sub { font-size: 12px; color: var(--fg-mid); margin-top: 2px; }
   .ath-sub .up { color: #dc2626; font-weight: 700; }
   .ath-sub .down { color: #2563eb; font-weight: 700; }
   .ath-volratio { font-size: 14px; font-weight: 800; color: #d97706; white-space: nowrap; }
   .ath-tags { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
   .ath-tag {
-    font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 8px;
+    font-size:11px; font-weight: 600; padding: 2px 7px; border-radius: 8px;
   }
   .ath-tag.ath { background: var(--bg-card-tint-amber); color: var(--accent-amber-text); }
   .ath-tag.sd { background: #fef3c7; color: #92400e; }
@@ -1082,7 +1082,7 @@
   .cmp-table .down { color: #2563eb; font-weight: 700; }
   .cmp-del {
     border: none; background: var(--bg-inset); color: var(--fg-dim);
-    border-radius: 4px; font-size: 10px; cursor: pointer; padding: 1px 5px; margin-top: 2px;
+    border-radius: 4px; font-size:11px; cursor: pointer; padding: 1px 5px; margin-top: 2px;
   }
   .theme-dark .cmp-table .up { color: #fca5a5; }
   .theme-dark .cmp-table .down { color: #93c5fd; }
@@ -1105,7 +1105,7 @@
   .jr-return.up { color: #dc2626; }
   .jr-return.down { color: #2563eb; }
   .jr-return.flat { color: var(--fg-dim); }
-  .jr-status { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; }
+  .jr-status { font-size:11px; font-weight: 700; padding: 2px 7px; border-radius: 4px; }
   .jr-status.open { background: #fef3c7; color: #92400e; }
   .jr-status.closed { background: var(--bg-inset); color: var(--fg-dim); }
   .jr-row {
@@ -1134,7 +1134,7 @@
   .jr-stat {
     background: var(--bg-card); border-radius: 6px; padding: 8px;
   }
-  .jr-stat-label { font-size: 10px; color: var(--fg-dim); font-weight: 700; }
+  .jr-stat-label { font-size:11px; color: var(--fg-dim); font-weight: 700; }
   .jr-stat-value { font-size: 18px; font-weight: 800; margin-top: 2px; color: var(--fg-strong); }
 
   /* 마지막 업데이트 시간 badge — 헤더 우측 상단 floating */
@@ -1142,7 +1142,7 @@
     position: absolute;
     top: 14px;
     right: 14px;
-    font-size: 10px;
+    font-size:11px;
     color: #6b7280;
     background: rgba(243,244,246,0.95);
     border: 1px solid #e5e7eb;
@@ -1177,6 +1177,46 @@
   .theme-dark .hdr-btn { background: #2a2f3a; border-color: #3a414f; }
   .theme-toggle { left: 14px; }
   .search-btn { left: 48px; }
+
+  /* 첫 방문 안내 */
+  .onboard-mask {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+    display: none; align-items: center; justify-content: center;
+    z-index: 200; padding: 16px;
+  }
+  .onboard-mask.show { display: flex; }
+  .onboard {
+    background: var(--bg-card); border-radius: 14px; padding: 22px 20px;
+    max-width: 380px; width: 100%; max-height: 88vh; overflow-y: auto;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+  }
+  .onboard h2 { font-size: 18px; margin: 0 0 4px; color: var(--fg-strong); }
+  .onboard .sub { font-size: 12px; color: var(--fg-dim); margin-bottom: 16px; }
+  .onboard-item { display: flex; gap: 10px; margin-bottom: 14px; align-items: flex-start; }
+  .onboard-item .ico { font-size: 18px; line-height: 1.3; flex-shrink: 0; }
+  .onboard-item .ttl { font-size: 13px; font-weight: 700; color: var(--fg-strong); }
+  .onboard-item .txt { font-size: 12px; color: var(--fg-mid); line-height: 1.6; margin-top: 2px; }
+  .onboard-btn {
+    width: 100%; padding: 11px; border-radius: 9px; border: none;
+    background: var(--accent-purple); color: #fff; font-size: 14px;
+    font-weight: 700; cursor: pointer; margin-top: 6px;
+  }
+  .onboard-skip {
+    width: 100%; padding: 9px; border-radius: 9px; margin-top: 7px;
+    border: 1px solid var(--border-light); background: transparent;
+    color: var(--fg-dim); font-size: 12px; cursor: pointer;
+  }
+  /* 로그인 유도 배너 */
+  .login-banner {
+    background: var(--bg-card-tint-purple); border: 1px solid var(--border-purple);
+    border-radius: 10px; padding: 12px 14px; margin-bottom: 12px;
+  }
+  .login-banner .lb-ttl { font-size: 13px; font-weight: 700; color: var(--accent-purple-text); }
+  .login-banner .lb-txt { font-size: 12px; color: var(--fg-mid); line-height: 1.6; margin: 4px 0 9px; }
+  .login-banner button {
+    padding: 8px 14px; border-radius: 8px; border: none; cursor: pointer;
+    background: var(--accent-purple); color: #fff; font-size: 12px; font-weight: 700;
+  }
   .alerthist-btn { left: 82px; }
   .auth-btn { left: 116px; }
   .auth-btn.logged-in { background: #dcfce7; border-color: #86efac; }
@@ -1221,6 +1261,44 @@
   </button>
   <div class="tabs collapsed" id="tabs"></div>
 </header>
+
+<div class="onboard-mask" id="onboardMask">
+  <div class="onboard">
+    <h2>📓 종목노트</h2>
+    <div class="sub">매일 아침 조건 통과 종목 + 나만의 매매일지</div>
+
+    <div class="onboard-item">
+      <div class="ico">🔍</div>
+      <div>
+        <div class="ttl">매일 자동 스크리닝</div>
+        <div class="txt">장 마감 후 전 종목을 추세 조건과 실적 필터로 걸러 정리합니다. 미너비니 · 모멘텀 · 오닐 신고가 탭에서 결과를 볼 수 있어요.</div>
+      </div>
+    </div>
+
+    <div class="onboard-item">
+      <div class="ico">👤</div>
+      <div>
+        <div class="ttl">로그인하면 일지가 남습니다</div>
+        <div class="txt">로그인 없이도 쓸 수 있지만, 그때는 이 기기에만 저장돼요. 로그인하면 폰과 PC 어디서든 같은 일지를 보고, 캐시를 지워도 사라지지 않습니다. <b>일지는 본인만 볼 수 있습니다.</b></div>
+      </div>
+    </div>
+
+    <div class="onboard-item">
+      <div class="ico">📱</div>
+      <div>
+        <div class="ttl">목표가 도달 시 텔레그램 알림</div>
+        <div class="txt">⭐ 관심 탭에서 종목을 담고 목표가를 걸어두면, 도달했을 때 알려드립니다. 보유 종목은 손절선·트레일링 시그널도 함께 보내드려요.</div>
+      </div>
+    </div>
+
+    <div class="txt" style="font-size:11px;color:var(--fg-dim);line-height:1.6;margin:14px 0 12px;padding-top:12px;border-top:1px solid var(--border-light)">
+      종목 추천이나 리딩이 아닙니다. 조건을 통과한 종목을 정리해 보여줄 뿐이며, 투자 판단과 책임은 본인에게 있습니다.
+    </div>
+
+    <button class="onboard-btn" onclick="closeOnboard(true)">로그인하고 시작하기</button>
+    <button class="onboard-skip" onclick="closeOnboard(false)">로그인 없이 둘러보기</button>
+  </div>
+</div>
 
 <main>
   <div id="strength"></div>
@@ -2617,6 +2695,7 @@ async function saveAlertModal() {
   closeAlertModal();
   if (state.currentView === 'watchlist') renderWatchlistView();
   autoSyncIfPossible();
+  nudgeTelegramLink();
 }
 
 function clearAlertModal() {
@@ -2765,7 +2844,7 @@ function renderInvestorView() {
 }
 
 // === 📓 매매 일지 ===
-const TELEGRAM_BOT_USERNAME = '@stage2_note_bot';  // 예: @richman_alert_bot
+const TELEGRAM_BOT_USERNAME = '@여기에_봇이름_입력';  // 예: @richman_alert_bot
 const JOURNAL_KEY = 'trade_journal_v1';
 let JOURNAL = [];
 
@@ -2888,6 +2967,15 @@ function tradeReturn(t) {
   return (exitPrice - t.buyPrice) / t.buyPrice * 100;
 }
 
+function loginBannerHtml(context) {
+  if (window.CURRENT_USER) return '';
+  return `<div class="login-banner">
+    <div class="lb-ttl">👤 로그인하면 계정에 저장됩니다</div>
+    <div class="lb-txt">${context}<br>지금은 이 기기에만 저장돼 캐시를 지우면 사라집니다. 로그인하면 폰·PC 어디서든 이어서 볼 수 있어요. <b>본인만 볼 수 있습니다.</b></div>
+    <button onclick="handleAuthClick()">구글로 로그인</button>
+  </div>`;
+}
+
 function renderJournalView() {
   const el = document.getElementById('strength');
   if (!el) return;
@@ -2908,7 +2996,8 @@ function renderJournalView() {
   const avgReturn = closed.length > 0 ? (sumReturn / closed.length) : 0;
   const hasPat = !!getPat();
 
-  let html = `<div class="strength-section">
+  let html = loginBannerHtml('매수 이유와 매도 이유를 남겨두면 나중에 복기할 때 큰 차이가 납니다.');
+  html += `<div class="strength-section">
     <div class="strength-header">
       <div>
         <div class="strength-title">📓 매매 일지 ${JOURNAL.length > 0 ? `(${JOURNAL.length}건)` : ''}</div>
@@ -3321,7 +3410,7 @@ function renderCompareTable() {
     html += `</tr>`;
   });
   html += `</tbody></table>`;
-  html += `<div style="font-size:10px;color:var(--fg-dim);margin-top:6px">미너비니/모멘텀 점수는 해당 탭 데이터 로드 후 표시됩니다</div>`;
+  html += `<div style="font-size:11px;color:var(--fg-dim);margin-top:6px">미너비니/모멘텀 점수는 해당 탭 데이터 로드 후 표시됩니다</div>`;
   el.innerHTML = html;
   // 미너비니/모멘텀 데이터 없으면 백그라운드 로드 후 재렌더
   if (!mvData) loadMinerviniData().then(() => { if (document.getElementById('compareModal').classList.contains('show')) renderCompareTable(); });
@@ -3352,7 +3441,7 @@ function openAlertHistoryModal() {
         const emoji = typeEmoji[a.type] || '🔔';
         html += `<div style="padding:8px;background:var(--bg-inset);border-radius:6px">
           <div style="font-size:12px;font-weight:700;color:var(--fg-strong)">${emoji} ${a.title || a.type}</div>
-          <div style="font-size:10px;color:var(--fg-dim);margin-top:2px">${a.datetime || a.date || ''}</div>
+          <div style="font-size:11px;color:var(--fg-dim);margin-top:2px">${a.datetime || a.date || ''}</div>
           <div style="font-size:11px;color:var(--fg-mid);margin-top:3px;line-height:1.5">${escapeHtml(a.summary || '')}</div>
         </div>`;
       });
@@ -3392,7 +3481,7 @@ function renderVolumeView() {
       const tradeValue = (s.price && s.volume) ? s.price * s.volume : 0;
       html += `<tr class="strength-row" data-code="${s.code}">
         <td>${i + 1}</td>
-        <td>${s.name}<div class="company-code" style="display:block;font-size:10px;margin-top:2px">${s.code} · ${s.market}</div></td>
+        <td>${s.name}<div class="company-code" style="display:block;font-size:11px;margin-top:2px">${s.code} · ${s.market}</div></td>
         <td class="num up">${s.ratio}x</td>
         <td class="num ${cls}">${fmtPct(s.change)}</td>
         <td class="num">${tradeValue ? fmtMoney(tradeValue) : '—'}</td>
@@ -3565,7 +3654,7 @@ function showVolumeDayModal(date, list) {
       const cls = s.change > 0 ? 'up' : s.change < 0 ? 'down' : 'flat';
       html += `<div class="legend-item" data-stock-code="${s.code}" data-modal-row="1">
         <span class="legend-rank">${i + 1}</span>
-        <span class="legend-name">${s.name}<span style="font-size:10px;color:var(--fg-faint);margin-left:4px">${s.code}·${s.market || ''}</span></span>
+        <span class="legend-name">${s.name}<span style="font-size:11px;color:var(--fg-faint);margin-left:4px">${s.code}·${s.market || ''}</span></span>
         <span class="legend-val up" style="font-weight:700">${s.ratio}x</span>
         <span class="legend-val ${cls}">${sign}${s.change.toFixed(2)}%</span>
       </div>`;
@@ -4250,7 +4339,7 @@ function renderEarningsBanner(watchlistCodes) {
       <div style="min-width:0">
         <div style="font-weight:700;font-size:13px">${isProv ? '🚨' : '📋'} ${d.name} <span style="color:var(--fg-dim);font-weight:400;font-size:11px">${d.code}</span></div>
         <div style="font-size:11px;color:var(--fg-dim);margin-top:2px">${d.report_nm}</div>
-        <a href="${d.url}" target="_blank" rel="noreferrer" style="font-size:10px;color:#0369a1;margin-top:2px;display:inline-block">📄 DART 공시 보기</a>
+        <a href="${d.url}" target="_blank" rel="noreferrer" style="font-size:11px;color:#0369a1;margin-top:2px;display:inline-block">📄 DART 공시 보기</a>
       </div>
       <button onclick="hideEarningsItem('${d.rcept_no}')" title="이 공시 숨기기" style="flex:none;background:none;border:none;color:var(--fg-dim);font-size:18px;line-height:1;cursor:pointer;padding:0 4px">×</button>
     </div>`;
@@ -4338,7 +4427,7 @@ function renderExitSignalsBanner(watchlistCodes) {
   // 보유 종목 (빨강 강조 — Telegram 알림 보내짐)
   if (hasOwned) {
     html += `<div class="strength-section" style="border-left:4px solid #dc2626;background:#fef2f2">
-      <div class="strength-title">🛑 보유 종목 매도 시그널 <span style="font-size:10px;background:#dc2626;color:#fff;padding:2px 6px;border-radius:4px;margin-left:6px">📱 알림 발송</span></div>
+      <div class="strength-title">🛑 보유 종목 매도 시그널 <span style="font-size:11px;background:#dc2626;color:#fff;padding:2px 6px;border-radius:4px;margin-left:6px">📱 알림 발송</span></div>
       <div class="strength-meta">${EXIT_SIGNALS_DATA.trading_day || ''} 분석 · 위험 ${ownedCrit.length}건 · 주의 ${ownedWarn.length}건</div>
       <div style="margin-top:8px">`;
     for (const r of [...ownedCrit, ...ownedWarn]) {
@@ -4366,7 +4455,7 @@ function renderExitSignalsBanner(watchlistCodes) {
   // 관심만 (노랑 — 알림 없음, 모니터링용)
   if (hasWl) {
     html += `<div class="strength-section" style="border-left:4px solid #f59e0b;background:#fffbeb">
-      <div class="strength-title">⚠️ 관심 종목 매도 시그널 <span style="font-size:10px;background:#9ca3af;color:#fff;padding:2px 6px;border-radius:4px;margin-left:6px">알림 X · 참고만</span></div>
+      <div class="strength-title">⚠️ 관심 종목 매도 시그널 <span style="font-size:11px;background:#9ca3af;color:#fff;padding:2px 6px;border-radius:4px;margin-left:6px">알림 X · 참고만</span></div>
       <div class="strength-meta">위험 ${wlCrit.length}건 · 주의 ${wlWarn.length}건 (보유 등록 시 Telegram 알림)</div>
       <div style="margin-top:8px">`;
     for (const r of [...wlCrit, ...wlWarn]) {
@@ -4453,11 +4542,11 @@ function renderPortfolioSummary(codes) {
     <div class="strength-title">📁 내 포트폴리오 (${ownedCodes.length}종목)</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;font-size:12px">
       <div style="background:#fff;padding:8px;border-radius:6px">
-        <div style="font-size:10px;color:var(--fg-dim);font-weight:700">종합 수익률</div>
+        <div style="font-size:11px;color:var(--fg-dim);font-weight:700">종합 수익률</div>
         <div style="font-size:18px;font-weight:800;color:${retColor};margin-top:2px">${retStr}</div>
       </div>
       <div style="background:#fff;padding:8px;border-radius:6px">
-        <div style="font-size:10px;color:var(--fg-dim);font-weight:700">승/패</div>
+        <div style="font-size:11px;color:var(--fg-dim);font-weight:700">승/패</div>
         <div style="font-size:18px;font-weight:800;margin-top:2px">
           <span style="color:#dc2626">${winCount}</span>
           <span style="color:var(--fg-faint);font-size:14px"> / </span>
@@ -4535,12 +4624,13 @@ function renderWatchlistView() {
   // 실적 공시 배너 (있을 때만)
   html += renderEarningsBanner(codes);
   // 관심 종목 카드
+  html += loginBannerHtml('관심 종목과 목표가 알림도 계정에 저장됩니다.');
   html += `<div class="strength-section">`;
   const hasPat = !!getPat();
   html += `<div class="strength-header">
     <div>
       <div class="strength-title">⭐ 관심 종목 ${codes.length > 0 ? `(${codes.length})` : ''}</div>
-      <div class="strength-meta">★ 종목 추가 · 가격 도달 시 Telegram 알림 ${hasPat ? '🚀' : ''}</div>
+      <div class="strength-meta">★ 종목 추가 · 목표가 도달 시 텔레그램 알림 · 📱 버튼으로 연결</div>
     </div>
     <div style="display:flex;gap:6px">
       <button class="refresh-btn" onclick="openTelegramLinkModal()" title="텔레그램 알림 연결">📱 알림</button>
@@ -4597,7 +4687,7 @@ function renderWatchlistView() {
       html += `<div class="watchlist-card ${triggered ? 'triggered' : ''}">
         <div class="watchlist-top">
           <div>
-            <div class="company-name">${name} ${w.owned ? '<span style="font-size:10px;background:#92400e;color:#fff;padding:1px 5px;border-radius:3px;vertical-align:middle">📌</span>' : ''}</div>
+            <div class="company-name">${name} ${w.owned ? '<span style="font-size:11px;background:#92400e;color:#fff;padding:1px 5px;border-radius:3px;vertical-align:middle">📌</span>' : ''}</div>
             <div class="company-code">${code}${s ? ` · ${s.market}` : ''}</div>
           </div>
           <button class="watchlist-btn-remove" onclick="confirmRemoveWatchlist('${code}')">삭제</button>
@@ -5039,16 +5129,16 @@ async function renderSignalTimeline(code) {
     const dateF = `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`;
     const dayEvts = byDate[date];
     const chips = dayEvts.map(e =>
-      `<span style="display:inline-block;background:${e.color}22;color:${e.color};border:1px solid ${e.color}66;font-size:10px;padding:2px 6px;border-radius:4px;margin:1px;font-weight:600">${e.label}${e.score ? ' · ' + e.score : ''}</span>`
+      `<span style="display:inline-block;background:${e.color}22;color:${e.color};border:1px solid ${e.color}66;font-size:11px;padding:2px 6px;border-radius:4px;margin:1px;font-weight:600">${e.label}${e.score ? ' · ' + e.score : ''}</span>`
     ).join('');
     html += `<div style="display:flex;align-items:center;gap:8px;padding:3px 0;border-bottom:1px solid #f3f4f6">
-      <span style="font-size:10px;color:var(--fg-dim);font-family:monospace;min-width:80px">${dateF}</span>
+      <span style="font-size:11px;color:var(--fg-dim);font-family:monospace;min-width:80px">${dateF}</span>
       <span>${chips}</span>
     </div>`;
   }
   html += `</div>`;
   if (sortedDates.length > 30) {
-    html += `<div style="font-size:10px;color:var(--fg-faint);margin-top:4px;text-align:center">... 외 ${sortedDates.length - 30}일 더</div>`;
+    html += `<div style="font-size:11px;color:var(--fg-faint);margin-top:4px;text-align:center">... 외 ${sortedDates.length - 30}일 더</div>`;
   }
   html += `</div>`;
   container.innerHTML = html;
@@ -5836,7 +5926,7 @@ function renderOneilView() {
       <div class="strength-title">🏆 윌리엄 오닐 — 신고가 돌파 매매</div>
       <div class="strength-meta" style="margin-top:4px;line-height:1.6">
         CAN SLIM의 <b>N</b> = New highs. 거래량 동반 <b>역사적 신고가 돌파</b> 종목 포착.<br>
-        <span style="font-size:10px">오닐: "역대 최고가 돌파 + 평균 대비 40~50%↑ 거래량 = 가장 강력한 매수 신호"</span>
+        <span style="font-size:11px">오닐: "역대 최고가 돌파 + 평균 대비 40~50%↑ 거래량 = 가장 강력한 매수 신호"</span>
       </div>
     </div>
     <div id="athBreakoutSection"></div>`;
@@ -6110,10 +6200,10 @@ function renderConfluenceBanner() {
   const card = (e, isTriple) => {
     const cls = e.change > 0 ? 'up' : e.change < 0 ? 'down' : 'flat';
     const sign = e.change > 0 ? '+' : '';
-    const label = isTriple ? '🏆🏆🏆' : `🏆🏆 <span style="font-size:10px;color:var(--fg-dim)">${pairLabel(e.hits)}</span>`;
+    const label = isTriple ? '🏆🏆🏆' : `🏆🏆 <span style="font-size:11px;color:var(--fg-dim)">${pairLabel(e.hits)}</span>`;
     return `<div style="padding:8px 0;border-bottom:1px solid var(--border-amber);cursor:pointer" onclick="openStockModal('${e.code}')">
       <div style="font-weight:700;font-size:13px;color:var(--fg-strong)">
-        ${label} ${e.name} <span style="font-size:10px;color:var(--fg-dim);font-weight:400">${e.code} · ${e.market}</span>
+        ${label} ${e.name} <span style="font-size:11px;color:var(--fg-dim);font-weight:400">${e.code} · ${e.market}</span>
       </div>
       <div style="font-size:11px;color:var(--fg-mid);margin-top:2px">
         ${(e.price||0).toLocaleString('ko-KR')}원 <span class="${cls}" style="font-weight:700">${sign}${(e.change||0).toFixed(2)}%</span>
@@ -6137,7 +6227,7 @@ function renderConfluenceBanner() {
     for (const d of double.slice(0, 15)) html += card(d, false);
     html += `</div>`;
     if (double.length > 15) {
-      html += `<div style="font-size:10px;color:var(--fg-dim);text-align:center;margin-top:4px">... 외 ${double.length - 15}개</div>`;
+      html += `<div style="font-size:11px;color:var(--fg-dim);text-align:center;margin-top:4px">... 외 ${double.length - 15}개</div>`;
     }
   }
   html += `</div>`;
@@ -6313,7 +6403,7 @@ function renderMarket(market) {
     const tv = (s.price && s.volume) ? s.price * s.volume : 0;
     html += `<tr class="strength-row" data-code="${s.code}">
       <td>${i + 1}</td>
-      <td>${s.name}<div class="company-code" style="display:block;font-size:10px;margin-top:2px">${s.code} · ${s.market}</div></td>
+      <td>${s.name}<div class="company-code" style="display:block;font-size:11px;margin-top:2px">${s.code} · ${s.market}</div></td>
       <td class="num up">${fmtPct(s.change)}</td>
       <td class="num">${tv ? fmtMoney(tv) : '—'}</td>
     </tr>`;
@@ -6329,7 +6419,7 @@ function renderMarket(market) {
     const tv = (s.price && s.volume) ? s.price * s.volume : 0;
     html += `<tr class="strength-row" data-code="${s.code}">
       <td>${i + 1}</td>
-      <td>${s.name}<div class="company-code" style="display:block;font-size:10px;margin-top:2px">${s.code} · ${s.market}</div></td>
+      <td>${s.name}<div class="company-code" style="display:block;font-size:11px;margin-top:2px">${s.code} · ${s.market}</div></td>
       <td class="num down">${fmtPct(s.change)}</td>
       <td class="num">${tv ? fmtMoney(tv) : '—'}</td>
     </tr>`;
@@ -6358,7 +6448,7 @@ function renderMarket(market) {
       shown++;
       html += `<tr class="strength-row" data-code="${code}">
         <td>${shown}</td>
-        <td>${s.name}<div class="company-code" style="display:block;font-size:10px;margin-top:2px">${code} · ${s.market}</div></td>
+        <td>${s.name}<div class="company-code" style="display:block;font-size:11px;margin-top:2px">${code} · ${s.market}</div></td>
         <td class="num ${cls}">${fmtPct(s.change)}</td>
       </tr>`;
     }
@@ -6637,7 +6727,7 @@ function renderForecastBox(data) {
   } else if (stats && stats.status === 'warming_up') {
     trustText = stats.message || '백테스트 데이터 누적 중';
   }
-  trustBadge = `<span style="font-size:10px;background:${trustColor};color:#fff;padding:2px 6px;border-radius:4px;margin-left:6px">${trustText}</span>`;
+  trustBadge = `<span style="font-size:11px;background:${trustColor};color:#fff;padding:2px 6px;border-radius:4px;margin-left:6px">${trustText}</span>`;
 
   let html = `<div class="strength-section" style="border-left:4px solid var(--accent-purple);background:var(--bg-card-tint-purple)">
     <div class="strength-title">🔮 다음 주 강세 예상 테마 ${trustBadge}</div>
@@ -6660,13 +6750,13 @@ function renderForecastBox(data) {
     html += `<div style="padding:8px 0;border-bottom:1px solid var(--border-purple);${cursorStyle}" ${clickAttr}>
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div style="flex:1;min-width:0">
-          <div style="font-weight:700;font-size:13px;color:var(--accent-purple-text)">#${i+1} ${t.name} ${hasStocks ? `<span style="font-size:10px;color:var(--accent-purple);font-weight:400">▸ ${t.stocks.length}종목</span>` : ''}</div>
-          <div style="font-size:10px;color:var(--fg-dim);margin-top:2px">현재 ${t.current_rank}위 · ${t.current_change >= 0 ? '+' : ''}${t.current_change}%</div>
+          <div style="font-weight:700;font-size:13px;color:var(--accent-purple-text)">#${i+1} ${t.name} ${hasStocks ? `<span style="font-size:11px;color:var(--accent-purple);font-weight:400">▸ ${t.stocks.length}종목</span>` : ''}</div>
+          <div style="font-size:11px;color:var(--fg-dim);margin-top:2px">현재 ${t.current_rank}위 · ${t.current_change >= 0 ? '+' : ''}${t.current_change}%</div>
           <div style="font-size:11px;color:var(--fg-mid);margin-top:3px">${whyStr}</div>
         </div>
         <div style="text-align:right;margin-left:8px">
           <div style="font-size:16px;font-weight:800;color:var(--accent-purple)">${t.total_score}</div>
-          <div style="font-size:9px;color:var(--fg-dim)">M${t.momentum_score} F${t.flow_score} U${t.fundamental_score} C${t.confidence_score ?? 0}</div>
+          <div style="font-size:11px;color:var(--fg-dim)">M${t.momentum_score} F${t.flow_score} U${t.fundamental_score} C${t.confidence_score ?? 0}</div>
         </div>
       </div>
     </div>`;
@@ -6720,7 +6810,7 @@ function showForecastThemeStocks(themeIdx) {
     const cls = change > 0 ? 'up' : change < 0 ? 'down' : 'flat';
     html += `<div class="legend-item" data-stock-code="${s.code}" data-modal-row="1">
       <span class="legend-rank">${i + 1}</span>
-      <span class="legend-name">${s.name}<span style="font-size:10px;color:var(--fg-faint);margin-left:4px">${s.code}</span></span>
+      <span class="legend-name">${s.name}<span style="font-size:11px;color:var(--fg-faint);margin-left:4px">${s.code}</span></span>
       <span class="legend-val ${cls}">${price ? price.toLocaleString('ko-KR') + '원' : '—'}</span>
       <span class="legend-val ${cls}">${sign}${change.toFixed(2)}%</span>
     </div>`;
@@ -7084,6 +7174,37 @@ async function migrateLocalToAccount() {
   showToast(`✅ ${nTrade}건 계정으로 이관 완료`, 4000);
 }
 
+// === 첫 방문 안내 ===
+const ONBOARD_KEY = 'onboard_seen_v1';
+
+function maybeShowOnboard() {
+  if (localStorage.getItem(ONBOARD_KEY) === '1') return;
+  if (window.CURRENT_USER) { localStorage.setItem(ONBOARD_KEY, '1'); return; }
+  const mask = document.getElementById('onboardMask');
+  if (mask) mask.classList.add('show');
+}
+
+function closeOnboard(doLogin) {
+  localStorage.setItem(ONBOARD_KEY, '1');
+  const mask = document.getElementById('onboardMask');
+  if (mask) mask.classList.remove('show');
+  if (doLogin) handleAuthClick();
+}
+
+// 목표가를 걸었는데 텔레그램이 연결 안 됐으면 한 번 안내
+let _telegramNudged = false;
+async function nudgeTelegramLink() {
+  if (_telegramNudged || !window.CURRENT_USER) return;
+  _telegramNudged = true;
+  try {
+    const { data } = await window.sb.from('profiles').select('telegram_chat_id').single();
+    if (data && data.telegram_chat_id) return;
+  } catch { return; }
+  if (confirm('목표가를 저장했습니다.\n\n텔레그램을 연결하면 도달했을 때 알림을 보내드립니다.\n지금 연결하시겠습니까?')) {
+    openTelegramLinkModal();
+  }
+}
+
 // === 📱 텔레그램 알림 연결 ===
 async function openTelegramLinkModal() {
   if (!window.CURRENT_USER) {
@@ -7144,6 +7265,7 @@ async function initMarket() {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js').catch(() => {});
     }
+    maybeShowOnboard();
   } catch (e) {
     el.innerHTML = `<div class="strength-section"><div class="strength-loading">
       ⚠️ 시장 데이터를 아직 불러올 수 없습니다.<br>
