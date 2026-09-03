@@ -1178,6 +1178,9 @@
   .theme-toggle { left: 14px; }
   .search-btn { left: 48px; }
   .alerthist-btn { left: 82px; }
+  .auth-btn { left: 116px; }
+  .auth-btn.logged-in { background: #dcfce7; border-color: #86efac; }
+  .theme-dark .auth-btn.logged-in { background: #14532d; border-color: #166534; }
   .update-badge .src { font-weight: 700; color: #374151; margin-right: 4px; }
 
   .theme-dark .update-badge .src { color: #d1d5db; }
@@ -1194,6 +1197,7 @@
   <button id="themeToggle" class="hdr-btn theme-toggle" onclick="cycleTheme()" title="테마 전환 (자동/라이트/다크)">🌓</button>
   <button class="hdr-btn search-btn" onclick="openSearchModal()" title="종목 검색">🔍</button>
   <button class="hdr-btn alerthist-btn" onclick="openAlertHistoryModal()" title="알림 기록">🔔</button>
+  <button id="authBtn" class="hdr-btn auth-btn" onclick="handleAuthClick()" title="로그인">👤</button>
   <div class="top-nav">
     <button class="nav-btn active" data-view="strength" onclick="setView('strength')">🔥 강도</button>
     <button class="nav-btn" data-view="industry" onclick="setView('industry')">🏭 업종</button>
@@ -1450,6 +1454,61 @@
     <div class="modal-note">⚙️ TELEGRAM_BOT_TOKEN/CHAT_ID는 GitHub Secrets에 등록되어 있어야 동작합니다</div>
   </div>
 </div>
+
+<!-- ===== Supabase 계정 로그인 (다중 사용자) ===== -->
+<script>
+// 인증 준비 완료를 알리는 약속(Promise). module 스크립트가 나중에 실행되므로 필요.
+window.CURRENT_USER = null;
+window._authResolve = null;
+window.AUTH_READY = new Promise(r => { window._authResolve = r; });
+
+function handleAuthClick() {
+  if (!window.sb) { alert('로그인 모듈 로딩 중입니다. 잠시 후 다시 시도해주세요.'); return; }
+  if (window.CURRENT_USER) {
+    if (confirm('로그아웃 하시겠습니까?')) window.sb.auth.signOut().then(() => location.reload());
+  } else {
+    window.sb.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: location.origin + location.pathname }
+    });
+  }
+}
+
+function updateAuthBtn() {
+  const btn = document.getElementById('authBtn');
+  if (!btn) return;
+  if (window.CURRENT_USER) {
+    btn.textContent = '✅';
+    btn.classList.add('logged-in');
+    btn.title = window.CURRENT_USER.email + ' (클릭하면 로그아웃)';
+  } else {
+    btn.textContent = '👤';
+    btn.classList.remove('logged-in');
+    btn.title = '로그인하면 일지가 계정에 저장됩니다';
+  }
+}
+</script>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const SUPABASE_URL = 'https://xnppyvwikvrggcgciwdr.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhucHB5dndpa3ZyZ2djZ2Npd2RyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg0MTA1MDksImV4cCI6MjEwMzk4NjUwOX0.ZodaBdq6ARM1PAqeqpMSV8uXdxJUDamG_6VZo2oggNA';
+
+window.sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const { data: { session } } = await window.sb.auth.getSession();
+window.CURRENT_USER = session ? session.user : null;
+updateAuthBtn();
+window._authResolve(window.CURRENT_USER);
+
+// 로그인/로그아웃이 나중에 일어나면 화면을 새로 그린다
+let firstEvent = true;
+window.sb.auth.onAuthStateChange((event) => {
+  if (firstEvent) { firstEvent = false; return; }
+  if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') location.reload();
+});
+</script>
 
 <script>
 const DATA = {
@@ -2276,7 +2335,31 @@ const TRIGGERED_KEY = 'triggered_alerts_v1';
 let WATCHLIST = {};
 let TRIGGERED = new Set();
 
-function loadWatchlist() {
+async function loadWatchlist() {
+  if (window.CURRENT_USER) {
+    try {
+      const { data, error } = await window.sb.from('watchlist').select('*');
+      if (error) throw error;
+      WATCHLIST = {};
+      TRIGGERED = new Set();
+      for (const r of (data || [])) {
+        const w = { name: r.name || r.code, addedAt: r.added_at ? new Date(r.added_at).getTime() : Date.now() };
+        if (r.target) { w.target = r.target; w.direction = r.direction || 'above'; }
+        if (r.owned) {
+          w.owned = true;
+          if (r.entry_price) w.entry_price = r.entry_price;
+          if (r.entry_date) w.entry_date = r.entry_date;
+        }
+        WATCHLIST[r.code] = w;
+        if (r.triggered) TRIGGERED.add(r.code);
+      }
+      return;
+    } catch (e) {
+      console.error('관심종목 불러오기 실패', e);
+      WATCHLIST = {}; TRIGGERED = new Set();
+      return;
+    }
+  }
   try {
     WATCHLIST = JSON.parse(localStorage.getItem(WATCHLIST_KEY) || '{}');
     TRIGGERED = new Set(JSON.parse(localStorage.getItem(TRIGGERED_KEY) || '[]'));
@@ -2284,6 +2367,8 @@ function loadWatchlist() {
 }
 
 async function syncWatchlistFromGitHub() {
+  return;  // 비활성: 개인 데이터를 공개 저장소로 주고받지 않는다
+  // eslint-disable-next-line no-unreachable
   // 다른 기기에서 추가한 관심 종목/알림을 자동 복원
   let changed = false;
   // 1. watchlist.json (전체 관심 종목)
@@ -2354,10 +2439,47 @@ async function syncWatchlistFromGitHub() {
 }
 
 function saveWatchlist() {
+  if (window.CURRENT_USER) { pushWatchlistToDB(); return; }
   try {
     localStorage.setItem(WATCHLIST_KEY, JSON.stringify(WATCHLIST));
     localStorage.setItem(TRIGGERED_KEY, JSON.stringify([...TRIGGERED]));
   } catch {}
+}
+
+let _watchPushTimer = null;
+function pushWatchlistToDB() {
+  clearTimeout(_watchPushTimer);
+  _watchPushTimer = setTimeout(async () => {
+    const uid = window.CURRENT_USER && window.CURRENT_USER.id;
+    if (!uid) return;
+    try {
+      const codes = Object.keys(WATCHLIST);
+      const rows = codes.map(code => {
+        const w = WATCHLIST[code];
+        return {
+          user_id: uid, code,
+          name: w.name || code,
+          target: w.target || null,
+          direction: w.direction || null,
+          owned: !!w.owned,
+          entry_price: w.entry_price || null,
+          entry_date: w.entry_date || null,
+          triggered: TRIGGERED.has(code),
+        };
+      });
+      if (rows.length) {
+        const { error } = await window.sb.from('watchlist')
+          .upsert(rows, { onConflict: 'user_id,code' });
+        if (error) throw error;
+      }
+      let q = window.sb.from('watchlist').delete().eq('user_id', uid);
+      if (codes.length) q = q.not('code', 'in', '(' + codes.map(c => `"${c}"`).join(',') + ')');
+      await q;
+    } catch (e) {
+      console.error('관심종목 저장 실패', e);
+      showToast('⚠️ 저장 실패 - 인터넷 확인 후 다시 시도', 4000);
+    }
+  }, 400);
 }
 
 function isWatched(code) { return code in WATCHLIST; }
@@ -2646,7 +2768,44 @@ function renderInvestorView() {
 const JOURNAL_KEY = 'trade_journal_v1';
 let JOURNAL = [];
 
-function loadJournal() {
+// DB 컬럼(snake_case) ↔ 앱 필드(camelCase) 변환
+function tradeFromDB(r) {
+  return {
+    id: r.local_id || r.id,
+    code: r.code, name: r.name,
+    buyDate: r.buy_date, buyPrice: r.buy_price, buyQty: r.buy_qty,
+    buyReason: r.buy_reason || '',
+    sellDate: r.sell_date, sellPrice: r.sell_price, sellReason: r.sell_reason || '',
+    memo: r.memo || '',
+    createdAt: r.created_at ? new Date(r.created_at).getTime() : Date.now(),
+  };
+}
+function tradeToDB(t, uid) {
+  return {
+    user_id: uid, local_id: t.id,
+    code: t.code, name: t.name,
+    buy_date: t.buyDate || null, buy_price: t.buyPrice || null, buy_qty: t.buyQty || null,
+    buy_reason: t.buyReason || '',
+    sell_date: t.sellDate || null, sell_price: t.sellPrice || null, sell_reason: t.sellReason || '',
+    memo: t.memo || '',
+  };
+}
+
+async function loadJournal() {
+  if (window.CURRENT_USER) {
+    try {
+      const { data, error } = await window.sb.from('trades')
+        .select('*').order('buy_date', { ascending: false });
+      if (error) throw error;
+      JOURNAL = (data || []).map(tradeFromDB);
+      return;
+    } catch (e) {
+      console.error('일지 불러오기 실패', e);
+      showToast('⚠️ 일지 불러오기 실패 - 새로고침 해보세요', 4000);
+      JOURNAL = [];
+      return;
+    }
+  }
   try {
     JOURNAL = JSON.parse(localStorage.getItem(JOURNAL_KEY) || '[]');
     if (!Array.isArray(JOURNAL)) JOURNAL = [];
@@ -2654,10 +2813,38 @@ function loadJournal() {
 }
 
 function saveJournal() {
+  if (window.CURRENT_USER) { pushJournalToDB(); return; }
   localStorage.setItem(JOURNAL_KEY, JSON.stringify(JOURNAL));
 }
 
+let _journalPushTimer = null;
+function pushJournalToDB() {
+  clearTimeout(_journalPushTimer);
+  _journalPushTimer = setTimeout(async () => {
+    const uid = window.CURRENT_USER && window.CURRENT_USER.id;
+    if (!uid) return;
+    try {
+      const rows = JOURNAL.map(t => tradeToDB(t, uid));
+      if (rows.length) {
+        const { error } = await window.sb.from('trades')
+          .upsert(rows, { onConflict: 'user_id,local_id' });
+        if (error) throw error;
+      }
+      // 앱에서 삭제된 거래는 DB에서도 제거
+      const keep = JOURNAL.map(t => t.id);
+      let q = window.sb.from('trades').delete().eq('user_id', uid);
+      if (keep.length) q = q.not('local_id', 'in', '(' + keep.map(k => `"${k}"`).join(',') + ')');
+      await q;
+    } catch (e) {
+      console.error('일지 저장 실패', e);
+      showToast('⚠️ 저장 실패 - 인터넷 확인 후 다시 시도', 4000);
+    }
+  }, 400);
+}
+
 async function syncJournalFromGitHub() {
+  return false;  // 비활성: 개인 데이터를 공개 저장소로 주고받지 않는다
+  // eslint-disable-next-line no-unreachable
   // 다른 기기에서 작성한 일지 복원 (id 기준 merge)
   try {
     const r = await fetch('data/trade_journal.json?t=' + Date.now());
@@ -2678,6 +2865,8 @@ async function syncJournalFromGitHub() {
 }
 
 async function autoSyncJournal() {
+  return;  // 비활성: 일지를 공개 저장소에 쓰지 않는다
+  // eslint-disable-next-line no-unreachable
   if (!getPat()) return;
   const res = await pushFileToGitHub('data/trade_journal.json',
     { trades: JOURNAL }, `Update trade journal (${JOURNAL.length}건)`);
@@ -2725,7 +2914,6 @@ function renderJournalView() {
         <div class="strength-meta">매수/매도 시점 + 이유 기록 · 복기용</div>
       </div>
       <div style="display:flex;gap:6px">
-        ${hasPat ? `<button class="refresh-btn" onclick="autoSyncJournal()">🚀 동기화</button>` : ''}
         <button class="refresh-btn" onclick="openTradeBuyModal()">+ 매수 기록</button>
       </div>
     </div>`;
@@ -4353,10 +4541,7 @@ function renderWatchlistView() {
       <div class="strength-title">⭐ 관심 종목 ${codes.length > 0 ? `(${codes.length})` : ''}</div>
       <div class="strength-meta">★ 종목 추가 · 가격 도달 시 Telegram 알림 ${hasPat ? '🚀' : ''}</div>
     </div>
-    <div style="display:flex;gap:6px">
-      ${alertCodes.length > 0 ? `<button class="refresh-btn" onclick="onSyncButtonClick()">${hasPat ? '🚀 동기화' : '📤 동기화'}</button>` : ''}
-      <button class="refresh-btn" onclick="openSettingsModal()" title="자동 동기화 설정">⚙️</button>
-    </div>
+    <div style="display:flex;gap:6px"></div>
   </div>`;
   if (codes.length === 0) {
     html += `<div class="strength-loading">관심 종목이 없습니다.<br>
@@ -4646,6 +4831,8 @@ async function triggerActionsRun() {
 }
 
 async function autoSyncIfPossible() {
+  return false;  // 비활성: 관심종목/알림을 공개 저장소에 쓰지 않는다
+  // eslint-disable-next-line no-unreachable
   if (!getPat()) return false;
   const ok1 = await autoSyncWatchlistFile();
   const ok2 = await autoSyncAlerts(true);
@@ -6872,12 +7059,37 @@ function formatDate(d) {
   return `${y}${m}${day}`;
 }
 
+// 로그인 직후, 이 기기에만 있던 데이터를 계정으로 한 번 옮긴다
+async function migrateLocalToAccount() {
+  if (!window.CURRENT_USER) return;
+  if (localStorage.getItem('migrated_to_account') === '1') return;
+  let localTrades = [], localWatch = {};
+  try { localTrades = JSON.parse(localStorage.getItem(JOURNAL_KEY) || '[]'); } catch {}
+  try { localWatch = JSON.parse(localStorage.getItem(WATCHLIST_KEY) || '{}'); } catch {}
+  if (!Array.isArray(localTrades)) localTrades = [];
+  const nTrade = localTrades.length, nWatch = Object.keys(localWatch).length;
+  if (!nTrade && !nWatch) { localStorage.setItem('migrated_to_account', '1'); return; }
+  if (!confirm(`이 기기에 저장된 매매일지 ${nTrade}건, 관심종목 ${nWatch}개를 계정으로 옮길까요?\n(취소해도 기기 데이터는 지워지지 않습니다)`)) return;
+
+  const have = new Set(JOURNAL.map(t => t.id));
+  for (const t of localTrades) if (!have.has(t.id)) JOURNAL.push(t);
+  for (const [code, w] of Object.entries(localWatch)) if (!WATCHLIST[code]) WATCHLIST[code] = w;
+
+  saveJournal();
+  saveWatchlist();
+  localStorage.setItem('migrated_to_account', '1');
+  showToast(`✅ ${nTrade}건 계정으로 이관 완료`, 4000);
+}
+
 async function initMarket() {
   const el = document.getElementById('strength');
   el.innerHTML = `<div class="strength-section"><div class="strength-loading">⏳ 시장 데이터 불러오는 중...</div></div>`;
   try {
-    loadWatchlist();
-    loadJournal();
+    window.CURRENT_USER = await window.AUTH_READY;
+    updateAuthBtn();
+    await loadWatchlist();
+    await loadJournal();
+    await migrateLocalToAccount();
     MARKET = await loadMarket();
     await loadDescriptions();
     await syncWatchlistFromGitHub();
