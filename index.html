@@ -67,8 +67,8 @@
     --bg-card-tint-red: #2a1313;
     --bg-card-tint-yellow: #2a2008;
     --bg-card-tint-blue: #0a1f33;
-    --bg-card-tint-amber: #2a1f0d;
-    --bg-card-tint-rose: #2a1313;
+    --bg-card-tint-amber: #33260f;
+    --bg-card-tint-rose: #35191a;
     --bg-inset: #2a2f3a;
     --border-light: #2a2f3a;
     --border-purple: #4c1d95;
@@ -4426,7 +4426,7 @@ function renderExitSignalsBanner(watchlistCodes) {
   let html = '';
   // 보유 종목 (빨강 강조 — Telegram 알림 보내짐)
   if (hasOwned) {
-    html += `<div class="strength-section" style="border-left:4px solid #dc2626;background:#fef2f2">
+    html += `<div class="strength-section" style="border-left:4px solid #dc2626;background:var(--bg-card-tint-red)">
       <div class="strength-title">🛑 보유 종목 매도 시그널 <span style="font-size:11px;background:#dc2626;color:#fff;padding:2px 6px;border-radius:4px;margin-left:6px">📱 알림 발송</span></div>
       <div class="strength-meta">${EXIT_SIGNALS_DATA.trading_day || ''} 분석 · 위험 ${ownedCrit.length}건 · 주의 ${ownedWarn.length}건</div>
       <div style="margin-top:8px">`;
@@ -4439,9 +4439,9 @@ function renderExitSignalsBanner(watchlistCodes) {
         retLine = ` · <span style="color:${retCls};font-weight:700">수익 ${ret >= 0 ? '+' : ''}${ret.toFixed(2)}%</span>`;
       }
       const sigs = (r.signals || []).map(s =>
-        `<span class="mv-chip ${s.severity === 'critical' ? 'fail' : 'pass'}" style="background:${s.severity === 'critical' ? '#fee2e2' : '#fef3c7'};color:${s.severity === 'critical' ? '#991b1b' : '#92400e'};border-color:${s.severity === 'critical' ? '#fca5a5' : '#fcd34d'}">${s.label}</span>`
+        `<span class="mv-chip ${s.severity === 'critical' ? 'fail' : 'pass'}" style="background:${s.severity === 'critical' ? 'var(--bg-card-tint-rose)' : 'var(--bg-card-tint-amber)'};color:${s.severity === 'critical' ? 'var(--accent-rose-text)' : 'var(--accent-amber-text)'};border-color:${s.severity === 'critical' ? 'var(--border-rose)' : 'var(--border-amber)'}">${s.label}</span>`
       ).join('');
-      html += `<div style="padding:8px 0;border-bottom:1px solid #fee2e2;display:flex;justify-content:space-between;gap:8px">
+      html += `<div style="padding:8px 0;border-bottom:1px solid var(--border-light);display:flex;justify-content:space-between;gap:8px">
         <div style="min-width:0;cursor:pointer" onclick="openStockModal('${r.code}')">
           <div style="font-weight:700;font-size:13px">${r.overall === 'critical' ? '🛑' : '⚠️'} ${r.name} <span style="color:var(--fg-dim);font-weight:400;font-size:11px">${r.code}</span> 📌</div>
           <div style="font-size:11px;color:var(--fg-dim);margin-top:2px">${(r.current_price || 0).toLocaleString('ko-KR')}원 · ${r.today_change >= 0 ? '+' : ''}${r.today_change}%${retLine}</div>
@@ -4454,13 +4454,13 @@ function renderExitSignalsBanner(watchlistCodes) {
   }
   // 관심만 (노랑 — 알림 없음, 모니터링용)
   if (hasWl) {
-    html += `<div class="strength-section" style="border-left:4px solid #f59e0b;background:#fffbeb">
+    html += `<div class="strength-section" style="border-left:4px solid var(--border-amber);background:var(--bg-card-tint-yellow)">
       <div class="strength-title">⚠️ 관심 종목 매도 시그널 <span style="font-size:11px;background:#9ca3af;color:#fff;padding:2px 6px;border-radius:4px;margin-left:6px">알림 X · 참고만</span></div>
       <div class="strength-meta">위험 ${wlCrit.length}건 · 주의 ${wlWarn.length}건 (보유 등록 시 Telegram 알림)</div>
       <div style="margin-top:8px">`;
     for (const r of [...wlCrit, ...wlWarn]) {
       const sigs = (r.signals || []).map(s =>
-        `<span class="mv-chip ${s.severity === 'critical' ? 'fail' : 'pass'}" style="background:${s.severity === 'critical' ? '#fee2e2' : '#fef3c7'};color:${s.severity === 'critical' ? '#991b1b' : '#92400e'};border-color:${s.severity === 'critical' ? '#fca5a5' : '#fcd34d'}">${s.label}</span>`
+        `<span class="mv-chip ${s.severity === 'critical' ? 'fail' : 'pass'}" style="background:${s.severity === 'critical' ? 'var(--bg-card-tint-rose)' : 'var(--bg-card-tint-amber)'};color:${s.severity === 'critical' ? 'var(--accent-rose-text)' : 'var(--accent-amber-text)'};border-color:${s.severity === 'critical' ? 'var(--border-rose)' : 'var(--border-amber)'}">${s.label}</span>`
       ).join('');
       html += `<div style="padding:8px 0;border-bottom:1px solid #fef3c7;display:flex;justify-content:space-between;gap:8px">
         <div style="min-width:0;cursor:pointer" onclick="openStockModal('${r.code}')">
@@ -4538,14 +4538,14 @@ function renderPortfolioSummary(codes) {
   const retSign = portfolioReturn === null ? '' : (portfolioReturn >= 0 ? '+' : '');
   const retStr = portfolioReturn === null ? '— (매입가 미등록)' : `${retSign}${portfolioReturn.toFixed(2)}%`;
 
-  let html = `<div class="strength-section" style="border-left:4px solid #92400e;background:#fef3c7">
+  let html = `<div class="strength-section" style="border-left:4px solid var(--border-amber);background:var(--bg-card-tint-amber)">
     <div class="strength-title">📁 내 포트폴리오 (${ownedCodes.length}종목)</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;font-size:12px">
-      <div style="background:#fff;padding:8px;border-radius:6px">
+      <div style="background:var(--bg-card);padding:8px;border-radius:6px">
         <div style="font-size:11px;color:var(--fg-dim);font-weight:700">종합 수익률</div>
         <div style="font-size:18px;font-weight:800;color:${retColor};margin-top:2px">${retStr}</div>
       </div>
-      <div style="background:#fff;padding:8px;border-radius:6px">
+      <div style="background:var(--bg-card);padding:8px;border-radius:6px">
         <div style="font-size:11px;color:var(--fg-dim);font-weight:700">승/패</div>
         <div style="font-size:18px;font-weight:800;margin-top:2px">
           <span style="color:#dc2626">${winCount}</span>
@@ -4558,15 +4558,15 @@ function renderPortfolioSummary(codes) {
 
   // 분산도
   const marketChips = Object.entries(marketCounts).map(([m, n]) =>
-    `<span style="background:#fff;padding:2px 8px;border-radius:4px;font-size:11px;border:1px solid #fcd34d"><b>${m}</b> ${n}</span>`
+    `<span style="background:var(--bg-card);color:var(--fg-strong);padding:2px 8px;border-radius:4px;font-size:11px;border:1px solid var(--border-amber)"><b>${m}</b> ${n}</span>`
   ).join(' ');
   html += `<div style="margin-top:8px;font-size:11px">
-    <span style="color:#92400e;font-weight:700">시장 분산:</span> ${marketChips}
+    <span style="color:var(--accent-amber-text);font-weight:700">시장 분산:</span> ${marketChips}
   </div>`;
 
   // 매도 시그널 경고
   if (signalCount > 0) {
-    html += `<div style="margin-top:8px;font-size:11px;background:#fee2e2;color:#991b1b;padding:6px 8px;border-radius:6px;font-weight:700">
+    html += `<div style="margin-top:8px;font-size:11px;background:var(--bg-card-tint-rose);color:var(--accent-rose-text);padding:6px 8px;border-radius:6px;font-weight:700">
       🛑 매도 시그널 ${signalCount}건 (위 banner 참고)
     </div>`;
   }
@@ -4576,15 +4576,15 @@ function renderPortfolioSummary(codes) {
     const sorted = items.filter(i => i.ret !== undefined).sort((a, b) => b.ret - a.ret);
     const top = sorted.slice(0, 3);
     const bottom = sorted.slice(-3).reverse();
-    html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;font-size:11px">`;
-    html += `<div><div style="color:#dc2626;font-weight:700;margin-bottom:3px">📈 수익 상위</div>`;
+    html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;font-size:11px;color:var(--fg-strong)">`;
+    html += `<div><div style="color:var(--accent-rose-text);font-weight:700;margin-bottom:3px">📈 수익 상위</div>`;
     for (const it of top) {
       html += `<div onclick="openStockModal('${it.code}')" style="cursor:pointer;padding:2px 0">
         ${it.name} <span style="color:#dc2626;font-weight:700">+${it.ret.toFixed(2)}%</span>
       </div>`;
     }
     html += `</div>`;
-    html += `<div><div style="color:#2563eb;font-weight:700;margin-bottom:3px">📉 손실 하위</div>`;
+    html += `<div><div style="color:var(--accent-blue-text);font-weight:700;margin-bottom:3px">📉 손실 하위</div>`;
     for (const it of bottom) {
       const sign = it.ret >= 0 ? '+' : '';
       const cls = it.ret >= 0 ? '#dc2626' : '#2563eb';
@@ -4682,7 +4682,7 @@ function renderWatchlistView() {
         } else if (w.entry_price) {
           retStr = ` · 매입 ${w.entry_price.toLocaleString('ko-KR')}원`;
         }
-        ownedLine = `<div style="font-size:11px;color:#92400e;background:#fef3c7;padding:4px 8px;border-radius:4px;margin-top:4px">📌 보유 중${retStr}</div>`;
+        ownedLine = `<div style="font-size:11px;color:var(--accent-amber-text);background:var(--bg-card-tint-amber);padding:4px 8px;border-radius:4px;margin-top:4px">📌 보유 중${retStr}</div>`;
       }
       html += `<div class="watchlist-card ${triggered ? 'triggered' : ''}">
         <div class="watchlist-top">
@@ -4993,7 +4993,7 @@ function openStockModal(code) {
       const retSign = ret >= 0 ? '+' : '';
       returnLine = `<div class="detail-row"><span class="label">수익률</span><span class="value ${retCls}">${retSign}${ret.toFixed(2)}%</span></div>`;
     }
-    html += `<div class="detail-section" style="background:#fef3c7;border-radius:6px;padding:8px">
+    html += `<div class="detail-section" style="background:var(--bg-card-tint-amber);color:var(--fg-strong);border-radius:6px;padding:8px">
       <div class="detail-row"><span class="label">📌 보유 중</span><span class="value">매입 ${w.entry_price ? w.entry_price.toLocaleString('ko-KR') + '원' : '미등록'}</span></div>
       ${w.entry_date ? `<div class="detail-row"><span class="label">매입일</span><span class="value">${w.entry_date}</span></div>` : ''}
       ${returnLine}
