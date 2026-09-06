@@ -21,6 +21,7 @@ import hashlib
 import sys
 import time
 import traceback
+from datetime import timedelta
 from pathlib import Path
 
 import requests
@@ -34,6 +35,27 @@ from social.threads_api import Threads  # noqa: E402
 
 PENDING = "pending"
 STATE = "state"
+
+# 인스타가 게시를 막았을 때 쉬는 기간
+PAUSE_DAYS = 3
+
+# "We restrict certain activity to protect our community" 계열 응답.
+# 단순 횟수 초과가 아니라 스팸 의심 차단이라 바로 재시도하면 더 나빠진다.
+BLOCK_MARKERS = ("2207051", "action is blocked", "restrict certain activity")
+
+
+def is_blocked(err):
+    text = str(err).lower()
+    return any(m.lower() in text for m in BLOCK_MARKERS)
+
+
+def latest_media_id(api):
+    """계정의 가장 최근 게시물 ID. 조회에 실패하면 빈 문자열."""
+    try:
+        media = api.recent_media(limit=1)
+        return media[0]["id"] if media else ""
+    except Exception:
+        return ""
 
 
 def text_key(text):
@@ -99,6 +121,13 @@ def prepare(dry_run=False, only=None, force=False):
     if not ready and not dry_run:
         print("발행 가능한 플랫폼이 없습니다 (시크릿을 확인하세요)")
         return
+    # 인스타가 게시를 차단한 직후에는 재시도하지 않는다.
+    # 매일 컨테이너를 만들어대면 차단 신호만 더 쌓인다.
+    paused = state.get("instagram_paused_until")
+    if paused and paused >= today and "instagram" in ready:
+        print(f"인스타 일시 중지 중 ({paused}까지) - 제외")
+        ready = [p for p in ready if p != "instagram"]
+
     # 예행 연습은 자격증명이 없어도 본문을 보여준다
     platforms = ready or platforms
 
@@ -199,6 +228,7 @@ def publish():
     image_urls = plan.get("image_urls") or []
     images_ready = None
     problems = []
+    paused_now = False
 
     for platform in plan["platforms"]:
         text = plan["texts"].get(platform)
@@ -226,25 +256,54 @@ def publish():
                     raise InstagramError(f"이미지 URL이 아직 열리지 않음: {image_urls}")
 
                 api = Instagram(creds["instagram"]["user_id"], creds["instagram"]["token"])
-                if len(image_urls) >= 2:
-                    media_id = api.publish_carousel(image_urls, text)
-                    print(f"인스타 캐러셀 발행 완료 ({len(image_urls)}장): {media_id}")
-                else:
-                    media_id = api.publish_image(image_urls[0], text)
-                    print(f"인스타 발행 완료: {media_id}")
+                # 발행 전 최신 게시물 ID. 오류가 나도 실제로 올라갔는지
+                # 판별하는 기준이 된다.
+                before_id = latest_media_id(api)
+
+                try:
+                    if len(image_urls) >= 2:
+                        media_id = api.publish_carousel(image_urls, text)
+                        print(f"인스타 캐러셀 발행 완료 ({len(image_urls)}장): {media_id}")
+                    else:
+                        media_id = api.publish_image(image_urls[0], text)
+                        print(f"인스타 발행 완료: {media_id}")
+                except Exception as e:
+                    # 인스타는 게시에 성공하고도 오류 응답을 주는 경우가 있다.
+                    # 실제로 올라갔는지 확인하고, 올라갔으면 성공으로 처리한다.
+                    after_id = latest_media_id(api)
+                    if after_id and after_id != before_id:
+                        media_id = after_id
+                        print(f"  오류 응답이 왔지만 실제로는 게시됨: {media_id}")
+                        print(f"  (응답 내용: {str(e)[:200]})")
+                    else:
+                        raise
                 record["ig_id"] = media_id
 
         except Exception as e:
             msg = f"{platform} 발행 실패: {e}"
             print(f"  ! {msg}")
             problems.append(msg)
+            # 실제로도 안 올라갔고 스팸 차단(subcode 2207051)이면 며칠 쉰다.
+            # 매일 재시도하며 컨테이너를 만들어대면 차단만 길어진다.
+            if platform == "instagram" and is_blocked(e):
+                until = (store.now_kst() + timedelta(days=PAUSE_DAYS)).strftime("%Y-%m-%d")
+                state["instagram_paused_until"] = until
+                paused_now = True
+                problems.append(
+                    f"인스타가 게시를 차단했습니다 (스팸 의심). {until}까지 인스타 발행을 멈춥니다."
+                )
 
     if record.get("threads_id") or record.get("ig_id"):
         state.setdefault("posts", []).append(record)
         state["posts"] = state["posts"][-60:]
+        _save_state = True
+    else:
+        _save_state = paused_now
         if plan.get("source") == "manual" and plan.get("key"):
             state.setdefault("queue_done", []).append(plan["key"])
             state["queue_done"] = state["queue_done"][-200:]
+
+    if _save_state:
         store.save(STATE, state)
 
     store.save(PENDING, {})
