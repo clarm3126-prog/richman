@@ -201,6 +201,40 @@ def check_instagram(creds):
     except Exception as e:
         print(BAD + f"확인 실패: {e}")
 
+    # 게시 권한 확인.
+    # 컨테이너만 만들어 보고 발행은 하지 않는다. 만들어진 컨테이너는
+    # 24시간 뒤 저절로 사라지고 아무에게도 보이지 않는다.
+    # 토큰에 instagram_business_content_publish 가 안 들어 있으면 여기서 걸린다.
+    probe = f"{config.PAGES_BASE}/assets/cards/about.jpg"
+    try:
+        probe_res = requests.get(probe, timeout=20)
+        if probe_res.status_code != 200:
+            print(NO + "게시 권한 확인 건너뜀 (테스트용 이미지가 아직 배포되지 않음)")
+            return
+    except Exception:
+        print(NO + "게시 권한 확인 건너뜀 (이미지 접근 실패)")
+        return
+
+    try:
+        r = requests.post(
+            f"{config.IG_API}/{c['user_id']}/media",
+            params={"image_url": probe, "caption": "권한 확인용", "access_token": c["token"]},
+            timeout=30,
+        )
+        if r.status_code < 300 and r.json().get("id"):
+            print(OK + "게시 권한 있음 (컨테이너 생성 성공 · 발행하지 않음)")
+        else:
+            body = r.text[:200]
+            if "permission" in body.lower() or "OAuth" in body:
+                print(BAD + "게시 권한 없음 - instagram_business_content_publish 를 추가하고 "
+                            "토큰을 다시 발급받으세요")
+                fails.append("instagram_business_content_publish 누락 (토큰 재발급 필요)")
+            else:
+                print(BAD + f"게시 확인 실패: {body}")
+                warns.append(f"게시 권한 확인 불가: {body[:120]}")
+    except Exception as e:
+        print(BAD + f"게시 확인 실패: {e}")
+
     warns.append(
         "DM(비공개 답장) 권한은 실제로 보내봐야 알 수 있습니다. "
         "실패해도 링크가 담긴 대체 답글이 대신 나갑니다"
