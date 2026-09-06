@@ -2,8 +2,9 @@
 """
 인스타그램용 카드 이미지 생성.
 
-인스타는 텍스트만으로 게시할 수 없어서, 스크리닝 결과를 1080x1080 PNG로 그린다.
-만든 PNG는 저장소에 커밋하고 GitHub Pages가 서빙하는 URL을 인스타에 넘긴다.
+인스타는 텍스트만으로 게시할 수 없어서, 스크리닝 결과를 1080x1080 JPEG로 그린다.
+(인스타 게시 API는 JPEG만 받는다. PNG를 넘기면 컨테이너가 ERROR로 끝난다.)
+만든 이미지는 저장소에 커밋하고 GitHub Pages가 서빙하는 URL을 인스타에 넘긴다.
 
 한글 폰트는 우분투(fonts-nanum)와 윈도우(맑은 고딕) 양쪽 경로를 모두 찾는다.
 """
@@ -61,6 +62,21 @@ def _font(bold, size):
             "한글 폰트를 찾지 못했습니다. 워크플로우에서 fonts-nanum 설치가 필요합니다."
         )
     return ImageFont.truetype(path, size)
+
+
+def _save(img, out_path):
+    """확장자에 맞춰 저장한다.
+
+    인스타 게시 API는 JPEG만 받는다 (PNG는 컨테이너가 ERROR로 끝난다).
+    글자가 많은 카드라 크로마 서브샘플링을 끄고(4:4:4) 품질을 높게 잡는다.
+    """
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    if out_path.suffix.lower() in (".jpg", ".jpeg"):
+        img.save(out_path, "JPEG", quality=92, optimize=True, subsampling=0)
+    else:
+        img.save(out_path, "PNG", optimize=True)
+    return out_path
 
 
 def _fit(draw, text, font, max_w):
@@ -157,21 +173,18 @@ def render_card(post, out_path, brand="종목노트", url=""):
         w = d.textlength(short, font=f_foot)
         d.text((SIZE - PAD - w, foot_y + 4), short, font=f_foot, fill=FG_DIM)
 
-    out_path = Path(out_path)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    img.save(out_path, "PNG", optimize=True)
-    return out_path
+    return _save(img, out_path)
 
 
 def prune_cards(keep_days=60):
-    """오래된 카드 PNG를 지운다. 공개 저장소가 이미지로 계속 불어나는 걸 막는다."""
+    """오래된 카드를 지운다. 공개 저장소가 이미지로 계속 불어나는 걸 막는다."""
     from datetime import date, timedelta
 
     if not CARD_DIR.exists():
         return 0
     cutoff = (date.today() - timedelta(days=keep_days)).isoformat()
     removed = 0
-    for p in CARD_DIR.glob("*.png"):
+    for p in list(CARD_DIR.glob("*.jpg")) + list(CARD_DIR.glob("*.png")):
         stamp = p.name[:10]
         if len(stamp) == 10 and stamp[4] == "-" and stamp < cutoff:
             p.unlink()
@@ -206,7 +219,7 @@ def render_about_card(about, out_path, brand="종목노트", url=""):
     """캐러셀 2번째 장에 고정으로 붙는 소개 카드.
 
     매일 바뀌는 종목 카드와 달리 내용이 고정이라, 설정을 바꾸지 않는 한
-    매번 같은 PNG가 나온다. 같은 바이트면 git이 변경으로 보지 않는다.
+    매번 같은 이미지가 나온다. 같은 바이트면 git이 변경으로 보지 않는다.
     """
     img = Image.new("RGB", (SIZE, SIZE), BG)
     d = ImageDraw.Draw(img)
@@ -272,7 +285,4 @@ def render_about_card(about, out_path, brand="종목노트", url=""):
         w = d.textlength(short, font=f_foot)
         d.text((SIZE - PAD - w, foot_y + 12), short, font=f_foot, fill=FG_DIM)
 
-    out_path = Path(out_path)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    img.save(out_path, "PNG", optimize=True)
-    return out_path
+    return _save(img, out_path)

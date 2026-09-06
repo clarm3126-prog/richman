@@ -57,6 +57,25 @@ def check_config():
     else:
         print(OK + "규칙에 안 걸린 댓글은 무시합니다")
 
+    # 쓰레드 답글에 링크가 들어가면 봇이 링크를 공개로 뿌리게 된다.
+    # 직접 DM으로 보내는 운영이면 실수로 새어나가지 않게 미리 잡아준다.
+    leaky = []
+    for rule in list(rules) + [engage.get("default") or {}]:
+        name = rule.get("name") or "default"
+        tmpl = rule.get("reply_threads") or rule.get("reply") or []
+        for t in tmpl if isinstance(tmpl, list) else [tmpl]:
+            if "{link}" in str(t) or "http" in str(t):
+                leaky.append(name)
+                break
+    if leaky:
+        print(BAD + f"쓰레드 답글 문구에 링크가 들어 있습니다: {', '.join(leaky)}")
+        warns.append(
+            f"쓰레드 답글에 링크가 포함된 규칙: {', '.join(leaky)} "
+            "(직접 DM으로 보낼 계획이면 문구에서 링크를 빼세요)"
+        )
+    else:
+        print(OK + "쓰레드 답글 문구에 링크 없음 (직접 DM 운영)")
+
     post = cfg.get("post") or {}
     print(OK + f"글쓰기 {'켜짐' if post.get('enabled', True) else '꺼짐'}"
           f" · 하루 최대 {post.get('max_per_day', 1)}건"

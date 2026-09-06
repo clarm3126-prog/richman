@@ -70,6 +70,9 @@ class Runner:
         self.budget = int(self.engage.get("max_actions_per_run") or 20)
         self.log = []
         self.problems = []
+        # 쓰레드는 DM API가 없다. 링크를 원한 사람은 여기 모아뒀다가
+        # 운영자에게 텔레그램으로 알려서 직접 보내게 한다.
+        self.manual_dm = []
 
     def spent(self):
         return self.budget <= 0
@@ -128,14 +131,22 @@ class Runner:
                     self.mark("replied", key)
                     continue
 
+                # 이 규칙이 DM을 보내도록 돼 있으면, 쓰레드에서는 대신
+                # 운영자가 직접 보내야 하므로 목록에 담아둔다
+                needs_dm = bool(matcher.pick(rule, "dm", "threads"))
+
                 if self.dry_run:
                     print(f"  [예행] @{author} <{name}> -> {text[:60]}")
+                    if needs_dm:
+                        print(f"         └ 직접 DM 대상: @{author}")
                 else:
                     try:
                         api.publish_text(text[:500], reply_to_id=reply["id"])
                         self.mark("replied", key)
                         self.budget -= 1
                         self.log.append(f"쓰레드 답글 @{author} ({name})")
+                        if needs_dm:
+                            self.manual_dm.append((author, name))
                         time.sleep(1)
                     except Exception as e:
                         self.problems.append(f"쓰레드 답글 실패 @{author}: {e}")
@@ -246,6 +257,20 @@ class Runner:
                 print(f"  - {line}")
         else:
             print("\n새로 처리한 댓글 없음")
+
+        # 쓰레드는 DM API가 없어 봇이 링크를 못 보낸다.
+        # 답글로 "디엠 드릴게요"라고 해뒀으니 실제 발송은 운영자 몫이다.
+        if self.manual_dm:
+            print(f"\n직접 DM 보내야 할 사람 {len(self.manual_dm)}명")
+            for author, name in self.manual_dm:
+                print(f"  - @{author} ({name})")
+            if not self.dry_run:
+                lines = [f"📩 <b>쓰레드에서 링크 요청 {len(self.manual_dm)}건</b>\n"]
+                for author, name in self.manual_dm:
+                    lines.append(f"@{author}  <i>{name}</i>")
+                lines.append("\n답글로 '디엠 드릴게요'라고 해뒀습니다.")
+                lines.append("쓰레드는 DM API가 없어 직접 보내주셔야 합니다.")
+                tell_owner("\n".join(lines))
 
         if self.problems:
             print(f"\n문제 {len(self.problems)}건")

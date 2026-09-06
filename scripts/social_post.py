@@ -3,7 +3,7 @@
 쓰레드 / 인스타그램 자동 글쓰기.
 
 두 단계로 나뉜다.
-  prepare : 무엇을 올릴지 정하고, 인스타용 카드 PNG를 만든다.
+  prepare : 무엇을 올릴지 정하고, 인스타용 카드 이미지를 만든다.
   publish : GitHub Pages에 카드가 올라간 걸 확인한 뒤 실제로 발행한다.
 
 인스타는 텍스트만으로 글을 올릴 수 없어서 이미지가 반드시 필요하고,
@@ -80,7 +80,7 @@ def prepare(dry_run=False):
     link_cfg = cfg.get("link") or {}
 
     # 자격증명이 없는 플랫폼은 애초에 대상에서 뺀다.
-    # 특히 인스타는 카드 PNG를 만들어 저장소에 커밋하므로,
+    # 특히 인스타는 카드 이미지를 만들어 저장소에 커밋하므로,
     # 연결도 안 된 상태에서 쓸모없는 이미지가 쌓이는 걸 막는다.
     creds = config.credentials()
     ready = [p for p in platforms if config.available(creds, p)]
@@ -128,16 +128,16 @@ def prepare(dry_run=False):
             url = link_cfg.get("url", "")
 
             # 1번째 장: 그날의 종목 카드
-            rel = "assets/cards/{}-{}.png".format(today, post["kind"])
+            rel = "assets/cards/{}-{}.jpg".format(today, post["kind"])
             card.render_card(post, config.ROOT / rel, brand=brand, url=url)
             plan["image_rels"].append(rel)
             print(f"카드 생성: {rel}")
 
             # 2번째 장: 고정 소개 카드.
-            # 내용이 고정이라 같은 PNG가 나오고, 바뀌지 않으면 git이 커밋하지 않는다.
+            # 내용이 고정이라 같은 이미지가 나오고, 바뀌지 않으면 git이 커밋하지 않는다.
             about = post_cfg.get("about_card")
             if about:
-                about_rel = "assets/cards/about.png"
+                about_rel = "assets/cards/about.jpg"
                 card.render_about_card(
                     about, config.ROOT / about_rel, brand=brand, url=url
                 )
