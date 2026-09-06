@@ -11,6 +11,18 @@ on:
         description: "실제 발행 없이 본문만 확인"
         type: boolean
         default: false
+      only:
+        description: "한 플랫폼에만 발행 (테스트용)"
+        type: choice
+        default: "설정대로"
+        options:
+          - "설정대로"
+          - threads
+          - instagram
+      force:
+        description: "하루 1건 상한 무시 (테스트용)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -49,7 +61,11 @@ jobs:
           THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN }}
           IG_USER_ID: ${{ secrets.IG_USER_ID }}
           IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
-        run: python scripts/social_post.py prepare ${{ inputs.dry_run && '--dry-run' || '' }}
+        run: |
+          python scripts/social_post.py prepare \
+            ${{ inputs.dry_run && '--dry-run' || '' }} \
+            ${{ inputs.force && '--force' || '' }} \
+            ${{ (inputs.only != '' && inputs.only != '설정대로') && format('--only={0}', inputs.only) || '' }}
 
       # 인스타는 외부에서 열리는 이미지 URL이 필요하다.
       # 카드를 먼저 push해서 GitHub Pages가 서빙하게 만든다.

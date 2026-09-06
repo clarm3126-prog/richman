@@ -14,6 +14,8 @@
   python scripts/social_post.py prepare
   python scripts/social_post.py publish
   python scripts/social_post.py prepare --dry-run
+  python scripts/social_post.py prepare --only=instagram   # 한 플랫폼만
+  python scripts/social_post.py prepare --force            # 하루 상한 무시
 """
 import hashlib
 import sys
@@ -61,7 +63,7 @@ def pick_from_queue(state):
     return None
 
 
-def prepare(dry_run=False):
+def prepare(dry_run=False, only=None, force=False):
     cfg = config.load_config()
     post_cfg = cfg.get("post") or {}
     if not post_cfg.get("enabled", True):
@@ -72,11 +74,18 @@ def prepare(dry_run=False):
     today = store.today_kst()
     today_count = sum(1 for p in state.get("posts", []) if p.get("date") == today)
     cap = int(post_cfg.get("max_per_day") or 1)
-    if today_count >= cap and not dry_run:
+    if today_count >= cap and not dry_run and not force:
         print(f"오늘 이미 {today_count}건 발행 (상한 {cap}) - 건너뜀")
         return
 
     platforms = list(post_cfg.get("platforms") or ["threads"])
+    # 수동 실행에서 한 플랫폼만 테스트하고 싶을 때 (--only=instagram)
+    if only:
+        platforms = [p for p in platforms if p == only]
+        if not platforms:
+            print(f"'{only}' 는 설정의 platforms 에 없습니다")
+            return
+        print(f"{only} 에만 발행합니다")
     link_cfg = cfg.get("link") or {}
 
     # 자격증명이 없는 플랫폼은 애초에 대상에서 뺀다.
@@ -247,11 +256,16 @@ def publish():
 if __name__ == "__main__":
     args = sys.argv[1:]
     stage = args[0] if args and not args[0].startswith("-") else "prepare"
+    only = next((a.split("=", 1)[1] for a in args if a.startswith("--only=")), None)
     try:
         if stage == "publish":
             publish()
         else:
-            prepare(dry_run="--dry-run" in args)
+            prepare(
+                dry_run="--dry-run" in args,
+                only=only or None,
+                force="--force" in args,
+            )
     except Exception:
         traceback.print_exc()
         tell_owner("🛑 <b>SNS 자동 발행 스크립트 오류</b>\n\n실행 로그를 확인해주세요.")
