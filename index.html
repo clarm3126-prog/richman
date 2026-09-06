@@ -1481,58 +1481,6 @@
   </div>
 </div>
 
-<div id="settingsModal" class="modal-overlay" onclick="if(event.target===this) closeSettingsModal()">
-  <div class="modal" style="max-width:480px">
-    <div class="modal-title">⚙️ 자동 동기화 설정</div>
-    <div class="modal-current" id="patStatus"></div>
-    <div class="modal-form">
-      <label class="modal-label">GitHub Personal Access Token</label>
-      <input type="password" id="patInput" class="modal-input" placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxx" autocomplete="off">
-      <div style="display:flex;gap:6px;margin-top:6px">
-        <button class="modal-btn modal-btn-cancel" style="flex:1;font-size:11px" onclick="togglePatVisibility()">👁️ 보기/숨기기</button>
-        <button class="modal-btn modal-btn-cancel" style="flex:1;font-size:11px" onclick="copyPatToClipboard()" id="copyPatBtn">📋 복사</button>
-      </div>
-      <div style="font-size:11px;color:var(--fg-faint);margin-top:8px;line-height:1.7">
-        <b>📋 발급 방법:</b><br>
-        1. <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" style="color:#2563eb">새 Fine-grained Token 발급 페이지 열기</a><br>
-        2. <b>Token name</b>: <code>richman alerts</code><br>
-        3. <b>Repository access</b> → "Only select repositories" → <b>richman</b> 선택<br>
-        4. <b>Repository permissions</b> 펼치기:<br>
-        &nbsp;&nbsp;• <b>Contents</b> → <b>Read and write</b> (필수)<br>
-        &nbsp;&nbsp;• <b>Actions</b> → <b>Read and write</b> (선택, 즉시 알림용 ✨)<br>
-        5. 하단 <b>Generate token</b> → 생성된 토큰 복사 → 위 입력란에 붙여넣기<br><br>
-        ⚠️ Token은 본인 핸드폰/PC에만 저장됩니다 (서버 X). 분실 우려 있으면 GitHub에서 언제든 revoke 가능.
-      </div>
-    </div>
-    <div class="modal-actions">
-      <button class="modal-btn modal-btn-clear" onclick="clearPatFromModal()">삭제</button>
-      <button class="modal-btn modal-btn-cancel" onclick="closeSettingsModal()">취소</button>
-      <button class="modal-btn modal-btn-save" onclick="savePatFromModal()">저장</button>
-    </div>
-  </div>
-</div>
-
-<div id="telegramModal" class="modal-overlay" onclick="if(event.target===this) closeTelegramSyncModal()">
-  <div class="modal" style="max-width:480px">
-    <div class="modal-title">📤 Telegram 알림 동기화</div>
-    <div class="modal-current">아래 JSON을 복사 → GitHub 파일에 붙여넣기 → 커밋하면 5분 내 적용</div>
-    <div class="modal-form">
-      <label class="modal-label">1️⃣ JSON 내용 복사</label>
-      <textarea id="syncJsonContent" class="modal-input" rows="8" style="font-family:ui-monospace,monospace;font-size:11px;resize:vertical" readonly></textarea>
-      <button id="copyJsonBtn" class="modal-btn modal-btn-cancel" style="width:100%;margin-top:6px" onclick="copyTelegramJson()">📋 클립보드에 복사</button>
-      <label class="modal-label">2️⃣ GitHub에서 파일 편집</label>
-      <a id="syncEditLink" href="#" target="_blank" class="modal-btn modal-btn-save" style="display:block;text-align:center;text-decoration:none;width:100%">🔗 alerts_config.json 편집 페이지 열기</a>
-      <div style="font-size:11px;color:var(--fg-faint);margin-top:8px;line-height:1.6">
-        편집 페이지에서: 기존 내용 전체 삭제 → 복사한 내용 붙여넣기 → 하단 "Commit changes" 클릭
-      </div>
-    </div>
-    <div class="modal-actions">
-      <button class="modal-btn modal-btn-cancel" onclick="closeTelegramSyncModal()">닫기</button>
-    </div>
-    <div class="modal-note">⚙️ TELEGRAM_BOT_TOKEN/CHAT_ID는 GitHub Secrets에 등록되어 있어야 동작합니다</div>
-  </div>
-</div>
-
 <!-- ===== Supabase 계정 로그인 (다중 사용자) ===== -->
 <script>
 // 인증 준비 완료를 알리는 약속(Promise). module 스크립트가 나중에 실행되므로 필요.
@@ -2444,78 +2392,6 @@ async function loadWatchlist() {
   } catch { WATCHLIST = {}; TRIGGERED = new Set(); }
 }
 
-async function syncWatchlistFromGitHub() {
-  return;  // 비활성: 개인 데이터를 공개 저장소로 주고받지 않는다
-  // eslint-disable-next-line no-unreachable
-  // 다른 기기에서 추가한 관심 종목/알림을 자동 복원
-  let changed = false;
-  // 1. watchlist.json (전체 관심 종목)
-  try {
-    const r = await fetch('data/watchlist.json?t=' + Date.now());
-    if (r.ok) {
-      const cfg = await r.json();
-      for (const item of (cfg.watchlist || [])) {
-        const code = String(item.code).padStart(6, '0');
-        if (!WATCHLIST[code]) {
-          WATCHLIST[code] = {
-            name: item.name || code,
-            addedAt: item.addedAt || Date.now(),
-          };
-          if (item.target) {
-            WATCHLIST[code].target = item.target;
-            WATCHLIST[code].direction = item.direction || 'above';
-          }
-          if (item.owned) {
-            WATCHLIST[code].owned = true;
-            if (item.entry_price) WATCHLIST[code].entry_price = item.entry_price;
-            if (item.entry_date) WATCHLIST[code].entry_date = item.entry_date;
-          }
-          changed = true;
-        } else {
-          if (!WATCHLIST[code].target && item.target) {
-            WATCHLIST[code].target = item.target;
-            WATCHLIST[code].direction = item.direction || 'above';
-            changed = true;
-          }
-          if (!WATCHLIST[code].owned && item.owned) {
-            WATCHLIST[code].owned = true;
-            if (item.entry_price) WATCHLIST[code].entry_price = item.entry_price;
-            if (item.entry_date) WATCHLIST[code].entry_date = item.entry_date;
-            changed = true;
-          }
-        }
-      }
-    }
-  } catch {}
-  // 2. alerts_config.json (호환용 — 알림만)
-  try {
-    const r = await fetch('data/alerts_config.json?t=' + Date.now());
-    if (r.ok) {
-      const cfg = await r.json();
-      for (const a of (cfg.alerts || [])) {
-        const code = String(a.code).padStart(6, '0');
-        if (!WATCHLIST[code]) {
-          WATCHLIST[code] = {
-            name: a.name || code,
-            target: a.target,
-            direction: a.direction || 'above',
-            addedAt: Date.now(),
-          };
-          changed = true;
-        } else if (!WATCHLIST[code].target && a.target) {
-          WATCHLIST[code].target = a.target;
-          WATCHLIST[code].direction = a.direction || 'above';
-          changed = true;
-        }
-      }
-    }
-  } catch {}
-  if (changed) {
-    saveWatchlist();
-    if (state.currentView === 'watchlist') renderWatchlistView();
-  }
-}
-
 function saveWatchlist() {
   if (window.CURRENT_USER) { pushWatchlistToDB(); return; }
   try {
@@ -2575,7 +2451,6 @@ function toggleWatchlist(code, name) {
     btn.textContent = isWatched(code) ? '★' : '☆';
     btn.classList.toggle('starred', isWatched(code));
   });
-  autoSyncIfPossible();
 }
 
 async function requestNotificationPermission() {
@@ -2694,17 +2569,14 @@ async function saveAlertModal() {
   await requestNotificationPermission();
   closeAlertModal();
   if (state.currentView === 'watchlist') renderWatchlistView();
-  autoSyncIfPossible();
   nudgeTelegramLink();
 }
 
 function clearAlertModal() {
   const code = document.getElementById('alertModal').dataset.code;
-  const hadAlert = WATCHLIST[code] && WATCHLIST[code].target;
   clearAlert(code);
   closeAlertModal();
   if (state.currentView === 'watchlist') renderWatchlistView();
-  if (hadAlert) autoSyncIfPossible();
 }
 
 // === 📌 보유 종목 등록 modal ===
@@ -2742,7 +2614,6 @@ async function saveOwnedModal() {
   closeOwnedModal();
   if (state.currentView === 'watchlist') renderWatchlistView();
   showToast('📌 보유 등록 완료');
-  autoSyncIfPossible();
 }
 
 async function clearOwnedModal() {
@@ -2757,7 +2628,6 @@ async function clearOwnedModal() {
   closeOwnedModal();
   if (state.currentView === 'watchlist') renderWatchlistView();
   showToast('📌 보유 해제');
-  autoSyncIfPossible();
 }
 
 function confirmRemoveWatchlist(code) {
@@ -2766,8 +2636,6 @@ function confirmRemoveWatchlist(code) {
     TRIGGERED.delete(code);
     saveWatchlist();
     renderWatchlistView();
-    // 삭제는 항상 sync (zombie entry 방지)
-    autoSyncIfPossible();
   }
 }
 
@@ -2922,37 +2790,6 @@ function pushJournalToDB() {
   }, 400);
 }
 
-async function syncJournalFromGitHub() {
-  return false;  // 비활성: 개인 데이터를 공개 저장소로 주고받지 않는다
-  // eslint-disable-next-line no-unreachable
-  // 다른 기기에서 작성한 일지 복원 (id 기준 merge)
-  try {
-    const r = await fetch('data/trade_journal.json?t=' + Date.now());
-    if (!r.ok) return false;
-    const cfg = await r.json();
-    const remote = cfg.trades || [];
-    const localIds = new Set(JOURNAL.map(t => t.id));
-    let changed = false;
-    for (const t of remote) {
-      if (!localIds.has(t.id)) {
-        JOURNAL.push(t);
-        changed = true;
-      }
-    }
-    if (changed) saveJournal();
-    return changed;
-  } catch { return false; }
-}
-
-async function autoSyncJournal() {
-  return;  // 비활성: 일지를 공개 저장소에 쓰지 않는다
-  // eslint-disable-next-line no-unreachable
-  if (!getPat()) return;
-  const res = await pushFileToGitHub('data/trade_journal.json',
-    { trades: JOURNAL }, `Update trade journal (${JOURNAL.length}건)`);
-  if (res.ok) showToast('📓 일지 동기화됨');
-}
-
 function tradeReturn(t) {
   // 수익률 % 계산. 매도 완료면 sellPrice, 보유 중이면 현재가
   if (!t.buyPrice) return null;
@@ -2994,7 +2831,6 @@ function renderJournalView() {
   }
   const winRate = closed.length > 0 ? Math.round(winCount / closed.length * 100) : 0;
   const avgReturn = closed.length > 0 ? (sumReturn / closed.length) : 0;
-  const hasPat = !!getPat();
 
   let html = loginBannerHtml('매수 이유와 매도 이유를 남겨두면 나중에 복기할 때 큰 차이가 납니다.');
   html += `<div class="strength-section">
@@ -3183,7 +3019,6 @@ function saveTradeBuy() {
   closeTradeBuyModal();
   renderJournalView();
   showToast('🛒 매수 기록 저장');
-  autoSyncJournal();
 }
 
 // --- 매도 기록 modal ---
@@ -3217,7 +3052,6 @@ function saveTradeSell() {
   closeTradeSellModal();
   renderJournalView();
   showToast('💰 매도 기록 저장');
-  autoSyncJournal();
 }
 
 // --- 거래 수정 modal ---
@@ -3262,7 +3096,6 @@ function saveTradeEdit() {
   closeTradeEditModal();
   renderJournalView();
   showToast('✏️ 거래 수정 완료');
-  autoSyncJournal();
 }
 
 function deleteTradeFromEdit() {
@@ -3274,7 +3107,6 @@ function deleteTradeFromEdit() {
   closeTradeEditModal();
   renderJournalView();
   showToast('🗑 거래 삭제됨');
-  autoSyncJournal();
 }
 
 // === 🔍 전역 종목 검색 ===
@@ -4626,7 +4458,6 @@ function renderWatchlistView() {
   // 관심 종목 카드
   html += loginBannerHtml('관심 종목과 목표가 알림도 계정에 저장됩니다.');
   html += `<div class="strength-section">`;
-  const hasPat = !!getPat();
   html += `<div class="strength-header">
     <div>
       <div class="strength-title">⭐ 관심 종목 ${codes.length > 0 ? `(${codes.length})` : ''}</div>
@@ -4754,7 +4585,6 @@ function addFromSearch(code, name) {
   if (!WATCHLIST[code]) {
     WATCHLIST[code] = { name, addedAt: Date.now() };
     saveWatchlist();
-    autoSyncIfPossible();
   }
   renderWatchlistView();
   // 검색어 복원 + results 재실행
@@ -4763,184 +4593,6 @@ function addFromSearch(code, name) {
     newSearch.value = prevQuery;
     onWatchlistSearch(prevQuery);
   }
-}
-
-const PAT_KEY = 'github_pat_v1';
-function getPat() { return localStorage.getItem(PAT_KEY) || ''; }
-function savePat(p) { if (p) localStorage.setItem(PAT_KEY, p); else localStorage.removeItem(PAT_KEY); }
-
-function buildAlertsJson() {
-  const alerts = [];
-  for (const code in WATCHLIST) {
-    const w = WATCHLIST[code];
-    if (w.target) {
-      alerts.push({ code, name: w.name, target: w.target, direction: w.direction || 'above' });
-    }
-  }
-  return { alerts };
-}
-
-async function pushFileToGitHub(path, contentObj, commitMsg) {
-  const pat = getPat();
-  if (!pat) return { ok: false, err: 'no PAT' };
-  const content = JSON.stringify(contentObj, null, 2) + '\n';
-  const apiBase = `https://api.github.com/repos/clarm3126-prog/richman/contents/${path}`;
-  const headers = {
-    'Authorization': `Bearer ${pat}`,
-    'Accept': 'application/vnd.github+json',
-    'Content-Type': 'application/json',
-  };
-  try {
-    let sha = null;
-    const getRes = await fetch(apiBase, { headers });
-    if (getRes.ok) {
-      const fileData = await getRes.json();
-      sha = fileData.sha;
-    }
-    const base64 = btoa(unescape(encodeURIComponent(content)));
-    const body = { message: commitMsg, content: base64, branch: 'main' };
-    if (sha) body.sha = sha;
-    const putRes = await fetch(apiBase, {
-      method: 'PUT', headers, body: JSON.stringify(body),
-    });
-    if (!putRes.ok) {
-      const errTxt = await putRes.text();
-      return { ok: false, err: `${putRes.status}: ${errTxt.slice(0, 200)}` };
-    }
-    return { ok: true };
-  } catch (e) {
-    return { ok: false, err: String(e) };
-  }
-}
-
-async function autoSyncAlerts(silent) {
-  const pat = getPat();
-  if (!pat) {
-    if (!silent) alert('GitHub Token이 등록되어 있지 않습니다.\n"⚙️ 설정"에서 먼저 등록하세요.');
-    return false;
-  }
-  const config = buildAlertsJson();
-  const res = await pushFileToGitHub('data/alerts_config.json', config, `Update alerts (${config.alerts.length}개)`);
-  if (!silent) {
-    if (res.ok) alert(`✅ 동기화 완료!\n${config.alerts.length}개 알림이 저장되었습니다.`);
-    else alert(`❌ 동기화 실패\n${res.err}`);
-  }
-  return res.ok;
-}
-
-async function autoSyncWatchlistFile() {
-  const list = [];
-  for (const code in WATCHLIST) {
-    const w = WATCHLIST[code];
-    const item = { code, name: w.name, addedAt: w.addedAt || Date.now() };
-    if (w.target) {
-      item.target = w.target;
-      item.direction = w.direction || 'above';
-    }
-    if (w.owned) {
-      item.owned = true;
-      if (w.entry_price) item.entry_price = w.entry_price;
-      if (w.entry_date) item.entry_date = w.entry_date;
-    }
-    list.push(item);
-  }
-  const res = await pushFileToGitHub('data/watchlist.json', { watchlist: list }, `Update watchlist (${list.length}개)`);
-  return res.ok;
-}
-
-function openSettingsModal() {
-  const modal = document.getElementById('settingsModal');
-  modal.querySelector('#patInput').value = getPat();
-  const status = modal.querySelector('#patStatus');
-  status.textContent = getPat() ? '✅ Token 등록됨 (자동 동기화 활성)' : '⚠️ Token 미등록 (수동 동기화만 가능)';
-  modal.classList.add('show');
-}
-function closeSettingsModal() { document.getElementById('settingsModal').classList.remove('show'); }
-function savePatFromModal() {
-  const v = document.getElementById('patInput').value.trim();
-  savePat(v);
-  closeSettingsModal();
-  alert(v ? '✅ Token이 저장되었습니다. 이제 자동 동기화가 가능합니다.' : 'Token이 삭제되었습니다.');
-  if (state.currentView === 'watchlist') renderWatchlistView();
-}
-function clearPatFromModal() {
-  if (confirm('GitHub Token을 삭제하시겠습니까?\n(자동 동기화가 비활성화됩니다)')) {
-    savePat('');
-    document.getElementById('patInput').value = '';
-    closeSettingsModal();
-    if (state.currentView === 'watchlist') renderWatchlistView();
-  }
-}
-
-function togglePatVisibility() {
-  const inp = document.getElementById('patInput');
-  inp.type = (inp.type === 'password') ? 'text' : 'password';
-}
-
-async function copyPatToClipboard() {
-  const inp = document.getElementById('patInput');
-  if (!inp.value) {
-    alert('복사할 Token이 없습니다');
-    return;
-  }
-  try {
-    await navigator.clipboard.writeText(inp.value);
-    const btn = document.getElementById('copyPatBtn');
-    const orig = btn.textContent;
-    btn.textContent = '✓ 복사됨';
-    setTimeout(() => { btn.textContent = orig; }, 1500);
-  } catch {
-    inp.type = 'text';
-    inp.select();
-    document.execCommand('copy');
-    alert('복사됨!');
-  }
-}
-
-async function onSyncButtonClick() {
-  if (getPat()) {
-    const ok = await autoSyncAlerts(false);
-    if (ok && state.currentView === 'watchlist') renderWatchlistView();
-  } else {
-    openTelegramSyncModal();
-  }
-}
-
-async function triggerActionsRun() {
-  const pat = getPat();
-  if (!pat) return false;
-  try {
-    const r = await fetch('https://api.github.com/repos/clarm3126-prog/richman/actions/workflows/fetch-prices.yml/dispatches', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${pat}`,
-        'Accept': 'application/vnd.github+json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ ref: 'main' }),
-    });
-    return r.status === 204;
-  } catch { return false; }
-}
-
-async function autoSyncIfPossible() {
-  return false;  // 비활성: 관심종목/알림을 공개 저장소에 쓰지 않는다
-  // eslint-disable-next-line no-unreachable
-  if (!getPat()) return false;
-  const ok1 = await autoSyncWatchlistFile();
-  const ok2 = await autoSyncAlerts(true);
-  if (ok1 && ok2) {
-    showToast('✅ 동기화됨 (관심+알림)');
-    const triggered = await triggerActionsRun();
-    if (triggered) {
-      setTimeout(() => showToast('🚀 즉시 알림 체크 중 (1~3분)', 3000), 2400);
-    }
-  } else if (ok1 || ok2) {
-    showToast('⚠️ 일부만 동기화됨', 3000);
-  } else {
-    showToast('⚠️ 동기화 실패 - ⚙️에서 Token 확인', 4000);
-  }
-  return ok1 || ok2;
 }
 
 function openStockModal(code) {
@@ -5350,36 +5002,6 @@ function showToast(msg, duration) {
   toast.classList.add('show');
   clearTimeout(toast._timer);
   toast._timer = setTimeout(() => toast.classList.remove('show'), duration);
-}
-
-function openTelegramSyncModal() {
-  const config = buildAlertsJson();
-  const json = JSON.stringify(config, null, 2);
-  const editUrl = 'https://github.com/clarm3126-prog/richman/edit/main/data/alerts_config.json';
-  const modal = document.getElementById('telegramModal');
-  modal.querySelector('.modal-title').textContent = `📤 수동 동기화 (${config.alerts.length}개)`;
-  modal.querySelector('#syncJsonContent').value = json;
-  modal.querySelector('#syncEditLink').href = editUrl;
-  modal.classList.add('show');
-}
-
-function closeTelegramSyncModal() {
-  document.getElementById('telegramModal').classList.remove('show');
-}
-
-async function copyTelegramJson() {
-  const ta = document.getElementById('syncJsonContent');
-  ta.select();
-  try {
-    await navigator.clipboard.writeText(ta.value);
-    const btn = document.getElementById('copyJsonBtn');
-    const orig = btn.textContent;
-    btn.textContent = '✓ 복사됨';
-    setTimeout(() => { btn.textContent = orig; }, 1500);
-  } catch {
-    document.execCommand('copy');
-    alert('복사됨!');
-  }
 }
 
 function fmtDateStr(yyyymmdd) {
@@ -7252,8 +6874,6 @@ async function initMarket() {
     await migrateLocalToAccount();
     MARKET = await loadMarket();
     await loadDescriptions();
-    await syncWatchlistFromGitHub();
-    await syncJournalFromGitHub();
     if (state.currentView === 'journal') renderJournalView();
     // 캘린더 사용 가능하도록 history 미리 로드 (background, 중복 방지)
     HISTORY_LOADING = loadHistoryRange(60);
