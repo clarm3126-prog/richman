@@ -1,0 +1,13 @@
+# 직접 쓴 글 대기열.
+#
+# 여기 글이 있으면 자동 생성보다 먼저 발행됩니다.
+# 발행된 글은 published: true 로 표시되어 다시 올라가지 않습니다.
+#
+# 항목 형식:
+#   - text: 본문 (쓰레드 500자, 인스타 캡션 2200자 제한)
+#     image: assets/cards/파일명.png   (선택. 인스타에 올리려면 필수)
+#     platforms: [threads, instagram]  (선택. 없으면 설정의 기본값)
+#     after: "2026-09-10"              (선택. 이 날짜 이후에만 발행)
+#     published: false
+
+queue: []
