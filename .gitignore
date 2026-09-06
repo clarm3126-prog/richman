@@ -1,3 +1,9 @@
 __pycache__/
 *.pyc
 .claude/
+
+# 개인 매매 데이터. 계정별로 Supabase에 저장되며 공개 저장소에 두지 않는다.
+# 실수로 다시 커밋되는 걸 막기 위해 무시한다.
+data/trade_journal.json
+data/watchlist.json
+data/alerts_config.json
