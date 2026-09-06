@@ -93,6 +93,11 @@ def compose_screener():
 
     return {
         "kind": "screener",
+        # badge/headline은 인스타 카드 전용이다.
+        # 프로필 그리드 썸네일은 아주 작게 보이므로 클릭 전에도
+        # 무슨 글인지 알 수 있게 짧고 큰 두 줄로 만든다.
+        "badge": "미너비니 스크리닝",
+        "headline": ["오늘 조건을", "통과한 종목"],
         "title": "오늘의 미너비니 조건 통과 종목",
         "subtitle": f"{_day_label(data.get('trading_day'))} 기준 · {len(picks)}종목",
         "items": items,
@@ -133,6 +138,8 @@ def compose_momentum():
     mood = "상승" if data.get("market_bullish") else "관망"
     return {
         "kind": "momentum",
+        "badge": "모멘텀",
+        "headline": ["거래량이 터진", "돌파 종목"],
         "title": "거래량이 터진 모멘텀 종목",
         "subtitle": f"{_day_label(data.get('trading_day'))} 기준 · 시장 {mood} 국면",
         "items": items,
@@ -164,6 +171,8 @@ def compose_theme():
 
     return {
         "kind": "theme",
+        "badge": "테마 분석",
+        "headline": ["이번 주", "올라오는 테마"],
         "title": "이번 주 올라오는 테마",
         "subtitle": f"{_day_label(data.get('trading_day'))} 기준 · 순위 변화와 수급으로 계산",
         "items": items,
