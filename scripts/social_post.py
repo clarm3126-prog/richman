@@ -72,10 +72,24 @@ def prepare(dry_run=False):
     platforms = list(post_cfg.get("platforms") or ["threads"])
     link_cfg = cfg.get("link") or {}
 
+    # 자격증명이 없는 플랫폼은 애초에 대상에서 뺀다.
+    # 특히 인스타는 카드 PNG를 만들어 저장소에 커밋하므로,
+    # 연결도 안 된 상태에서 쓸모없는 이미지가 쌓이는 걸 막는다.
+    creds = config.credentials()
+    ready = [p for p in platforms if config.available(creds, p)]
+    if ready != platforms:
+        skipped = [p for p in platforms if p not in ready]
+        print(f"자격증명 없어 제외: {', '.join(skipped)}")
+    if not ready and not dry_run:
+        print("발행 가능한 플랫폼이 없습니다 (시크릿을 확인하세요)")
+        return
+    # 예행 연습은 자격증명이 없어도 본문을 보여준다
+    platforms = ready or platforms
+
     manual = pick_from_queue(state)
     if manual:
         text = manual["text"].strip()
-        targets = list(manual.get("platforms") or platforms)
+        targets = [p for p in (manual.get("platforms") or platforms) if p in platforms]
         plan = {
             "source": "manual",
             "kind": "manual",

@@ -41,8 +41,14 @@ jobs:
       - name: Install Korean fonts
         run: sudo apt-get update -qq && sudo apt-get install -y -qq fonts-nanum
 
-      # 무엇을 올릴지 정하고 인스타용 카드 PNG를 만든다
+      # 무엇을 올릴지 정하고 인스타용 카드 PNG를 만든다.
+      # 연결되지 않은 플랫폼을 걸러내야 해서 여기서도 자격증명을 읽는다.
       - name: Prepare post
+        env:
+          THREADS_USER_ID: ${{ secrets.THREADS_USER_ID }}
+          THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN }}
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
         run: python scripts/social_post.py prepare ${{ inputs.dry_run && '--dry-run' || '' }}
 
       # 인스타는 외부에서 열리는 이미지 URL이 필요하다.
