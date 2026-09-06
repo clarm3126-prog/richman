@@ -322,7 +322,88 @@ engage:
 
 ---
 
-## 12. 파일 구성
+## 12. 남은 일 (2026-09-07 기준)
+
+설정과 운영은 끝났고 자동으로 돌아가는 상태입니다. 아래는 나중에 손볼 것들입니다.
+
+### 우선순위 높음 — 사용자가 늘기 전에
+
+**1. 텔레그램 연결 코드가 공개 로그에 남습니다**
+
+`scripts/telegram_link.py:111`
+
+```python
+print(f"  연결 성공: {code} → {chat_id}")
+```
+
+저장소가 Public이라 Actions 로그도 공개됩니다. 게다가 `link_code_to_chat()`은
+코드 재사용을 막지 않아서, 로그에서 코드를 본 사람이 그 코드를 봇에 보내면
+**그 사용자의 알림이 자기 대화방으로 넘어갑니다.** 남의 관심종목·목표가·
+보유 종목이 그대로 보입니다.
+
+`user_alerts.py:58,61` 과 `user_exit_alerts.py:69,72` 도 실패 시 chat_id를 찍습니다.
+
+고칠 것:
+- 로그에서 코드와 chat_id 마스킹
+- 연결 성공 후 `link_code`를 새로 발급 (이미 로그에 남은 과거 코드까지 무효화)
+
+**2. 히스토리 재작성 뒷정리**
+
+2026-09-06에 `git filter-repo`로 개인 매매 데이터를 전체 이력에서 지우고
+세 브랜치를 force push 했습니다. 하지만 옛 커밋 SHA로 직접 접근하면 아직
+열립니다 (특히 `refs/pull/1/head` = `a64643d5`).
+
+GitHub Support(https://support.github.com/contact)에 캐시된 뷰와 stale ref
+제거를 요청해야 완전히 사라집니다. 요청 문구는 아래 항목 참고.
+
+```
+Repository: clarm3126-prog/richman
+I rewrote history with git filter-repo to remove files containing personal
+financial data and force-pushed all branches. Please permanently remove the
+cached views and stale references to the old commits, including
+refs/pull/1/head.
+Removed paths: data/trade_journal.json, data/watchlist.json, data/alerts_config.json
+```
+
+### 우선순위 보통
+
+**3. 실적 공시 알림이 사실상 멈춰 있습니다**
+
+`earnings_calendar.py`의 알림 대상은 "관심종목 + 미너비니 strict"인데,
+`data/watchlist.json`을 지우면서 관심종목 쪽이 사라졌습니다. 이 스크립트에는
+Supabase 대체 경로가 없어서 (목표가는 `user_alerts.py`, 매도 시그널은
+`user_exit_alerts.py`가 커버) **strict 통과 종목만 남았고 현재 0개입니다.**
+
+Supabase watchlist를 읽도록 바꾸면 되살아납니다. 30분 정도 작업입니다.
+
+**4. 스크리닝 결과는 소유자에게만 갑니다**
+
+`screener.py` / `momentum_screener.py` / `exit_signals.py` /
+`earnings_calendar.py` / `fetch_prices.py` 모두 `TELEGRAM_CHAT_ID` 고정입니다.
+다른 사용자는 **본인 관심종목 알림과 본인 보유종목 시그널만** 받습니다.
+
+앱의 핵심 가치가 스크리닝 결과인데 텔레그램으로는 안 나가므로, 재방문을
+늘리려면 선택지가 있습니다.
+- 현행 유지 (웹사이트 방문 유도)
+- 연결된 전 사용자에게 발송 (알림 피로 + 텔레그램 초당 30건 제한 주의)
+- 앱에 "매일 스크리닝 결과 받기" 토글 추가
+
+**5. `GH_PAT` 등록 여부 확인**
+
+없으면 60일 뒤 Meta 토큰 만료로 자동화가 통째로 멈춥니다.
+`Social Token Refresh` 워크플로우 로그를 보면 알 수 있습니다.
+없어도 새 토큰이 텔레그램으로 오긴 하지만 손으로 넣어야 합니다.
+
+### 운영 메모
+
+- **인스타 계정이 갓 전환된 상태라** subcode 2207051(스팸 의심 차단)이 종종
+  납니다. 게시가 실제로 됐는지 확인하는 로직이 들어 있어 헛알림은 안 갑니다.
+  손으로도 게시물을 올리고 평범한 활동을 섞으면 완화됩니다.
+- **쓰레드 링크 요청은 직접 DM으로 보내야 합니다.** 쓰레드에 DM API가 없어
+  봇이 못 보냅니다. 대상 명단이 텔레그램으로 옵니다.
+- 첫 주에는 실제로 나간 답글을 매일 눈으로 확인하세요.
+
+## 13. 파일 구성
 
 ```
 scripts/
