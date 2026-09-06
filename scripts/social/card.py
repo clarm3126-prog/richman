@@ -177,3 +177,102 @@ def prune_cards(keep_days=60):
             p.unlink()
             removed += 1
     return removed
+
+
+def _wrap(draw, text, font, max_w):
+    """폭에 맞춰 줄바꿈. 공백으로 먼저 나누고, 한 덩어리가 너무 길면 글자 단위로 자른다."""
+    lines, cur = [], ""
+    for word in (text or "").split(" "):
+        trial = f"{cur} {word}".strip()
+        if draw.textlength(trial, font=font) <= max_w:
+            cur = trial
+            continue
+        if cur:
+            lines.append(cur)
+        # 띄어쓰기 없는 긴 한글 덩어리 처리
+        while draw.textlength(word, font=font) > max_w:
+            cut = len(word)
+            while cut > 1 and draw.textlength(word[:cut], font=font) > max_w:
+                cut -= 1
+            lines.append(word[:cut])
+            word = word[cut:]
+        cur = word
+    if cur:
+        lines.append(cur)
+    return lines
+
+
+def render_about_card(about, out_path, brand="종목노트", url=""):
+    """캐러셀 2번째 장에 고정으로 붙는 소개 카드.
+
+    매일 바뀌는 종목 카드와 달리 내용이 고정이라, 설정을 바꾸지 않는 한
+    매번 같은 PNG가 나온다. 같은 바이트면 git이 변경으로 보지 않는다.
+    """
+    img = Image.new("RGB", (SIZE, SIZE), BG)
+    d = ImageDraw.Draw(img)
+
+    f_title = _font(True, 58)
+    f_head = _font(True, 38)
+    f_body = _font(False, 28)
+    f_foot = _font(False, 26)
+    f_brand = _font(True, 30)
+
+    d.rectangle([0, 0, SIZE, 10], fill=ACCENT)
+
+    inner_w = SIZE - PAD * 2
+    y = PAD + 18
+    d.text((PAD, y), _fit(d, about.get("title", ""), f_title, inner_w), font=f_title, fill=FG)
+    y += 96
+
+    sections = about.get("sections") or []
+    foot_y = SIZE - PAD - 66
+    avail = foot_y - 40 - y
+    gap = 20
+
+    # 먼저 각 섹션 높이를 재서 전체가 넘치면 본문 줄 수를 줄인다
+    text_w = inner_w - 56
+    blocks = []
+    for s in sections:
+        body_lines = _wrap(d, s.get("body", ""), f_body, text_w)
+        blocks.append([s.get("heading", ""), body_lines])
+
+    def total(bs):
+        return sum(56 + len(b[1]) * 40 + 44 for b in bs) + gap * max(0, len(bs) - 1)
+
+    while blocks and total(blocks) > avail:
+        longest = max(blocks, key=lambda b: len(b[1]))
+        if len(longest[1]) <= 1:
+            blocks.pop()
+        else:
+            longest[1] = longest[1][:-1]
+            longest[1][-1] = longest[1][-1].rstrip() + "…"
+
+    for heading, body_lines in blocks:
+        h = 56 + len(body_lines) * 40 + 44
+        d.rounded_rectangle([PAD, y, SIZE - PAD, y + h - 8], radius=18, fill=PANEL)
+        d.text((PAD + 28, y + 24), _fit(d, heading, f_head, text_w), font=f_head, fill=ACCENT)
+        ty = y + 80
+        for line in body_lines:
+            d.text((PAD + 28, ty), line, font=f_body, fill=FG)
+            ty += 40
+        y += h + gap
+
+    if about.get("footer"):
+        d.text(
+            (PAD, foot_y - 52),
+            _fit(d, about["footer"], f_body, inner_w),
+            font=f_body,
+            fill=FG_DIM,
+        )
+
+    d.line([PAD, foot_y - 12, SIZE - PAD, foot_y - 12], fill=(45, 50, 60), width=2)
+    d.text((PAD, foot_y + 8), brand, font=f_brand, fill=ACCENT)
+    if url:
+        short = url.replace("https://", "").rstrip("/")
+        w = d.textlength(short, font=f_foot)
+        d.text((SIZE - PAD - w, foot_y + 12), short, font=f_foot, fill=FG_DIM)
+
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    img.save(out_path, "PNG", optimize=True)
+    return out_path

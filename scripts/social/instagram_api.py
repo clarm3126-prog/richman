@@ -77,23 +77,62 @@ class Instagram:
         creation_id = container.get("id")
         if not creation_id:
             raise InstagramError(f"컨테이너 생성 실패: {container}")
+        self._wait_finished(creation_id)
+        return self._publish(creation_id)
 
-        # 인스타가 이미지를 내려받아 처리할 때까지 기다린다
-        for _ in range(20):
-            status = self._get(creation_id, fields="status_code").get("status_code")
+    def _wait_finished(self, container_id, tries=20, delay=3):
+        """인스타가 이미지를 내려받아 처리할 때까지 기다린다."""
+        for _ in range(tries):
+            status = self._get(container_id, fields="status_code").get("status_code")
             if status == "FINISHED":
-                break
+                return
             if status == "ERROR":
                 raise InstagramError("이미지 처리 실패 (image_url 접근 불가 가능성)")
-            time.sleep(3)
-        else:
-            raise InstagramError("이미지 처리 시간 초과")
+            time.sleep(delay)
+        raise InstagramError("이미지 처리 시간 초과")
 
+    def _publish(self, creation_id):
         published = self._post(f"{self.user_id}/media_publish", creation_id=creation_id)
         media_id = published.get("id")
         if not media_id:
             raise InstagramError(f"발행 실패: {published}")
         return media_id
+
+    def publish_carousel(self, image_urls, caption):
+        """여러 장을 캐러셀로 게시. 인스타는 2~10장만 허용한다.
+
+        각 장을 is_carousel_item으로 만들고, 그 ID들을 children으로 묶어
+        CAROUSEL 컨테이너를 만든 뒤 발행한다.
+        """
+        urls = [u for u in image_urls if u]
+        if len(urls) < 2:
+            raise InstagramError("캐러셀은 2장 이상이어야 합니다")
+        urls = urls[:10]
+
+        children = []
+        for url in urls:
+            item = self._post(
+                f"{self.user_id}/media", image_url=url, is_carousel_item="true"
+            )
+            item_id = item.get("id")
+            if not item_id:
+                raise InstagramError(f"캐러셀 항목 생성 실패: {item}")
+            children.append(item_id)
+
+        for item_id in children:
+            self._wait_finished(item_id)
+
+        container = self._post(
+            f"{self.user_id}/media",
+            media_type="CAROUSEL",
+            children=",".join(children),
+            caption=caption,
+        )
+        creation_id = container.get("id")
+        if not creation_id:
+            raise InstagramError(f"캐러셀 컨테이너 생성 실패: {container}")
+        self._wait_finished(creation_id)
+        return self._publish(creation_id)
 
     # --- 조회 ---
 

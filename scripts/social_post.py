@@ -38,6 +38,13 @@ def text_key(text):
     return hashlib.sha1(text.encode("utf-8")).hexdigest()[:12]
 
 
+def _as_list(value):
+    """수동 큐의 image는 문자열 하나여도 되고 여러 장 목록이어도 된다."""
+    if not value:
+        return []
+    return list(value) if isinstance(value, list) else [value]
+
+
 def pick_from_queue(state):
     """수동 큐에서 아직 안 올린 글 하나."""
     done = set(state.get("queue_done") or [])
@@ -96,7 +103,7 @@ def prepare(dry_run=False):
             "key": text_key(text),
             "platforms": targets,
             "texts": {p: text for p in targets},
-            "image_rel": manual.get("image") or "",
+            "image_rels": _as_list(manual.get("image")),
         }
         print(f"수동 큐 사용: {text[:40]}...")
     else:
@@ -113,31 +120,41 @@ def prepare(dry_run=False):
             "kind": post["kind"],
             "platforms": platforms,
             "texts": {p: compose.render(post, p, cfg) for p in platforms},
-            "image_rel": "",
+            "image_rels": [],
         }
 
         if "instagram" in platforms:
+            brand = link_cfg.get("label", "종목노트")
+            url = link_cfg.get("url", "")
+
+            # 1번째 장: 그날의 종목 카드
             rel = "assets/cards/{}-{}.png".format(today, post["kind"])
-            out = card.render_card(
-                post,
-                config.ROOT / rel,
-                brand=link_cfg.get("label", "종목노트"),
-                url=link_cfg.get("url", ""),
-            )
-            plan["image_rel"] = rel
-            print(f"카드 생성: {out}")
+            card.render_card(post, config.ROOT / rel, brand=brand, url=url)
+            plan["image_rels"].append(rel)
+            print(f"카드 생성: {rel}")
+
+            # 2번째 장: 고정 소개 카드.
+            # 내용이 고정이라 같은 PNG가 나오고, 바뀌지 않으면 git이 커밋하지 않는다.
+            about = post_cfg.get("about_card")
+            if about:
+                about_rel = "assets/cards/about.png"
+                card.render_about_card(
+                    about, config.ROOT / about_rel, brand=brand, url=url
+                )
+                plan["image_rels"].append(about_rel)
+                print(f"소개 카드 생성: {about_rel}")
+
             gone = card.prune_cards()
             if gone:
                 print(f"오래된 카드 {gone}장 정리")
 
-    if plan.get("image_rel"):
-        plan["image_url"] = f"{config.PAGES_BASE}/{plan['image_rel']}"
+    plan["image_urls"] = [f"{config.PAGES_BASE}/{r}" for r in plan.get("image_rels") or []]
 
     if dry_run:
         for platform, text in plan["texts"].items():
             print(f"\n===== {platform} ({len(text)}자) =====\n{text}")
-        if plan.get("image_url"):
-            print(f"\n이미지: {plan['image_url']}")
+        for i, u in enumerate(plan.get("image_urls") or [], 1):
+            print(f"\n인스타 {i}번째 장: {u}")
         return
 
     store.save(PENDING, plan)
@@ -167,11 +184,11 @@ def publish():
     creds = config.credentials()
     state = store.load(STATE, {"posts": [], "queue_done": []})
     record = {"date": store.today_kst(), "kind": plan.get("kind") or plan.get("source")}
-    if plan.get("image_rel"):
-        record["image"] = plan["image_rel"]
+    if plan.get("image_rels"):
+        record["images"] = plan["image_rels"]
 
-    image_url = plan.get("image_url") or ""
-    image_ready = None
+    image_urls = plan.get("image_urls") or []
+    images_ready = None
     problems = []
 
     for platform in plan["platforms"]:
@@ -190,17 +207,23 @@ def publish():
                 print(f"쓰레드 발행 완료: {media_id}")
 
             elif platform == "instagram":
-                if not image_url:
+                if not image_urls:
                     print("인스타: 이미지가 없어 건너뜀 (인스타는 이미지 필수)")
                     continue
-                if image_ready is None:
-                    image_ready = wait_for_image(image_url)
-                if not image_ready:
-                    raise InstagramError(f"이미지 URL이 아직 열리지 않음: {image_url}")
+                # Pages 배포가 끝나야 인스타가 이미지를 내려받을 수 있다
+                if images_ready is None:
+                    images_ready = all(wait_for_image(u) for u in image_urls)
+                if not images_ready:
+                    raise InstagramError(f"이미지 URL이 아직 열리지 않음: {image_urls}")
+
                 api = Instagram(creds["instagram"]["user_id"], creds["instagram"]["token"])
-                media_id = api.publish_image(image_url, text)
+                if len(image_urls) >= 2:
+                    media_id = api.publish_carousel(image_urls, text)
+                    print(f"인스타 캐러셀 발행 완료 ({len(image_urls)}장): {media_id}")
+                else:
+                    media_id = api.publish_image(image_urls[0], text)
+                    print(f"인스타 발행 완료: {media_id}")
                 record["ig_id"] = media_id
-                print(f"인스타 발행 완료: {media_id}")
 
         except Exception as e:
             msg = f"{platform} 발행 실패: {e}"
