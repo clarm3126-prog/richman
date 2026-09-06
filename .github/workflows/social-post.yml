@@ -1,0 +1,97 @@
+name: Social Post
+
+on:
+  schedule:
+    # 스크리닝 파이프라인이 모두 끝난 뒤, 평일 KST 19:00 (UTC 10:00)
+    # fetch-prices 16:30 → exit-signals 16:45 → screener 17:00 → momentum 17:30 → social 19:00
+    - cron: "0 10 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "실제 발행 없이 본문만 확인"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: social-post
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install requests pyyaml pillow
+
+      - name: Install Korean fonts
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq fonts-nanum
+
+      # 무엇을 올릴지 정하고 인스타용 카드 PNG를 만든다
+      - name: Prepare post
+        run: python scripts/social_post.py prepare ${{ inputs.dry_run && '--dry-run' || '' }}
+
+      # 인스타는 외부에서 열리는 이미지 URL이 필요하다.
+      # 카드를 먼저 push해서 GitHub Pages가 서빙하게 만든다.
+      - name: Push card image
+        if: ${{ !inputs.dry_run }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/cards 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "No card change"
+            exit 0
+          fi
+          git commit -m "chore: social card [auto]"
+          for i in 1 2 3; do
+            if git push; then exit 0; fi
+            git fetch origin main
+            git rebase -X theirs origin/main || { git rebase --abort; git pull --rebase=true -X theirs origin main; }
+            sleep 2
+          done
+          exit 1
+
+      - name: Publish
+        if: ${{ !inputs.dry_run }}
+        env:
+          THREADS_USER_ID: ${{ secrets.THREADS_USER_ID }}
+          THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN }}
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python scripts/social_post.py publish
+
+      - name: Commit state
+        if: ${{ always() && !inputs.dry_run }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/social assets/cards 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+          git commit -m "chore: social post state [auto]"
+          for i in 1 2 3; do
+            if git push; then exit 0; fi
+            git fetch origin main
+            git rebase -X theirs origin/main || { git rebase --abort; git pull --rebase=true -X theirs origin main; }
+            sleep 2
+          done
+          exit 1

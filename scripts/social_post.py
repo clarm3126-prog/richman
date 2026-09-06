@@ -1,0 +1,221 @@
+#!/usr/bin/env python3
+"""
+쓰레드 / 인스타그램 자동 글쓰기.
+
+두 단계로 나뉜다.
+  prepare : 무엇을 올릴지 정하고, 인스타용 카드 PNG를 만든다.
+  publish : GitHub Pages에 카드가 올라간 걸 확인한 뒤 실제로 발행한다.
+
+인스타는 텍스트만으로 글을 올릴 수 없어서 이미지가 반드시 필요하고,
+그 이미지는 외부에서 접근 가능한 URL이어야 한다. 그래서 카드를 먼저
+저장소에 커밋해 Pages로 서빙한 다음 그 URL을 인스타에 넘긴다.
+
+사용:
+  python scripts/social_post.py prepare
+  python scripts/social_post.py publish
+  python scripts/social_post.py prepare --dry-run
+"""
+import hashlib
+import sys
+import time
+import traceback
+from pathlib import Path
+
+import requests
+
+sys.path.insert(0, str(Path(__file__).parent))
+
+from social import card, compose, config, store  # noqa: E402
+from social.instagram_api import Instagram, InstagramError  # noqa: E402
+from social.notify import tell_owner  # noqa: E402
+from social.threads_api import Threads  # noqa: E402
+
+PENDING = "pending"
+STATE = "state"
+
+
+def text_key(text):
+    return hashlib.sha1(text.encode("utf-8")).hexdigest()[:12]
+
+
+def pick_from_queue(state):
+    """수동 큐에서 아직 안 올린 글 하나."""
+    done = set(state.get("queue_done") or [])
+    today = store.today_kst()
+    for item in config.load_post_queue():
+        if not isinstance(item, dict) or item.get("published"):
+            continue
+        text = (item.get("text") or "").strip()
+        if not text or text_key(text) in done:
+            continue
+        if item.get("after") and str(item["after"]) > today:
+            continue
+        return item
+    return None
+
+
+def prepare(dry_run=False):
+    cfg = config.load_config()
+    post_cfg = cfg.get("post") or {}
+    if not post_cfg.get("enabled", True):
+        print("자동 글쓰기 꺼짐 (post.enabled=false)")
+        return
+
+    state = store.load(STATE, {"posts": [], "queue_done": []})
+    today = store.today_kst()
+    today_count = sum(1 for p in state.get("posts", []) if p.get("date") == today)
+    cap = int(post_cfg.get("max_per_day") or 1)
+    if today_count >= cap and not dry_run:
+        print(f"오늘 이미 {today_count}건 발행 (상한 {cap}) - 건너뜀")
+        return
+
+    platforms = list(post_cfg.get("platforms") or ["threads"])
+    link_cfg = cfg.get("link") or {}
+
+    manual = pick_from_queue(state)
+    if manual:
+        text = manual["text"].strip()
+        targets = list(manual.get("platforms") or platforms)
+        plan = {
+            "source": "manual",
+            "kind": "manual",
+            "key": text_key(text),
+            "platforms": targets,
+            "texts": {p: text for p in targets},
+            "image_rel": manual.get("image") or "",
+        }
+        print(f"수동 큐 사용: {text[:40]}...")
+    else:
+        recent_kinds = [p.get("kind") for p in state.get("posts", [])[-2:]]
+        post = compose.auto_compose(post_cfg.get("rotation"), skip_kinds=recent_kinds)
+        if not post:
+            post = compose.auto_compose(post_cfg.get("rotation"))
+        if not post:
+            print("올릴 만한 데이터가 없습니다 (스크리닝 결과가 비었거나 오래됨)")
+            return
+
+        plan = {
+            "source": "auto",
+            "kind": post["kind"],
+            "platforms": platforms,
+            "texts": {p: compose.render(post, p, cfg) for p in platforms},
+            "image_rel": "",
+        }
+
+        if "instagram" in platforms:
+            rel = "assets/cards/{}-{}.png".format(today, post["kind"])
+            out = card.render_card(
+                post,
+                config.ROOT / rel,
+                brand=link_cfg.get("label", "종목노트"),
+                url=link_cfg.get("url", ""),
+            )
+            plan["image_rel"] = rel
+            print(f"카드 생성: {out}")
+            gone = card.prune_cards()
+            if gone:
+                print(f"오래된 카드 {gone}장 정리")
+
+    if plan.get("image_rel"):
+        plan["image_url"] = f"{config.PAGES_BASE}/{plan['image_rel']}"
+
+    if dry_run:
+        for platform, text in plan["texts"].items():
+            print(f"\n===== {platform} ({len(text)}자) =====\n{text}")
+        if plan.get("image_url"):
+            print(f"\n이미지: {plan['image_url']}")
+        return
+
+    store.save(PENDING, plan)
+    print("발행 예정 저장 완료 ({})".format(", ".join(plan["platforms"])))
+
+
+def wait_for_image(url, tries=20, delay=15):
+    """GitHub Pages 배포가 끝나 이미지가 실제로 열릴 때까지 기다린다."""
+    for i in range(tries):
+        try:
+            r = requests.get(url, timeout=20)
+            if r.status_code == 200 and r.headers.get("content-type", "").startswith("image"):
+                print(f"  이미지 확인됨 ({i * delay}초 대기)")
+                return True
+        except Exception:
+            pass
+        time.sleep(delay)
+    return False
+
+
+def publish():
+    plan = store.load(PENDING, {})
+    if not plan or not plan.get("texts"):
+        print("발행할 내용 없음")
+        return
+
+    creds = config.credentials()
+    state = store.load(STATE, {"posts": [], "queue_done": []})
+    record = {"date": store.today_kst(), "kind": plan.get("kind") or plan.get("source")}
+    if plan.get("image_rel"):
+        record["image"] = plan["image_rel"]
+
+    image_url = plan.get("image_url") or ""
+    image_ready = None
+    problems = []
+
+    for platform in plan["platforms"]:
+        text = plan["texts"].get(platform)
+        if not text:
+            continue
+        if not config.available(creds, platform):
+            print(f"{platform}: 자격증명 없음 - 건너뜀")
+            continue
+
+        try:
+            if platform == "threads":
+                api = Threads(creds["threads"]["user_id"], creds["threads"]["token"])
+                media_id = api.publish_text(text)
+                record["threads_id"] = media_id
+                print(f"쓰레드 발행 완료: {media_id}")
+
+            elif platform == "instagram":
+                if not image_url:
+                    print("인스타: 이미지가 없어 건너뜀 (인스타는 이미지 필수)")
+                    continue
+                if image_ready is None:
+                    image_ready = wait_for_image(image_url)
+                if not image_ready:
+                    raise InstagramError(f"이미지 URL이 아직 열리지 않음: {image_url}")
+                api = Instagram(creds["instagram"]["user_id"], creds["instagram"]["token"])
+                media_id = api.publish_image(image_url, text)
+                record["ig_id"] = media_id
+                print(f"인스타 발행 완료: {media_id}")
+
+        except Exception as e:
+            msg = f"{platform} 발행 실패: {e}"
+            print(f"  ! {msg}")
+            problems.append(msg)
+
+    if record.get("threads_id") or record.get("ig_id"):
+        state.setdefault("posts", []).append(record)
+        state["posts"] = state["posts"][-60:]
+        if plan.get("source") == "manual" and plan.get("key"):
+            state.setdefault("queue_done", []).append(plan["key"])
+            state["queue_done"] = state["queue_done"][-200:]
+        store.save(STATE, state)
+
+    store.save(PENDING, {})
+
+    if problems:
+        tell_owner("⚠️ <b>SNS 자동 발행 문제</b>\n\n" + "\n".join(problems[:5]))
+
+
+if __name__ == "__main__":
+    args = sys.argv[1:]
+    stage = args[0] if args and not args[0].startswith("-") else "prepare"
+    try:
+        if stage == "publish":
+            publish()
+        else:
+            prepare(dry_run="--dry-run" in args)
+    except Exception:
+        traceback.print_exc()
+        tell_owner("🛑 <b>SNS 자동 발행 스크립트 오류</b>\n\n실행 로그를 확인해주세요.")
+        sys.exit(1)
