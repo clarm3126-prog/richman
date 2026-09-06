@@ -58,7 +58,11 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add assets/cards 2>/dev/null || true
+          # 경로를 하나씩 add 한다. 한꺼번에 넘기면 없는 경로 하나 때문에
+          # git add 전체가 실패해 아무것도 스테이징되지 않는다.
+          for p in assets/cards; do
+            if [ -e "$p" ]; then git add "$p"; fi
+          done
           if git diff --cached --quiet; then
             echo "No card change"
             exit 0
@@ -88,7 +92,11 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/social assets/cards 2>/dev/null || true
+          # 경로를 하나씩 add 한다. 한꺼번에 넘기면 없는 경로 하나 때문에
+          # git add 전체가 실패해 상태 파일이 커밋되지 않는다.
+          for p in data/social assets/cards; do
+            if [ -e "$p" ]; then git add "$p"; fi
+          done
           if git diff --cached --quiet; then
             echo "No changes"
             exit 0
