@@ -94,7 +94,7 @@ def compose_screener():
     return {
         "kind": "screener",
         "title": "오늘의 미너비니 조건 통과 종목",
-        "subtitle": f"{_day_label(data.get('trading_day'))} 기준 · {data.get('total_evaluated', 0)}종목 중 {len(picks)}개",
+        "subtitle": f"{_day_label(data.get('trading_day'))} 기준 · {len(picks)}종목",
         "items": items,
         "tail": "추세·수급·실적 조건을 전부 통과한 종목만 추렸습니다.",
     }
@@ -230,20 +230,30 @@ def render(post, platform, cfg):
         lines.append(post["tail"])
     lines.append(DISCLAIMER)
 
+    # 링크를 본문에 넣을지, 댓글 유도로 대신할지
+    append_link = post_cfg.get("append_link", True)
+    cta = post_cfg.get("cta")
+
     if platform == "instagram":
-        tags = post_cfg.get("hashtags") or []
-        if url:
+        if url and append_link:
             lines.append("")
             lines.append(f"전체 목록과 차트는 프로필 링크에서 · {url}")
+        if cta:
+            lines.append("")
+            lines.append(cta)
+        tags = post_cfg.get("hashtags") or []
         if tags:
             lines.append("")
             lines.append(" ".join(tags))
         return _clip("\n".join(lines), IG_LIMIT)
 
     # 쓰레드
-    if url and post_cfg.get("append_link", True):
+    if url and append_link:
         lines.append("")
         lines.append(url)
+    if cta:
+        lines.append("")
+        lines.append(cta)
     return _clip("\n".join(lines), THREADS_LIMIT)
 
 
