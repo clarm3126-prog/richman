@@ -87,7 +87,8 @@ def pick_from_queue(state):
     return None
 
 
-def prepare(dry_run=False, only=None, force=False, auto=False, queue_only=False):
+def prepare(dry_run=False, only=None, force=False, auto=False, queue_only=False,
+            brief=None):
     """무엇을 올릴지 정한다.
 
     수동 큐는 자동 생성보다 항상 먼저 쓰이므로, 큐에 글이 쌓여 있으면
@@ -96,6 +97,7 @@ def prepare(dry_run=False, only=None, force=False, auto=False, queue_only=False)
 
       auto=True        큐를 무시하고 자동 생성 글만 만든다
       queue_only=True  큐에 글이 있을 때만 만든다 (없으면 아무것도 안 함)
+      brief="kr_close" 정해진 시각의 시황 글만 만든다 (큐도 자동 생성도 안 봄)
 
     큐가 비면 queue_only 실행이 그냥 넘어가므로 하루 1건으로 돌아간다.
     """
@@ -109,7 +111,17 @@ def prepare(dry_run=False, only=None, force=False, auto=False, queue_only=False)
     today = store.today_kst()
     today_count = sum(1 for p in state.get("posts", []) if p.get("date") == today)
     cap = int(post_cfg.get("max_per_day") or 1)
-    if today_count >= cap and not dry_run and not force:
+    # 시황 글은 정해진 시각에 한 번씩만 나가므로 하루 상한과 따로 센다.
+    # 대신 같은 종류가 하루에 두 번 나가지 않게 막는다 (워크플로 재실행 대비).
+    if brief:
+        done = any(
+            p.get("date") == today and p.get("kind") == brief
+            for p in state.get("posts", [])
+        )
+        if done and not dry_run and not force:
+            print(f"오늘 {brief} 글은 이미 나갔습니다 - 건너뜀")
+            return
+    elif today_count >= cap and not dry_run and not force:
         print(f"오늘 이미 {today_count}건 발행 (상한 {cap}) - 건너뜀")
         return
 
@@ -144,12 +156,35 @@ def prepare(dry_run=False, only=None, force=False, auto=False, queue_only=False)
     # 예행 연습은 자격증명이 없어도 본문을 보여준다
     platforms = ready or platforms
 
-    manual = None if auto else pick_from_queue(state)
+    manual = None if (auto or brief) else pick_from_queue(state)
     if queue_only and not manual:
         print("큐에 올릴 글이 없습니다 - 건너뜀 (--queue-only)")
         return
 
-    if manual:
+    if brief:
+        builder = compose.BRIEFS.get(brief)
+        if not builder:
+            print(f"모르는 시황 글: {brief} (쓸 수 있는 것: {', '.join(compose.BRIEFS)})")
+            return
+        post = builder()
+        if not post:
+            print(f"{brief} 글에 쓸 데이터가 없습니다 - 건너뜀")
+            return
+        # 카드를 만들지 않으므로 쓰레드에만 올린다. 인스타는 이미지가 있어야
+        # 하고, 하루 네 번 올리면 계정이 시끄러워진다.
+        targets = [pl for pl in platforms if pl == "threads"]
+        if not targets:
+            print("쓰레드를 쓸 수 없어 시황 글을 건너뜁니다")
+            return
+        plan = {
+            "source": "brief",
+            "kind": post["kind"],
+            "platforms": targets,
+            "texts": {pl: compose.render(post, pl, cfg) for pl in targets},
+            "image_rels": [],
+        }
+        print(f"시황 글: {post['title']}")
+    elif manual:
         text = manual["text"].strip()
         targets = [p for p in (manual.get("platforms") or platforms) if p in platforms]
         # 인스타는 해시태그로 도달이 갈리므로 자동 글과 같은 태그를 붙인다.
@@ -393,6 +428,7 @@ if __name__ == "__main__":
     args = sys.argv[1:]
     stage = args[0] if args and not args[0].startswith("-") else "prepare"
     only = next((a.split("=", 1)[1] for a in args if a.startswith("--only=")), None)
+    brief = next((a.split("=", 1)[1] for a in args if a.startswith("--brief=")), None)
     try:
         if stage == "publish":
             publish()
@@ -403,6 +439,7 @@ if __name__ == "__main__":
                 force="--force" in args,
                 auto="--auto" in args,
                 queue_only="--queue-only" in args,
+                brief=brief or None,
             )
     except Exception:
         traceback.print_exc()

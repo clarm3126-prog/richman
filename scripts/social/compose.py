@@ -180,10 +180,182 @@ def compose_theme():
     }
 
 
+def _news_lines(section, hours, market, header):
+    """기사 제목 줄. 뉴스는 덤이라 못 가져와도 글 자체는 나가야 한다.
+
+    news 모듈은 beautifulsoup4를 쓰는데, 발행 워크플로에 그게 빠져 있어도
+    시황 글이 통째로 죽지 않도록 여기서 늦게 불러온다.
+    """
+    try:
+        from . import news
+    except Exception as e:
+        print(f"  뉴스 모듈을 못 불러왔습니다 ({e}) - 기사 없이 씁니다")
+        return []
+    try:
+        items = news.headlines(
+            section, 3, within_hours=hours, boost=news.market_boost(market)
+        )
+    except Exception as e:
+        print(f"  뉴스 수집 실패 ({e}) - 기사 없이 씁니다")
+        return []
+    if not items:
+        print("  기준을 넘은 기사가 없어 기사 항목을 뺍니다")
+        return []
+    return ["", header] + news.as_lines(items)
+
+
+def _fmt_idx(v):
+    try:
+        return f"{float(v):,.2f}"
+    except Exception:
+        return "-"
+
+
+def _eok(amount):
+    """원 단위 금액을 억으로. 순매수 금액은 억이 읽기 편하다."""
+    try:
+        return f"{float(amount) / 1e8:,.0f}억"
+    except Exception:
+        return "-"
+
+
+def _top_buy(market, investor):
+    """investor_top에서 코스피 순매수 1위 종목 이름과 금액."""
+    row = (((market.get("investor_top") or {}).get(investor) or {}).get("KOSPI") or {})
+    buys = row.get("buy") or []
+    if not buys:
+        return None
+    top = buys[0]
+    return top.get("name"), _eok(top.get("amount"))
+
+
+def compose_kr_close(with_news=True):
+    """오후 4시 국장 마감 요약. market.json은 15:55에 갱신된다."""
+    m = _load("market")
+    if not m:
+        return None
+    # 장이 안 열린 날에는 어제 숫자가 오늘 마감인 것처럼 나가면 안 된다.
+    day = str(m.get("trading_day") or "")
+    today = now_kst().strftime("%Y%m%d")
+    if day != today:
+        return None
+
+    idx = m.get("indices") or {}
+    kospi = idx.get("kospi") or {}
+    kosdaq = idx.get("kosdaq") or {}
+    if not kospi.get("value"):
+        return None
+
+    lines = [
+        f"코스피 {_fmt_idx(kospi.get('value'))} ({kospi.get('change', 0):+.2f}%)",
+        f"코스닥 {_fmt_idx(kosdaq.get('value'))} ({kosdaq.get('change', 0):+.2f}%)",
+        "",
+    ]
+
+    flow = []
+    for investor, label in (("foreign", "외국인"), ("institution", "기관")):
+        top = _top_buy(m, investor)
+        if top:
+            flow.append(f"{label} 순매수 1위 {top[0]} {top[1]}")
+    lines += flow
+
+    counts = []
+    if m.get("new_highs"):
+        counts.append(f"신고가 {len(m['new_highs'])}종목")
+    if m.get("volume_surges"):
+        counts.append(f"거래량 급증 {len(m['volume_surges'])}종목")
+    if counts:
+        lines.append(" · ".join(counts))
+
+    themes = sorted(
+        (t for t in (m.get("naver_themes") or []) if isinstance(t.get("change"), (int, float))),
+        key=lambda t: -t["change"],
+    )
+    if themes:
+        lines += ["", f"가장 많이 오른 테마: {themes[0]['name']} {themes[0]['change']:+.1f}%"]
+
+    if with_news:
+        # 오늘 움직인 테마·종목 이름을 넘겨 그날 시장과 이어지는 기사를 고르게 한다.
+        # 12시간으로 잡아 오늘 나온 기사만 본다.
+        lines += _news_lines("market", 12, m, "오늘 나온 기사")
+
+    lines += ["", "장 마감 기준 숫자입니다. " + DISCLAIMER]
+    lines += ["", "오늘 어떤 종목 보셨어요?"]
+
+    return {
+        "kind": "kr_close",
+        "title": f"{_day_label(day)} 국장 마감",
+        "lines": lines,
+        "no_cta": True,
+    }
+
+
+US_INDICES = [
+    ("^GSPC", "S&P500"),
+    ("^IXIC", "나스닥"),
+    ("^DJI", "다우"),
+    ("^VIX", "VIX"),
+]
+
+
+def compose_us_brief(with_news=True):
+    """아침 8시 미장 브리핑. 국장 개장(9시) 전에 나간다.
+
+    지수는 us_screener가 이미 쓰는 야후 차트 API로 가져온다.
+    """
+    from us_screener import fetch_ohlc  # 네트워크를 쓰므로 필요할 때만 부른다
+
+    lines = []
+    for symbol, label in US_INDICES:
+        hist, cur, change = fetch_ohlc(symbol, rng="5d")
+        if not hist:
+            continue
+        lines.append(f"{label} {_fmt_idx(cur)} ({change:+.2f}%)")
+    if not lines:
+        return None
+
+    hist, cur, change = fetch_ohlc("KRW=X", rng="5d")
+    if hist:
+        lines.append(f"원달러 {_fmt_idx(cur)}원 ({change:+.2f}%)")
+
+    u = _load("us_results")
+    if u and not _stale(u, 4):
+        mv = u.get("minervini") or {}
+        total = mv.get("total_evaluated")
+        strict = mv.get("minervini_strict_count")
+        strong = mv.get("minervini_strong_count")
+        if total and strong is not None:
+            lines += [
+                "",
+                f"미국 {total}종목을 같은 기준으로 걸러봤습니다.",
+                f"미너비니 조건 통과 {strong}개 (8개 전부 통과는 {strict}개)",
+            ]
+
+    if with_news:
+        # 미국 장은 한국 새벽에 끝나므로 18시간까지 본다.
+        lines += _news_lines("world", 18, _load("market"), "간밤 나온 기사")
+
+    lines += ["", "종목 추천이 아니라 조건에 걸린 개수입니다."]
+    lines += ["", "오늘 국장은 어떻게 보세요?"]
+
+    return {
+        "kind": "us_brief",
+        "title": f"{_day_label(now_kst().strftime('%Y%m%d'))} 미국 시장",
+        "lines": lines,
+        "no_cta": True,
+    }
+
+
 BUILDERS = {
     "screener": compose_screener,
     "momentum": compose_momentum,
     "theme": compose_theme,
+}
+
+# 정해진 시각에만 나가는 글. 날짜 돌려쓰기(rotation)에는 넣지 않는다.
+BRIEFS = {
+    "kr_close": compose_kr_close,
+    "us_brief": compose_us_brief,
 }
 
 
@@ -215,15 +387,16 @@ def _delta_str(v):
 
 
 def render(post, platform, cfg):
-    """플랫폼별 본문 문자열."""
-    link_cfg = cfg.get("link") or {}
-    post_cfg = cfg.get("post") or {}
-    url = link_cfg.get("url", "")
-
+    """플랫폼별 본문 문자열. 링크·유도 문구 붙이기는 _finish가 한다."""
     lines = [post["title"]]
     if post.get("subtitle"):
         lines.append(post["subtitle"])
     lines.append("")
+
+    # 시황 글은 종목 목록이 아니라 본문을 통째로 넘긴다.
+    if post.get("lines"):
+        lines += post["lines"]
+        return _finish(lines, post, platform, cfg)
 
     for i, it in enumerate(post["items"], 1):
         row = f"{i}. {it['name']}"
@@ -239,9 +412,19 @@ def render(post, platform, cfg):
         lines.append(post["tail"])
     lines.append(DISCLAIMER)
 
+    return _finish(lines, post, platform, cfg)
+
+
+def _finish(lines, post, platform, cfg):
+    """본문 뒤에 링크·댓글 유도·해시태그를 붙이고 길이를 맞춘다."""
+    link_cfg = cfg.get("link") or {}
+    post_cfg = cfg.get("post") or {}
+    url = link_cfg.get("url", "")
+
     # 링크를 본문에 넣을지, 댓글 유도로 대신할지
     append_link = post_cfg.get("append_link", True)
-    cta = post_cfg.get("cta")
+    # 하루에 여러 번 나가는 시황 글까지 같은 유도 문구를 달면 반복이 심해진다
+    cta = None if post.get("no_cta") else post_cfg.get("cta")
 
     if platform == "instagram":
         if url and append_link:

@@ -11,6 +11,14 @@ on:
     # 수동 큐는 자동 글보다 먼저 쓰이기 때문에, 한 실행에서 둘 다 뽑을
     # 수는 없어 이렇게 시간을 갈라 둘 다 매일 나가게 한다.
     - cron: "0 12 * * 1-5"
+    # 평일 KST 16:00 (UTC 07:00). 국장 마감 요약.
+    # 장은 15:30에 끝나고 fetch-prices가 15:55까지 돌므로 숫자가 확정돼 있다.
+    - cron: "0 7 * * 1-5"
+    # 평일 KST 08:00 (UTC 23:00, 전날). 미장 브리핑.
+    # us-screener가 UTC 22:00(KST 07:00)에 도니 한 시간 뒤다.
+    # 국장 개장(09:00) 전에 나가야 해서 08:00으로 잡았다.
+    # UTC 일요일 23:00 = KST 월요일 08:00이라 요일이 0-4다.
+    - cron: "0 23 * * 0-4"
   workflow_dispatch:
     inputs:
       dry_run:
@@ -24,6 +32,8 @@ on:
         options:
           - "자동 글 (스크리너)"
           - "대기열 글 (posts.yml)"
+          - "국장 마감 (16:00)"
+          - "미장 브리핑 (08:00)"
       only:
         description: "한 플랫폼에만 발행 (테스트용)"
         type: choice
@@ -61,7 +71,8 @@ jobs:
           cache: "pip"
 
       - name: Install dependencies
-        run: pip install requests pyyaml pillow
+        # beautifulsoup4는 시황 글의 기사 제목 수집에 쓴다
+        run: pip install requests pyyaml pillow beautifulsoup4
 
       - name: Install Korean fonts
         run: sudo apt-get update -qq && sudo apt-get install -y -qq fonts-nanum
@@ -75,10 +86,23 @@ jobs:
           IG_USER_ID: ${{ secrets.IG_USER_ID }}
           IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
         # 예약 실행은 cron으로, 수동 실행은 source 입력으로 갈린다.
-        # 21:00(UTC 12:00)과 "대기열 글"이 --queue-only, 나머지가 --auto다.
+        # 예약이면 schedule이 차 있고 inputs.source가 비어서 아래 case를
+        # 그냥 지나간다. 수동이면 그 반대라 source가 모드를 정한다.
         run: |
-          python scripts/social_post.py prepare \
-            ${{ (github.event.schedule == '0 12 * * 1-5' || inputs.source == '대기열 글 (posts.yml)') && '--queue-only' || '--auto' }} \
+          case "${{ github.event.schedule }}" in
+            "0 7 * * 1-5")  MODE="--brief=kr_close" ;;
+            "0 23 * * 0-4") MODE="--brief=us_brief" ;;
+            "0 12 * * 1-5") MODE="--queue-only" ;;
+            *)              MODE="--auto" ;;
+          esac
+          case "${{ inputs.source }}" in
+            "대기열 글 (posts.yml)") MODE="--queue-only" ;;
+            "국장 마감 (16:00)")     MODE="--brief=kr_close" ;;
+            "미장 브리핑 (08:00)")   MODE="--brief=us_brief" ;;
+            "자동 글 (스크리너)")    MODE="--auto" ;;
+          esac
+          echo "모드: $MODE"
+          python scripts/social_post.py prepare "$MODE" \
             ${{ inputs.dry_run && '--dry-run' || '' }} \
             ${{ inputs.force && '--force' || '' }} \
             ${{ (inputs.only != '' && inputs.only != '설정대로') && format('--only={0}', inputs.only) || '' }}
