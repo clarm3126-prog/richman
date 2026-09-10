@@ -23,6 +23,9 @@ from pathlib import Path
 import pytz
 import requests
 
+sys.path.insert(0, str(Path(__file__).parent))
+from common import load_json, send_message  # noqa: E402
+
 KST = pytz.timezone("Asia/Seoul")
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; MinerviniScreener/1.0)"}
 
@@ -100,11 +103,9 @@ def fetch_dart_corp_codes():
     if not DART_KEY:
         raise RuntimeError("DART_API_KEY env not set")
     cache_path = Path("data/dart_corp_codes.json")
-    if cache_path.exists():
-        try:
-            return json.loads(cache_path.read_text(encoding="utf-8"))
-        except Exception:
-            pass
+    cached = load_json(cache_path)
+    if cached:
+        return cached
     print("  fetching DART corp codes (one-time, ~3MB zip)...")
     url = f"{DART_BASE}/corpCode.xml?crtfc_key={DART_KEY}"
     r = requests.get(url, timeout=30)
@@ -187,12 +188,7 @@ def fetch_all_quarterly_data(corp_codes_map, target_codes, max_workers=12):
     캐시: data/dart_financials.json
     """
     cache_path = Path("data/dart_financials.json")
-    cache = {}
-    if cache_path.exists():
-        try:
-            cache = json.loads(cache_path.read_text(encoding="utf-8"))
-        except Exception:
-            cache = {}
+    cache = load_json(cache_path, {})
 
     today = datetime.now(KST)
     cur_year = today.year
@@ -390,12 +386,7 @@ def calc_rs_rating(stock_history, market_history):
 def load_metadata():
     """data/stock_metadata.json 로드. 없으면 빈 dict."""
     path = Path("data/stock_metadata.json")
-    if not path.exists():
-        return {"stocks": {}, "warning_stocks": []}
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        return {"stocks": {}, "warning_stocks": []}
+    return load_json(path, {"stocks": {}, "warning_stocks": []})
 
 
 def is_pump_or_warning(code, meta_stocks, warning_set, history):
@@ -661,22 +652,7 @@ def evaluate_minervini(stock_code, history, financials, market_history):
 
 def send_telegram(bot_token, chat_id, text):
     """Telegram sendMessage."""
-    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-    try:
-        r = requests.post(
-            url,
-            json={"chat_id": chat_id, "text": text, "parse_mode": "Markdown", "disable_web_page_preview": True},
-            timeout=10,
-        )
-        if r.status_code == 200:
-            return True, "OK"
-        try:
-            err = r.json().get("description", r.text[:200])
-        except Exception:
-            err = r.text[:200]
-        return False, f"HTTP {r.status_code}: {err}"
-    except Exception as e:
-        return False, f"Exception: {e}"
+    return send_message(bot_token, chat_id, text, parse_mode="Markdown", timeout=10)
 
 
 SCORE_IMPROVE_THRESHOLD = 5.0  # 점수 +5 이상 향상되면 재알림 (30일 안이라도)
@@ -688,14 +664,9 @@ def log_alert(alert_type, title, summary):
     최근 100건만 유지.
     """
     log_path = Path("data/alert_log.json")
-    log = {"alerts": []}
-    if log_path.exists():
-        try:
-            log = json.loads(log_path.read_text(encoding="utf-8"))
-            if not isinstance(log.get("alerts"), list):
-                log = {"alerts": []}
-        except Exception:
-            log = {"alerts": []}
+    log = load_json(log_path, {"alerts": []})
+    if not isinstance(log.get("alerts"), list):
+        log = {"alerts": []}
     log["alerts"].append({
         "type": alert_type,
         "title": title,
@@ -741,7 +712,7 @@ def notify_new_minervini(results):
     alerted = {"strict": {}, "strong": {}}
     if alerted_path.exists():
         try:
-            raw = json.loads(alerted_path.read_text(encoding="utf-8"))
+            raw = load_json(alerted_path, {})
             today_str = datetime.now(KST).strftime("%Y-%m-%d")
             for key in ["strict", "strong"]:
                 v = raw.get(key, {})

@@ -14,6 +14,7 @@ import requests
 from bs4 import BeautifulSoup
 
 sys.path.insert(0, str(Path(__file__).parent))
+from common import load_json, send_message
 from screener import is_excluded_security
 
 KST = pytz.timezone("Asia/Seoul")
@@ -265,23 +266,7 @@ def enrich_top_themes_with_stocks(themes, top_n=10):
 
 def send_telegram(bot_token, chat_id, text):
     """Telegram 봇으로 메시지 전송. 성공/실패 + 응답 메시지 반환."""
-    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-    try:
-        r = requests.post(
-            url,
-            json={"chat_id": chat_id, "text": text, "parse_mode": "Markdown", "disable_web_page_preview": True},
-            timeout=10,
-        )
-        if r.status_code == 200:
-            return True, "OK"
-        # 실패 시 Telegram 에러 메시지 반환
-        try:
-            err = r.json().get("description", r.text[:200])
-        except Exception:
-            err = r.text[:200]
-        return False, f"HTTP {r.status_code}: {err}"
-    except Exception as e:
-        return False, f"Exception: {e}"
+    return send_message(bot_token, chat_id, text, parse_mode="Markdown", timeout=10)
 
 
 def check_alerts_and_notify(stocks):
@@ -306,12 +291,7 @@ def check_alerts_and_notify(stocks):
         return
 
     triggered_path = Path("data/triggered_alerts.json")
-    triggered = set()
-    if triggered_path.exists():
-        try:
-            triggered = set(json.loads(triggered_path.read_text(encoding="utf-8")))
-        except Exception:
-            triggered = set()
+    triggered = set(load_json(triggered_path, []))
 
     new_count = 0
     for alert in alerts:
@@ -386,12 +366,7 @@ def update_descriptions(themes, industries):
     import concurrent.futures
     desc_path = Path("data/descriptions.json")
     desc_path.parent.mkdir(parents=True, exist_ok=True)
-    descriptions = {}
-    if desc_path.exists():
-        try:
-            descriptions = json.loads(desc_path.read_text(encoding="utf-8"))
-        except Exception:
-            descriptions = {}
+    descriptions = load_json(desc_path, {})
 
     needed = set()
     for t in themes[:10]:
@@ -459,7 +434,7 @@ def update_volume_data(stocks):
     surges = []
     if prev_path.exists():
         try:
-            prev_data = json.loads(prev_path.read_text(encoding="utf-8"))
+            prev_data = load_json(prev_path, {})
             prev_date = prev_data.get("date")
             prev_volumes = prev_data.get("volumes", {})
             if prev_date and prev_date < today_str:
@@ -603,10 +578,7 @@ def fetch_watchlist_stock_history(days=7):
     wl_path = Path("data/watchlist.json")
     if not wl_path.exists():
         return {}
-    try:
-        wl = json.loads(wl_path.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
+    wl = load_json(wl_path, {})
     codes = [item.get("code") for item in wl.get("watchlist", []) if item.get("code")]
     if not codes:
         return {}
@@ -731,10 +703,7 @@ def detect_ath_breakouts(stocks, investor_top, bot_token, chat_id):
     if not ath_path.exists():
         print("  ath_cache.json 없음 — ATH 돌파 감지 skip (fetch_ath 먼저 실행 필요)")
         return
-    try:
-        ath_cache = json.loads(ath_path.read_text(encoding="utf-8")).get("stocks", {})
-    except Exception:
-        return
+    ath_cache = load_json(ath_path, {}).get("stocks", {})
     if not ath_cache:
         return
 
@@ -815,7 +784,7 @@ def detect_ath_breakouts(stocks, investor_top, bot_token, chat_id):
     existing = {"trading_day": today_str, "intraday": [], "close": []}
     if bo_path.exists():
         try:
-            existing = json.loads(bo_path.read_text(encoding="utf-8"))
+            existing = load_json(bo_path, {})
             if existing.get("trading_day") != today_str:
                 existing = {"trading_day": today_str, "intraday": [], "close": []}
         except Exception:
@@ -839,7 +808,7 @@ def detect_ath_breakouts(stocks, investor_top, bot_token, chat_id):
     alerted = {"intraday": {}, "close": {}}
     if alerted_path.exists():
         try:
-            alerted = json.loads(alerted_path.read_text(encoding="utf-8"))
+            alerted = load_json(alerted_path, {})
             alerted.setdefault("intraday", {})
             alerted.setdefault("close", {})
         except Exception:
@@ -889,12 +858,7 @@ def find_new_highs(stocks):
     import concurrent.futures
     cache_path = Path("data/52w_cache.json")
     today_str = datetime.now(KST).strftime("%Y%m%d")
-    cache = {"date": "", "high": {}}
-    if cache_path.exists():
-        try:
-            cache = json.loads(cache_path.read_text(encoding="utf-8"))
-        except Exception:
-            cache = {"date": "", "high": {}}
+    cache = load_json(cache_path, {"date": "", "high": {}})
 
     is_full_refresh = cache.get("date") != today_str
     cached_high = cache.get("high", {})

@@ -21,26 +21,19 @@ import requests
 sys.path.insert(0, str(Path(__file__).parent))
 from screener import fetch_all_stock_history  # noqa: E402
 from exit_signals import evaluate_exit_signals  # noqa: E402
+from common import mask, send_message, supabase_get, supabase_headers  # noqa: E402
 
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "").strip().rstrip("/")
 SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "").strip()
 
-HEADERS = {
-    "apikey": SERVICE_KEY,
-    "Authorization": f"Bearer {SERVICE_KEY}",
-    "Content-Type": "application/json",
-}
+HEADERS = supabase_headers(SERVICE_KEY)
 
 SEV_ICON = {"critical": "🛑", "warning": "⚠️"}
 
 
 def fetch_rows(table, params):
-    r = requests.get(
-        f"{SUPABASE_URL}/rest/v1/{table}", headers=HEADERS, params=params, timeout=30
-    )
-    r.raise_for_status()
-    return r.json()
+    return supabase_get(SUPABASE_URL, HEADERS, table, params)
 
 
 def claim_alert(user_id, code, sig_type):
@@ -57,26 +50,12 @@ def claim_alert(user_id, code, sig_type):
     return bool(r.json())  # 중복이면 빈 배열
 
 
-def mask(value):
-    """Actions 로그가 공개되므로 chat_id는 뒤 3자리만 남긴다."""
-    s = str(value)
-    return "***" + s[-3:] if len(s) > 3 else "***"
-
-
 def send(chat_id, text):
-    try:
-        r = requests.post(
-            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-            json={"chat_id": chat_id, "text": text, "parse_mode": "HTML"},
-            timeout=20,
-        )
-        ok = r.json().get("ok", False)
-        if not ok:
-            print(f"  ! 발송 실패 {mask(chat_id)}: {r.text[:150]}")
-        return ok
-    except Exception as e:
-        print(f"  ! 발송 예외 {mask(chat_id)}: {e}")
-        return False
+    """본문에 링크가 있어 미리보기는 켜둔다 (기존 동작)."""
+    ok, detail = send_message(BOT_TOKEN, chat_id, text, disable_preview=False)
+    if not ok:
+        print(f"  ! 발송 실패 {mask(chat_id)}: {detail}")
+    return ok
 
 
 def main():

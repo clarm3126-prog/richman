@@ -6,7 +6,6 @@
 그 대화방 번호(chat_id)를 해당 사용자 프로필에 저장한다.
 5분마다 실행되며, 이미 처리한 메시지는 offset 파일로 건너뛴다.
 """
-import json
 import os
 import re
 import secrets
@@ -15,6 +14,9 @@ from pathlib import Path
 
 import requests
 
+sys.path.insert(0, str(Path(__file__).parent))
+from common import load_json, mask, save_json, send_message, supabase_headers  # noqa: E402
+
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "").strip().rstrip("/")
 SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "").strip()
@@ -22,11 +24,7 @@ SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "").strip()
 OFFSET_FILE = Path("data/telegram_offset.json")
 CODE_RE = re.compile(r"\b([A-Fa-f0-9]{6})\b")
 
-HEADERS = {
-    "apikey": SERVICE_KEY,
-    "Authorization": f"Bearer {SERVICE_KEY}",
-    "Content-Type": "application/json",
-}
+HEADERS = supabase_headers(SERVICE_KEY)
 
 
 def tg(method, **params):
@@ -37,25 +35,21 @@ def tg(method, **params):
 
 
 def send(chat_id, text):
-    tg("sendMessage", chat_id=chat_id, text=text, parse_mode="HTML")
+    ok, detail = send_message(BOT_TOKEN, chat_id, text, disable_preview=False)
+    if not ok:
+        print(f"  ! 발송 실패 {mask(chat_id)}: {detail}")
+    return ok
 
 
 def load_offset():
     try:
-        return json.loads(OFFSET_FILE.read_text()).get("offset", 0)
+        return load_json(OFFSET_FILE, {}).get("offset", 0)
     except Exception:
         return 0
 
 
 def save_offset(offset):
-    OFFSET_FILE.parent.mkdir(parents=True, exist_ok=True)
-    OFFSET_FILE.write_text(json.dumps({"offset": offset}))
-
-
-def mask(value):
-    """공개 로그에 그대로 남지 않도록 뒤 3자리만 남긴다."""
-    s = str(value)
-    return "***" + s[-3:] if len(s) > 3 else "***"
+    save_json(OFFSET_FILE, {"offset": offset}, indent=None)
 
 
 def new_code():

@@ -7,7 +7,6 @@ data/market.json의 현재가와 비교해 조건을 만족하면
 그 사용자의 텔레그램 대화방으로 알림을 보낸다.
 한 번 발송한 알림은 triggered=true로 표시해 중복 발송을 막는다.
 """
-import json
 import os
 import sys
 import time
@@ -15,25 +14,20 @@ from pathlib import Path
 
 import requests
 
+sys.path.insert(0, str(Path(__file__).parent))
+from common import load_json, mask, send_message, supabase_get, supabase_headers  # noqa: E402
+
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "").strip().rstrip("/")
 SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "").strip()
 
 MARKET_FILE = Path("data/market.json")
 
-HEADERS = {
-    "apikey": SERVICE_KEY,
-    "Authorization": f"Bearer {SERVICE_KEY}",
-    "Content-Type": "application/json",
-}
+HEADERS = supabase_headers(SERVICE_KEY)
 
 
 def fetch_rows(table, params):
-    r = requests.get(
-        f"{SUPABASE_URL}/rest/v1/{table}", headers=HEADERS, params=params, timeout=30
-    )
-    r.raise_for_status()
-    return r.json()
+    return supabase_get(SUPABASE_URL, HEADERS, table, params)
 
 
 def mark_triggered(row_id):
@@ -46,26 +40,12 @@ def mark_triggered(row_id):
     )
 
 
-def mask(value):
-    """Actions 로그가 공개되므로 chat_id는 뒤 3자리만 남긴다."""
-    s = str(value)
-    return "***" + s[-3:] if len(s) > 3 else "***"
-
-
 def send(chat_id, text):
-    try:
-        r = requests.post(
-            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-            json={"chat_id": chat_id, "text": text, "parse_mode": "HTML"},
-            timeout=20,
-        )
-        ok = r.json().get("ok", False)
-        if not ok:
-            print(f"  ! 발송 실패 {mask(chat_id)}: {r.text[:150]}")
-        return ok
-    except Exception as e:
-        print(f"  ! 발송 예외 {mask(chat_id)}: {e}")
-        return False
+    """알림 본문에 네이버 링크가 있어 미리보기는 켜둔다 (기존 동작)."""
+    ok, detail = send_message(BOT_TOKEN, chat_id, text, disable_preview=False)
+    if not ok:
+        print(f"  ! 발송 실패 {mask(chat_id)}: {detail}")
+    return ok
 
 
 def main():
@@ -77,7 +57,7 @@ def main():
         print("market.json 없음 - 건너뜀")
         sys.exit(0)
 
-    market = json.loads(MARKET_FILE.read_text())
+    market = load_json(MARKET_FILE, {})
     stocks = market.get("stocks", {})
     if not stocks:
         print("시세 데이터 비어있음 - 건너뜀")
