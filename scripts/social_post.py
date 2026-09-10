@@ -158,7 +158,10 @@ def prepare(dry_run=False, only=None, force=False, auto=False, queue_only=False)
         tags = " ".join(post_cfg.get("hashtags") or [])
         plan = {
             "source": "manual",
-            "kind": "manual",
+            # 큐 항목이 kind를 적어두면 그대로 쓴다. 안 적으면 manual이다.
+            # 이게 없으면 무료배포글·매매기록·질문글이 전부 manual 하나로
+            # 뭉쳐서, 성과 요약에서 어떤 형식이 먹혔는지 구분할 수 없다.
+            "kind": (manual.get("kind") or "manual").strip(),
             "key": text_key(text),
             "platforms": targets,
             "texts": {

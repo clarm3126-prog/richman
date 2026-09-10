@@ -8,7 +8,12 @@
 #     image: assets/cards/파일명.png   (선택. 인스타에 올리려면 필수)
 #     platforms: [threads, instagram]  (선택. 없으면 설정의 기본값)
 #     after: "2026-09-10"              (선택. 이 날짜 이후에만 발행)
+#     kind: promo                      (선택. 성과 요약에서 형식을 가르는 이름)
 #     published: false
+#
+# kind는 아무 이름이나 되지만, 같은 형식끼리 같은 이름을 써야
+# 성과 요약에서 '어떤 형식이 댓글을 받았나'가 나옵니다.
+# 지금 쓰는 이름: promo(무료 배포) / trade_log(매매 기록) / lesson(정리·원칙)
 #
 # 아래 항목은 네이버 블로그(blog.naver.com/clelrl3126)에 쓴 매매 기록을
 # 종목 하나씩 옮긴 것입니다.
@@ -28,6 +33,7 @@ queue:
   # 무료 배포글. 성장 엔진 역할이라 대기열 맨 앞에 둔다.
   # 카드는 scripts/make_promo_cards.py 로 만든 밝은 배경 2장을 쓴다.
   - after: "2026-09-10"
+    kind: promo
     platforms: [threads, instagram]
     image:
       - assets/cards/promo-what.jpg
@@ -49,6 +55,7 @@ queue:
       (팔로우해두시면 요청함으로 안 가고 바로 도착합니다)
 
   - after: "2026-09-11"
+    kind: trade_log
     platforms: [threads, instagram]
     image:
       - assets/cards/blog-daewon.jpg
@@ -72,6 +79,7 @@ queue:
       종목노트로 매매일지 써보고 싶으시면 댓글에 '노트'라고 남겨주세요. 링크 보내드릴게요.
 
   - after: "2026-09-11"
+    kind: trade_log
     platforms: [threads, instagram]
     image:
       - assets/cards/blog-taesung.jpg
@@ -95,6 +103,7 @@ queue:
       종목노트로 매매일지 써보고 싶으시면 댓글에 '노트'라고 남겨주세요. 링크 보내드릴게요.
 
   - after: "2026-09-11"
+    kind: trade_log
     platforms: [threads, instagram]
     image:
       - assets/cards/blog-soslab.jpg
@@ -118,6 +127,7 @@ queue:
       종목노트로 매매일지 써보고 싶으시면 댓글에 '노트'라고 남겨주세요. 링크 보내드릴게요.
 
   - after: "2026-09-11"
+    kind: trade_log
     platforms: [threads, instagram]
     image:
       - assets/cards/blog-ligachem.jpg
@@ -139,6 +149,7 @@ queue:
       종목노트로 매매일지 써보고 싶으시면 댓글에 '노트'라고 남겨주세요. 링크 보내드릴게요.
 
   - after: "2026-09-11"
+    kind: trade_log
     platforms: [threads, instagram]
     image:
       - assets/cards/blog-pskholdings.jpg
@@ -166,6 +177,7 @@ queue:
       종목노트로 매매일지 써보고 싶으시면 댓글에 '노트'라고 남겨주세요. 링크 보내드릴게요.
 
   - after: "2026-09-11"
+    kind: lesson
     platforms: [threads, instagram]
     image:
       - assets/cards/blog-principles.jpg

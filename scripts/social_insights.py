@@ -38,7 +38,7 @@ IG_METRICS = ["views", "reach", "likes", "comments", "saved", "shares", "total_i
 
 # 플랫폼마다 이름이 달라서 비교하려면 맞춰줘야 한다
 COMMON = {
-    "threads": {"조회": "views", "좋아요": "likes", "댓글": "replies"},
+    "threads": {"조회": "views", "좋아요": "likes", "댓글": "replies", "재게시": "reposts"},
     "instagram": {"조회": "views", "좋아요": "likes", "댓글": "comments"},
 }
 
@@ -150,18 +150,58 @@ def summarize(row):
     return " · ".join(parts) or "지표 없음"
 
 
+# 요약에 쓸 읽기 좋은 이름. 없으면 kind를 그대로 쓴다.
+KIND_LABELS = {
+    "promo": "무료 배포",
+    "trade_log": "매매 기록",
+    "lesson": "정리·원칙",
+    "screener": "스크리너",
+    "momentum": "모멘텀",
+    "theme": "테마",
+    "manual": "직접 쓴 글",
+}
+
+
+def kind_label(kind):
+    return KIND_LABELS.get(kind, kind)
+
+
 def by_kind(rows, platform):
-    """종류별 평균 조회수. 어떤 형식의 글이 읽히는지 보려는 것."""
+    """형식별 성과. 조회수가 아니라 댓글률로 줄을 세운다.
+
+    쓰레드는 팔로워 수가 아니라 반응으로 도달이 갈리고, 그중 댓글의
+    가중치가 가장 높다. 조회수가 높아도 댓글이 안 달리는 형식은
+    더 써봐야 계정이 안 큰다. 그래서 조회 대비 댓글 비율을 본다.
+
+    조회수가 0이거나 없는 글은 비율을 낼 수 없어 뺀다.
+    """
+    comment_key = COMMON.get(platform, {}).get("댓글")
     buckets = {}
     for r in rows:
         if r["platform"] != platform:
             continue
         views = r["metrics"].get("views")
-        if views is None:
+        comments = r["metrics"].get(comment_key)
+        if not views or comments is None:
             continue
-        buckets.setdefault(r["kind"], []).append(views)
-    out = [(k, sum(v) / len(v), len(v)) for k, v in buckets.items()]
-    return sorted(out, key=lambda x: -x[1])
+        buckets.setdefault(r["kind"], []).append((views, comments))
+
+    out = []
+    for kind, pairs in buckets.items():
+        views = sum(v for v, _ in pairs)
+        comments = sum(c for _, c in pairs)
+        out.append(
+            {
+                "kind": kind,
+                "n": len(pairs),
+                "views": views / len(pairs),
+                "comments": comments / len(pairs),
+                # 글마다 조회수 차이가 커서 글별 비율을 평균 내면
+                # 조회수 적은 글이 과대평가된다. 합계끼리 나눈다.
+                "rate": comments / views * 100,
+            }
+        )
+    return sorted(out, key=lambda d: -d["rate"])
 
 
 def report(rows):
@@ -170,22 +210,38 @@ def report(rows):
         print("요약할 글이 없습니다")
         return
 
-    lines = [f"📊 <b>SNS 성과 (최근 {REPORT_DAYS}일)</b>"]
+    lines = [f"📊 <b>SNS 성과 (최근 {REPORT_DAYS}일)</b> · 댓글 많은 순"]
 
     for platform, label in (("threads", "쓰레드"), ("instagram", "인스타")):
         mine = [r for r in recent if r["platform"] == platform and r["metrics"]]
         if not mine:
             continue
-        mine.sort(key=lambda r: -(r["metrics"].get("views") or 0))
+        # 조회수가 아니라 댓글 순이다. 도달을 만드는 건 댓글이라
+        # 조회만 높고 댓글이 없는 글을 위에 두면 판단을 그르친다.
+        ckey = COMMON.get(platform, {}).get("댓글")
+        mine.sort(
+            key=lambda r: (
+                -(r["metrics"].get(ckey) or 0),
+                -(r["metrics"].get("views") or 0),
+            )
+        )
         lines.append(f"\n<b>{label}</b>")
         for r in mine[:5]:
-            lines.append(f"{r['date'][5:]} {r['kind']} · {summarize(r)}")
+            lines.append(f"{r['date'][5:]} {kind_label(r['kind'])} · {summarize(r)}")
 
         kinds = by_kind(recent, platform)
         if len(kinds) >= 2:
-            lines.append("<i>종류별 평균 조회수</i>")
-            for kind, avg, n in kinds[:4]:
-                lines.append(f"  {kind} {avg:.0f} ({n}건)")
+            lines.append("<i>형식별 · 댓글률 순</i>")
+            for d in kinds[:5]:
+                lines.append(
+                    f"  {kind_label(d['kind'])} 댓글률 {d['rate']:.1f}%"
+                    f" · 댓글 {d['comments']:.0f} · 조회 {d['views']:.0f} ({d['n']}건)"
+                )
+            best = kinds[0]
+            tip = f"👉 {label}에서 댓글이 가장 잘 붙는 형식은 <b>{kind_label(best['kind'])}</b>입니다."
+            if best["n"] < 3:
+                tip += " (아직 {}건이라 참고만 하세요)".format(best["n"])
+            lines.append(tip)
 
     text = "\n".join(lines)
     print("\n" + text.replace("<b>", "").replace("</b>", "").replace("<i>", "").replace("</i>", ""))
