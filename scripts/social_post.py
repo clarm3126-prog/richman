@@ -135,12 +135,19 @@ def prepare(dry_run=False, only=None, force=False):
     if manual:
         text = manual["text"].strip()
         targets = [p for p in (manual.get("platforms") or platforms) if p in platforms]
+        # 인스타는 해시태그로 도달이 갈리므로 자동 글과 같은 태그를 붙인다.
+        # key는 태그를 뺀 본문으로 잡아야 설정에서 태그를 바꿔도 이미 올린
+        # 글이 다시 올라가지 않는다.
+        tags = " ".join(post_cfg.get("hashtags") or [])
         plan = {
             "source": "manual",
             "kind": "manual",
             "key": text_key(text),
             "platforms": targets,
-            "texts": {p: text for p in targets},
+            "texts": {
+                p: (f"{text}\n\n{tags}" if p == "instagram" and tags else text)
+                for p in targets
+            },
             "image_rels": _as_list(manual.get("image")),
         }
         print(f"수동 큐 사용: {text[:40]}...")
@@ -163,11 +170,15 @@ def prepare(dry_run=False, only=None, force=False):
 
         if "instagram" in platforms:
             brand = link_cfg.get("label", "종목노트")
-            url = link_cfg.get("url", "")
+
+            # 카드에는 주소를 찍지 않는다 (url="").
+            # 링크는 댓글에 반응해서 보내는 구조인데, 카드에 주소가 보이면
+            # 댓글을 달 이유가 없어진다. 인스타는 캡션 링크가 클릭되지도
+            # 않아서 주소를 노출해도 유입은 안 생기고 댓글만 줄어든다.
 
             # 1번째 장: 그날의 종목 카드
             rel = "assets/cards/{}-{}.jpg".format(today, post["kind"])
-            card.render_card(post, config.ROOT / rel, brand=brand, url=url)
+            card.render_card(post, config.ROOT / rel, brand=brand, url="")
             plan["image_rels"].append(rel)
             print(f"카드 생성: {rel}")
 
@@ -177,7 +188,7 @@ def prepare(dry_run=False, only=None, force=False):
             if about:
                 about_rel = "assets/cards/about.jpg"
                 card.render_about_card(
-                    about, config.ROOT / about_rel, brand=brand, url=url
+                    about, config.ROOT / about_rel, brand=brand, url=""
                 )
                 plan["image_rels"].append(about_rel)
                 print(f"소개 카드 생성: {about_rel}")
