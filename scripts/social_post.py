@@ -16,6 +16,8 @@
   python scripts/social_post.py prepare --dry-run
   python scripts/social_post.py prepare --only=instagram   # 한 플랫폼만
   python scripts/social_post.py prepare --force            # 하루 상한 무시
+  python scripts/social_post.py prepare --auto             # 큐 무시, 자동 글만
+  python scripts/social_post.py prepare --queue-only       # 큐에 글 있을 때만
 """
 import hashlib
 import sys
@@ -85,7 +87,18 @@ def pick_from_queue(state):
     return None
 
 
-def prepare(dry_run=False, only=None, force=False):
+def prepare(dry_run=False, only=None, force=False, auto=False, queue_only=False):
+    """무엇을 올릴지 정한다.
+
+    수동 큐는 자동 생성보다 항상 먼저 쓰이므로, 큐에 글이 쌓여 있으면
+    그동안 스크리너 글이 한 건도 안 나간다. 둘 다 매일 올리려고 하루에
+    두 번 실행하는데, 어느 쪽을 뽑을지는 이 두 스위치로 가른다.
+
+      auto=True        큐를 무시하고 자동 생성 글만 만든다
+      queue_only=True  큐에 글이 있을 때만 만든다 (없으면 아무것도 안 함)
+
+    큐가 비면 queue_only 실행이 그냥 넘어가므로 하루 1건으로 돌아간다.
+    """
     cfg = config.load_config()
     post_cfg = cfg.get("post") or {}
     if not post_cfg.get("enabled", True):
@@ -131,7 +144,11 @@ def prepare(dry_run=False, only=None, force=False):
     # 예행 연습은 자격증명이 없어도 본문을 보여준다
     platforms = ready or platforms
 
-    manual = pick_from_queue(state)
+    manual = None if auto else pick_from_queue(state)
+    if queue_only and not manual:
+        print("큐에 올릴 글이 없습니다 - 건너뜀 (--queue-only)")
+        return
+
     if manual:
         text = manual["text"].strip()
         targets = [p for p in (manual.get("platforms") or platforms) if p in platforms]
@@ -335,6 +352,8 @@ if __name__ == "__main__":
                 dry_run="--dry-run" in args,
                 only=only or None,
                 force="--force" in args,
+                auto="--auto" in args,
+                queue_only="--queue-only" in args,
             )
     except Exception:
         traceback.print_exc()

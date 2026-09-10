@@ -4,13 +4,26 @@ on:
   schedule:
     # 스크리닝 파이프라인이 모두 끝난 뒤, 평일 KST 19:00 (UTC 10:00)
     # fetch-prices 16:30 → exit-signals 16:45 → screener 17:00 → momentum 17:30 → social 19:00
+    # 이 실행은 --auto라서 스크리너 자동 글만 올린다.
     - cron: "0 10 * * 1-5"
+    # 평일 KST 21:00 (UTC 12:00). --queue-only라서 content/posts.yml에
+    # 올릴 글이 남아 있을 때만 발행하고, 큐가 비면 아무것도 하지 않는다.
+    # 수동 큐는 자동 글보다 먼저 쓰이기 때문에, 한 실행에서 둘 다 뽑을
+    # 수는 없어 이렇게 시간을 갈라 둘 다 매일 나가게 한다.
+    - cron: "0 12 * * 1-5"
   workflow_dispatch:
     inputs:
       dry_run:
         description: "실제 발행 없이 본문만 확인"
         type: boolean
         default: false
+      source:
+        description: "무엇을 올릴지"
+        type: choice
+        default: "자동 글 (스크리너)"
+        options:
+          - "자동 글 (스크리너)"
+          - "대기열 글 (posts.yml)"
       only:
         description: "한 플랫폼에만 발행 (테스트용)"
         type: choice
@@ -61,8 +74,11 @@ jobs:
           THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN }}
           IG_USER_ID: ${{ secrets.IG_USER_ID }}
           IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+        # 예약 실행은 cron으로, 수동 실행은 source 입력으로 갈린다.
+        # 21:00(UTC 12:00)과 "대기열 글"이 --queue-only, 나머지가 --auto다.
         run: |
           python scripts/social_post.py prepare \
+            ${{ (github.event.schedule == '0 12 * * 1-5' || inputs.source == '대기열 글 (posts.yml)') && '--queue-only' || '--auto' }} \
             ${{ inputs.dry_run && '--dry-run' || '' }} \
             ${{ inputs.force && '--force' || '' }} \
             ${{ (inputs.only != '' && inputs.only != '설정대로') && format('--only={0}', inputs.only) || '' }}

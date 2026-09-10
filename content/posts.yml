@@ -11,8 +11,14 @@
 #     published: false
 #
 # 아래 항목은 네이버 블로그(blog.naver.com/clelrl3126)에 쓴 매매 기록을
-# 종목 하나씩 옮긴 것입니다. after 날짜를 일주일 간격으로 줘서, 사이사이
-# 날짜에는 평소대로 스크리너 자동 글이 올라갑니다.
+# 종목 하나씩 옮긴 것입니다.
+#
+# after 날짜가 전부 같습니다. 한 번 실행에 한 편씩 나가므로, 위에서부터
+# 순서대로 평일 하루에 한 편씩 올라갑니다. 날짜를 따로 주고 싶으면
+# 항목마다 after를 다르게 적으면 됩니다.
+#
+# 스크리너 자동 글은 19:00, 이 대기열 글은 21:00에 나갑니다. 대기열이
+# 비면 21:00 실행이 그냥 넘어가서 다시 하루 1건으로 돌아갑니다.
 #
 # 쓰레드는 본문 그대로, 인스타는 요약 카드 + 소개 카드 2장짜리 캐러셀로
 # 나갑니다. 카드는 scripts/make_blog_cards.py 로 미리 만들어 커밋해 뒀고,
@@ -42,7 +48,7 @@ queue:
 
       종목노트로 매매일지 써보고 싶으시면 댓글에 '노트'라고 남겨주세요. 링크 보내드릴게요.
 
-  - after: "2026-09-18"
+  - after: "2026-09-11"
     platforms: [threads, instagram]
     image:
       - assets/cards/blog-taesung.jpg
@@ -65,7 +71,7 @@ queue:
 
       종목노트로 매매일지 써보고 싶으시면 댓글에 '노트'라고 남겨주세요. 링크 보내드릴게요.
 
-  - after: "2026-09-25"
+  - after: "2026-09-11"
     platforms: [threads, instagram]
     image:
       - assets/cards/blog-soslab.jpg
@@ -88,7 +94,7 @@ queue:
 
       종목노트로 매매일지 써보고 싶으시면 댓글에 '노트'라고 남겨주세요. 링크 보내드릴게요.
 
-  - after: "2026-10-02"
+  - after: "2026-09-11"
     platforms: [threads, instagram]
     image:
       - assets/cards/blog-ligachem.jpg
@@ -109,7 +115,7 @@ queue:
 
       종목노트로 매매일지 써보고 싶으시면 댓글에 '노트'라고 남겨주세요. 링크 보내드릴게요.
 
-  - after: "2026-10-09"
+  - after: "2026-09-11"
     platforms: [threads, instagram]
     image:
       - assets/cards/blog-pskholdings.jpg
@@ -136,7 +142,7 @@ queue:
 
       종목노트로 매매일지 써보고 싶으시면 댓글에 '노트'라고 남겨주세요. 링크 보내드릴게요.
 
-  - after: "2026-10-16"
+  - after: "2026-09-11"
     platforms: [threads, instagram]
     image:
       - assets/cards/blog-principles.jpg
