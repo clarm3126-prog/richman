@@ -23,6 +23,11 @@
    "date": "2026-09-10",
    "kind": "momentum",
    "threads_id": "18102303566200038"
+  },
+  {
+   "date": "2026-09-10",
+   "kind": "kr_close",
+   "threads_id": "18111961315845321"
   }
  ],
  "queue_done": []
