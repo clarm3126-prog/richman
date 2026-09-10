@@ -311,3 +311,161 @@ def prune_cards(keep_days=60):
             p.unlink()
             removed += 1
     return removed
+
+
+# ---------------------------------------------------------------
+# 프로모 카드 (밝은 배경)
+# ---------------------------------------------------------------
+#
+# 위의 종목 카드는 어두운 배경에 보라색이다. 데이터 카드로는 괜찮지만
+# 쓰레드 피드에서 작게 보일 때 리딩방 광고처럼 읽힌다는 문제가 있다.
+# 무료 배포글처럼 "사람이 만든 걸 나눠준다"는 인상이 필요한 글에는
+# 밝은 배경에 검은 글씨, 강조 한 단어만 색을 주는 형식을 쓴다.
+#
+# headline 각 줄에서 *별표*로 감싼 부분만 강조색으로 그린다.
+#   ["이게 *다* 나옵니다"]
+
+P_BG = (250, 249, 246)
+P_FG = (24, 24, 27)
+P_DIM = (113, 113, 122)
+P_ACCENT = (234, 88, 12)
+P_PANEL = (255, 255, 255)
+P_BORDER = (228, 228, 231)
+P_HL_BG = (220, 252, 231)
+P_HL_FG = (22, 101, 52)
+
+
+def _segments(line):
+    """'이게 *다* 나옵니다' -> [('이게 ', False), ('다', True), (' 나옵니다', False)]"""
+    out, buf, on = [], "", False
+    for ch in line:
+        if ch == "*":
+            if buf:
+                out.append((buf, on))
+            buf, on = "", not on
+            continue
+        buf += ch
+    if buf:
+        out.append((buf, on))
+    return out
+
+
+def _plain(line):
+    return line.replace("*", "")
+
+
+def _promo_headline(d, lines, inner_w, top):
+    """강조 구간만 색을 바꿔 그린다. 폭에 맞을 때까지 크기를 줄인다."""
+    size = 96 if len(lines) <= 2 else 78
+    while size > 46:
+        f = _font(True, size)
+        if all(d.textlength(_plain(l), font=f) <= inner_w for l in lines):
+            break
+        size -= 4
+    f = _font(True, size)
+    lh = int(size * 1.20)
+    y = top
+    for line in lines:
+        x = PAD
+        for text, accent in _segments(line):
+            d.text((x, y), text, font=f, fill=P_ACCENT if accent else P_FG)
+            x += d.textlength(text, font=f)
+        y += lh
+    return y
+
+
+def render_promo_card(spec, out_path):
+    """무료 배포·소개용 밝은 카드.
+
+    spec 키:
+      eyebrow   헤드라인 위 작은 문구
+      headline  큰 글씨 줄 목록 (*강조* 사용 가능)
+      rows      [{label, value}]  결과 미리보기용 좌우 정렬 표
+      items     [{title, note}]   번호가 붙는 목록
+      highlight 맨 아래 민트 박스에 넣을 한 줄
+      handle    왼쪽 아래 계정명
+      tagline   계정명 옆 한 줄 소개
+    """
+    img = Image.new("RGB", (W, H), P_BG)
+    d = ImageDraw.Draw(img)
+
+    f_eyebrow = _font(True, 32)
+    f_label = _font(False, 32)
+    f_value = _font(True, 36)
+    f_num = _font(True, 34)
+    f_title = _font(True, 40)
+    f_note = _font(False, 27)
+    f_hl = _font(True, 32)
+    f_handle = _font(True, 30)
+    f_tag = _font(False, 27)
+
+    inner_w = W - PAD * 2
+    d.rectangle([0, 0, W, 12], fill=P_ACCENT)
+
+    y = PAD + 16
+
+    if spec.get("eyebrow"):
+        d.text((PAD, y), spec["eyebrow"], font=f_eyebrow, fill=P_ACCENT)
+        y += 56
+
+    y = _promo_headline(d, spec.get("headline") or [], inner_w, y)
+    y += 34
+
+    foot_y = H - PAD - 56
+
+    # 아래에서부터 자리를 잡는다: 강조 박스가 있으면 먼저 높이를 뺀다
+    hl = spec.get("highlight")
+    hl_lines = _wrap(d, hl, f_hl, inner_w - 56) if hl else []
+    hl_h = (44 + len(hl_lines) * 46 + 40) if hl_lines else 0
+    body_bottom = foot_y - 40 - (hl_h + 28 if hl_h else 0)
+
+    rows = spec.get("rows") or []
+    if rows:
+        h = min(124, max(72, (body_bottom - y) // max(1, len(rows))))
+        # 남는 자리는 위아래로 나눠 블록을 가운데 둔다.
+        # 그러지 않으면 강조 박스 위가 빈 공간으로 남는다.
+        y += max(0, (body_bottom - y) - h * len(rows)) // 2
+        for r in rows:
+            d.rounded_rectangle(
+                [PAD, y, W - PAD, y + h - 12], radius=16,
+                fill=P_PANEL, outline=P_BORDER, width=2,
+            )
+            d.text((PAD + 28, y + (h - 12) // 2 - 22), _fit(d, r.get("label", ""), f_label, inner_w // 2),
+                   font=f_label, fill=P_DIM)
+            val = r.get("value", "")
+            vw = d.textlength(val, font=f_value)
+            d.text((W - PAD - 28 - vw, y + (h - 12) // 2 - 24), val, font=f_value, fill=P_FG)
+            y += h
+
+    items = spec.get("items") or []
+    if items:
+        h = min(150, max(88, (body_bottom - y) // max(1, len(items))))
+        y += max(0, (body_bottom - y) - h * len(items)) // 2
+        for i, it in enumerate(items, 1):
+            cy = y + 10
+            d.ellipse([PAD, cy, PAD + 54, cy + 54], fill=P_ACCENT)
+            nw = d.textlength(str(i), font=f_num)
+            d.text((PAD + 27 - nw / 2, cy + 7), str(i), font=f_num, fill=(255, 255, 255))
+            tx = PAD + 82
+            tw = W - PAD - tx
+            d.text((tx, y + 6), _fit(d, it.get("title", ""), f_title, tw), font=f_title, fill=P_FG)
+            if it.get("note"):
+                d.text((tx, y + 58), _fit(d, it["note"], f_note, tw), font=f_note, fill=P_DIM)
+            y += h
+
+    if hl_lines:
+        top = foot_y - 40 - hl_h
+        d.rounded_rectangle([PAD, top, W - PAD, top + hl_h - 8], radius=18, fill=P_HL_BG)
+        ty = top + 30
+        for line in hl_lines:
+            d.text((PAD + 28, ty), line, font=f_hl, fill=P_HL_FG)
+            ty += 46
+
+    d.line([PAD, foot_y - 24, W - PAD, foot_y - 24], fill=P_BORDER, width=2)
+    handle = spec.get("handle", "")
+    d.text((PAD, foot_y), handle, font=f_handle, fill=P_FG)
+    if spec.get("tagline"):
+        hw = d.textlength(handle, font=f_handle)
+        d.text((PAD + hw + 18, foot_y + 4), spec["tagline"], font=f_tag, fill=P_DIM)
+
+    return _save(img, out_path)
