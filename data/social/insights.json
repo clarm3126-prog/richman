@@ -1,0 +1,113 @@
+{
+ "posts": [
+  {
+   "checked": "2026-09-11",
+   "date": "2026-09-08",
+   "kind": "theme",
+   "media_id": "18078061262512062",
+   "metrics": {
+    "likes": 1,
+    "quotes": 0,
+    "replies": 0,
+    "reposts": 0,
+    "shares": 0,
+    "views": 11
+   },
+   "platform": "threads"
+  },
+  {
+   "checked": "2026-09-11",
+   "date": "2026-09-08",
+   "kind": "theme",
+   "media_id": "18339177343282180",
+   "metrics": {
+    "comments": 0,
+    "likes": 0,
+    "reach": 1,
+    "saved": 0,
+    "shares": 0,
+    "total_interactions": 0,
+    "views": 2
+   },
+   "platform": "instagram"
+  },
+  {
+   "checked": "2026-09-11",
+   "date": "2026-09-09",
+   "kind": "screener",
+   "media_id": "18104454422611253",
+   "metrics": {
+    "comments": 0,
+    "likes": 0,
+    "reach": 1,
+    "saved": 0,
+    "shares": 0,
+    "total_interactions": 0,
+    "views": 3
+   },
+   "platform": "instagram"
+  },
+  {
+   "checked": "2026-09-11",
+   "date": "2026-09-10",
+   "kind": "momentum",
+   "media_id": "18102303566200038",
+   "metrics": {
+    "likes": 2,
+    "quotes": 0,
+    "replies": 0,
+    "reposts": 0,
+    "shares": 0,
+    "views": 164
+   },
+   "platform": "threads"
+  },
+  {
+   "checked": "2026-09-11",
+   "date": "2026-09-10",
+   "kind": "kr_close",
+   "media_id": "18111961315845321",
+   "metrics": {
+    "likes": 1,
+    "quotes": 0,
+    "replies": 0,
+    "reposts": 0,
+    "shares": 0,
+    "views": 25
+   },
+   "platform": "threads"
+  },
+  {
+   "checked": "2026-09-11",
+   "date": "2026-09-11",
+   "kind": "promo",
+   "media_id": "18104954087252903",
+   "metrics": {
+    "likes": 1,
+    "quotes": 0,
+    "replies": 0,
+    "reposts": 0,
+    "shares": 0,
+    "views": 12
+   },
+   "platform": "threads"
+  },
+  {
+   "checked": "2026-09-11",
+   "date": "2026-09-11",
+   "kind": "promo",
+   "media_id": "18136297429532601",
+   "metrics": {
+    "comments": 0,
+    "likes": 0,
+    "reach": 0,
+    "saved": 0,
+    "shares": 0,
+    "total_interactions": 0,
+    "views": 0
+   },
+   "platform": "instagram"
+  }
+ ],
+ "updated": "2026-09-11"
+}
