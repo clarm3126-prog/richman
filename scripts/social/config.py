@@ -23,6 +23,23 @@ IG_API = "https://graph.instagram.com/v25.0"
 IG_AUTH = "https://graph.instagram.com"
 
 
+# 글 형식의 읽기 좋은 이름. 성과 요약과 발행 알림이 같이 쓴다.
+# 여기 없는 이름은 kind를 그대로 보여준다.
+KIND_LABELS = {
+    "promo": "무료 배포",
+    "trade_log": "매매 기록",
+    "lesson": "정리·원칙",
+    "screener": "스크리너",
+    "momentum": "모멘텀",
+    "theme": "테마",
+    "manual": "직접 쓴 글",
+}
+
+
+def kind_label(kind):
+    return KIND_LABELS.get(kind, kind or "?")
+
+
 def env(name, default=""):
     return os.environ.get(name, default).strip()
 

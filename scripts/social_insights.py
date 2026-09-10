@@ -20,6 +20,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from social import config, store  # noqa: E402
+from social.config import kind_label  # noqa: E402
 from social.instagram_api import Instagram  # noqa: E402
 from social.notify import tell_owner  # noqa: E402
 from social.threads_api import Threads  # noqa: E402
@@ -148,22 +149,6 @@ def summarize(row):
         if v is not None:
             parts.append(f"{label} {v}")
     return " · ".join(parts) or "지표 없음"
-
-
-# 요약에 쓸 읽기 좋은 이름. 없으면 kind를 그대로 쓴다.
-KIND_LABELS = {
-    "promo": "무료 배포",
-    "trade_log": "매매 기록",
-    "lesson": "정리·원칙",
-    "screener": "스크리너",
-    "momentum": "모멘텀",
-    "theme": "테마",
-    "manual": "직접 쓴 글",
-}
-
-
-def kind_label(kind):
-    return KIND_LABELS.get(kind, kind)
 
 
 def by_kind(rows, platform):

@@ -244,6 +244,51 @@ def wait_for_image(url, tries=20, delay=15):
     return False
 
 
+def announce(record, creds):
+    """발행 직후 운영자에게 알린다.
+
+    쓰레드는 올리고 10분 안에 반응이 없으면 확산이 멈춘다. 워크플로가
+    조용히 올리고 끝나면 그 시간을 통째로 놓치므로, 글 주소와 함께
+    지금 붙어 있어야 한다는 걸 알린다.
+
+    주소 조회는 덤이라 실패해도 발행 자체에는 영향을 주지 않는다.
+    """
+    links = []
+    if record.get("threads_id") and config.available(creds, "threads"):
+        try:
+            api = Threads(creds["threads"]["user_id"], creds["threads"]["token"])
+            url = api.permalink(record["threads_id"])
+            if url:
+                links.append(f"쓰레드 {url}")
+        except Exception:
+            pass
+    if record.get("ig_id") and config.available(creds, "instagram"):
+        try:
+            api = Instagram(creds["instagram"]["user_id"], creds["instagram"]["token"])
+            url = api.permalink(record["ig_id"])
+            if url:
+                links.append(f"인스타 {url}")
+        except Exception:
+            pass
+
+    where = []
+    if record.get("threads_id"):
+        where.append("쓰레드")
+    if record.get("ig_id"):
+        where.append("인스타")
+
+    lines = [
+        f"✅ <b>{'·'.join(where)}에 올라갔습니다</b> · {config.kind_label(record.get('kind'))}",
+        "",
+        "지금부터 30분이 확산을 가릅니다.",
+        "댓글이 달리면 바로 답해주세요. 초기 반응이 없으면 거기서 멈춥니다.",
+    ]
+    if links:
+        lines += [""] + links
+    tell_owner("\n".join(lines))
+    print("발행 알림을 보냈습니다")
+
+
 def publish():
     plan = store.load(PENDING, {})
     if not plan or not plan.get("texts"):
@@ -325,6 +370,7 @@ def publish():
                 )
 
     if record.get("threads_id") or record.get("ig_id"):
+        announce(record, creds)
         state.setdefault("posts", []).append(record)
         state["posts"] = state["posts"][-60:]
         _save_state = True

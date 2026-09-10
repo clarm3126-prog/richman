@@ -141,6 +141,12 @@ class Instagram:
             f"{self.user_id}/media", fields="id,permalink,timestamp", limit=limit
         ).get("data", [])
 
+    def permalink(self, media_id):
+        try:
+            return self._get(media_id, fields="permalink").get("permalink", "")
+        except InstagramError:
+            return ""
+
     def comments(self, media_id, limit=50):
         fields = "id,text,username,timestamp,from"
         return self._get(f"{media_id}/comments", fields=fields, limit=limit).get("data", [])
