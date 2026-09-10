@@ -31,6 +31,14 @@ from pathlib import Path
 import pytz
 import requests
 
+sys.path.insert(0, str(Path(__file__).parent))
+from common import (  # noqa: E402
+    fetch_theme_members,
+    load_dart_financials,
+    load_json,
+    load_recent_history,
+)
+
 KST = pytz.timezone("Asia/Seoul")
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; ThemeForecast/1.0)"}
 
@@ -38,44 +46,6 @@ HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; ThemeForecast/1.0)"}
 # ================================
 # 데이터 로더
 # ================================
-
-def load_recent_history(days=30):
-    """data/history/{date}.json 최근 N일."""
-    hist_dir = Path("data/history")
-    if not hist_dir.exists():
-        return []
-    files = sorted(
-        [f for f in hist_dir.glob("*.json") if f.stem != "index"],
-        reverse=True,
-    )[:days]
-    out = []
-    for f in files:
-        try:
-            data = json.loads(f.read_text(encoding="utf-8"))
-            data["_date"] = f.stem
-            out.append(data)
-        except Exception:
-            pass
-    return out
-
-
-def fetch_theme_members(theme_no):
-    """단일 테마 멤버 종목."""
-    url = f"https://m.stock.naver.com/api/stocks/theme/{theme_no}?page=1&pageSize=50"
-    headers = {**HEADERS, "Referer": "https://m.stock.naver.com/"}
-    try:
-        r = requests.get(url, headers=headers, timeout=8)
-        if r.status_code != 200:
-            return []
-        data = r.json()
-        return [
-            str(s.get("itemCode")).zfill(6)
-            for s in data.get("stocks", [])
-            if s.get("itemCode")
-        ]
-    except Exception:
-        return []
-
 
 def load_theme_members_cached(theme_list, max_workers=10):
     """테마별 멤버 종목 cache 로드 + 미스 항목만 fetch.
@@ -86,7 +56,7 @@ def load_theme_members_cached(theme_list, max_workers=10):
     cache_age = 999
     if cache_path.exists():
         try:
-            cache = json.loads(cache_path.read_text(encoding="utf-8"))
+            cache = load_json(cache_path, {})
             updated = cache.get("_updated", "")
             if updated:
                 # date-only 비교로 TZ-naive vs aware 충돌 회피
@@ -113,7 +83,7 @@ def load_theme_members_cached(theme_list, max_workers=10):
         print(f"  fetching {len(needs_fetch)} theme members...")
         cache.setdefault("themes", {})
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as ex:
-            futures = {ex.submit(fetch_theme_members, no): no for no in needs_fetch}
+            futures = {ex.submit(fetch_theme_members, no, HEADERS): no for no in needs_fetch}
             for f in concurrent.futures.as_completed(futures):
                 no = futures[f]
                 members = f.result()
@@ -123,16 +93,6 @@ def load_theme_members_cached(theme_list, max_workers=10):
         cache_path.write_text(json.dumps(cache, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
 
     return cache.get("themes", {})
-
-
-def load_dart_financials():
-    p = Path("data/dart_financials.json")
-    if not p.exists():
-        return {}
-    try:
-        return json.loads(p.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
 
 
 def load_weights():
@@ -151,7 +111,7 @@ def load_weights():
     if not p.exists():
         return default
     try:
-        d = json.loads(p.read_text(encoding="utf-8"))
+        d = load_json(p, {})
         # 안전장치: total = 100
         total = d.get("momentum", 0) + d.get("money_flow", 0) + d.get("fundamental", 0) + d.get("confidence", 0)
         if abs(total - 100) > 1:
@@ -532,12 +492,7 @@ def main():
 
     # 9. 백테스트 정확도 로드 (있으면)
     stats_path = Path("data/theme_forecast_stats.json")
-    backtest_stats = None
-    if stats_path.exists():
-        try:
-            backtest_stats = json.loads(stats_path.read_text(encoding="utf-8"))
-        except Exception:
-            pass
+    backtest_stats = load_json(stats_path)
 
     # 10. 저장
     today = datetime.now(KST).strftime("%Y%m%d")

@@ -23,6 +23,9 @@ from pathlib import Path
 import pytz
 import requests
 
+sys.path.insert(0, str(Path(__file__).parent))
+from common import fetch_theme_members, load_json, load_recent_history  # noqa: E402
+
 KST = pytz.timezone("Asia/Seoul")
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; MomentumScreener/1.0)"}
 
@@ -39,26 +42,6 @@ from screener import (
 # ================================
 # 테마 모멘텀 (data/history 활용)
 # ================================
-
-def load_recent_history(days=10):
-    """data/history/{date}.json 최근 N일 로드."""
-    hist_dir = Path("data/history")
-    if not hist_dir.exists():
-        return []
-    files = sorted(
-        [f for f in hist_dir.glob("*.json") if f.stem != "index"],
-        reverse=True,
-    )[:days]
-    out = []
-    for f in files:
-        try:
-            data = json.loads(f.read_text(encoding="utf-8"))
-            data["_date"] = f.stem
-            out.append(data)
-        except Exception:
-            pass
-    return out
-
 
 def compute_rising_themes(history_list, top_n=20):
     """최근 5일 평균 vs 그 이전 5일 평균 비교. 강세 전환 테마 top_n 추출."""
@@ -93,24 +76,6 @@ def compute_rising_themes(history_list, top_n=20):
     return rising[:top_n]
 
 
-def fetch_theme_members(theme_no):
-    """단일 테마 멤버 종목 코드 set."""
-    url = f"https://m.stock.naver.com/api/stocks/theme/{theme_no}?page=1&pageSize=50"
-    headers = {**HEADERS, "Referer": "https://m.stock.naver.com/"}
-    try:
-        r = requests.get(url, headers=headers, timeout=8)
-        if r.status_code != 200:
-            return set()
-        data = r.json()
-        return {
-            str(s.get("itemCode")).zfill(6)
-            for s in data.get("stocks", [])
-            if s.get("itemCode")
-        }
-    except Exception:
-        return set()
-
-
 def get_rising_theme_stocks(rising_themes, market):
     """강세 전환 테마들의 멤버 종목 코드 → 가중치 매핑.
     또한 각 rt에 'no' + 'stocks' field 추가 (frontend 테마별 탭에서 사용).
@@ -128,7 +93,7 @@ def get_rising_theme_stocks(rising_themes, market):
         if not no:
             continue
         rt["no"] = no  # frontend가 dedup용으로 사용
-        members = list(fetch_theme_members(no))
+        members = list(set(fetch_theme_members(no, HEADERS)))
         # 가중치: ranking 상승폭 / 10 (5위 상승 = 0.5)
         weight = rt["delta"] / 10
         rt["stocks"] = []  # frontend 테마별 탭에서 표시할 멤버 종목
@@ -386,7 +351,7 @@ def notify_new_momentum(results):
     alerted = {"strong": {}, "pre_breakout": {}}
     if alerted_path.exists():
         try:
-            raw = json.loads(alerted_path.read_text(encoding="utf-8"))
+            raw = load_json(alerted_path, {})
             today_str = datetime.now(KST).strftime("%Y-%m-%d")
             for key in ["strong", "pre_breakout"]:
                 v = raw.get(key, {})
@@ -512,7 +477,7 @@ def notify_confluence(momentum_results):
     sr_path = Path("data/screener_results.json")
     if sr_path.exists():
         try:
-            sr = json.loads(sr_path.read_text(encoding="utf-8"))
+            sr = load_json(sr_path, {})
             if sr.get("trading_day") == today:
                 for r in sr.get("results", []) or []:
                     c = r["code"]
@@ -532,7 +497,7 @@ def notify_confluence(momentum_results):
     bo_path = Path("data/ath_breakouts.json")
     if bo_path.exists():
         try:
-            bo = json.loads(bo_path.read_text(encoding="utf-8"))
+            bo = load_json(bo_path, {})
             if bo.get("trading_day") == today:
                 for b in (bo.get("close") or bo.get("intraday") or []):
                     c = b["code"]
@@ -616,7 +581,7 @@ def notify_confluence(momentum_results):
     alerted = {}
     if alerted_path.exists():
         try:
-            raw = json.loads(alerted_path.read_text(encoding="utf-8"))
+            raw = load_json(alerted_path, {})
             # 구버전 (code: date string) 호환
             for c, v in raw.items():
                 if isinstance(v, str):
@@ -769,7 +734,7 @@ def main():
     fin_path = Path("data/dart_financials.json")
     if fin_path.exists():
         try:
-            financials_cache = json.loads(fin_path.read_text(encoding="utf-8"))
+            financials_cache = load_json(fin_path, {})
             print(f"  loaded {len(financials_cache)} financial records (cache)")
         except Exception:
             pass

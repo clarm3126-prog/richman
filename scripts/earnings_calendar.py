@@ -24,6 +24,9 @@ import pytz
 import requests
 from bs4 import BeautifulSoup
 
+sys.path.insert(0, str(Path(__file__).parent))
+from common import load_dart_financials, load_json  # noqa: E402
+
 KST = pytz.timezone("Asia/Seoul")
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; EarningsCalendar/1.0)"}
 
@@ -282,17 +285,6 @@ def fetch_quarter_trend(stock_code, financials_cache):
     return out
 
 
-def load_dart_financials():
-    """data/dart_financials.json cache 로드."""
-    p = Path("data/dart_financials.json")
-    if not p.exists():
-        return {}
-    try:
-        return json.loads(p.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
-
-
 def collect_target_codes():
     """알림 대상 종목 = watchlist + 미너비니 strict (8/8 통과만).
     - 관심 종목: 사용자가 명시적으로 추가한 것
@@ -304,7 +296,7 @@ def collect_target_codes():
     p = Path("data/watchlist.json")
     if p.exists():
         try:
-            data = json.loads(p.read_text(encoding="utf-8"))
+            data = load_json(p, {})
             for item in data.get("watchlist", []):
                 code = str(item.get("code", "")).zfill(6)
                 if code:
@@ -315,7 +307,7 @@ def collect_target_codes():
     p = Path("data/screener_results.json")
     if p.exists():
         try:
-            data = json.loads(p.read_text(encoding="utf-8"))
+            data = load_json(p, {})
             for r in (data.get("results") or []):
                 code = r.get("code")
                 if code and r.get("minervini_strict"):
@@ -342,11 +334,7 @@ def notify_earnings(my_disclosures, financials_cache=None):
     alerted_path = Path("data/earnings_alerted.json")
     alerted = {"items": {}}
     if alerted_path.exists():
-        try:
-            raw = json.loads(alerted_path.read_text(encoding="utf-8"))
-            alerted["items"] = raw.get("items", {})
-        except Exception:
-            pass
+        alerted["items"] = load_json(alerted_path, {}).get("items", {})
     today = datetime.now(KST)
     cutoff = today.timestamp() - DEDUP_RESET_DAYS * 86400
     active = set()
