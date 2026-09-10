@@ -9,6 +9,7 @@
 import json
 import os
 import re
+import secrets
 import sys
 from pathlib import Path
 
@@ -51,19 +52,61 @@ def save_offset(offset):
     OFFSET_FILE.write_text(json.dumps({"offset": offset}))
 
 
+def mask(value):
+    """공개 로그에 그대로 남지 않도록 뒤 3자리만 남긴다."""
+    s = str(value)
+    return "***" + s[-3:] if len(s) > 3 else "***"
+
+
+def new_code():
+    return secrets.token_hex(3).upper()
+
+
 def link_code_to_chat(code, chat_id):
-    """코드에 해당하는 프로필에 chat_id 저장. 성공하면 True."""
-    r = requests.patch(
-        f"{SUPABASE_URL}/rest/v1/profiles",
-        headers={**HEADERS, "Prefer": "return=representation"},
-        params={"link_code": f"eq.{code.upper()}"},
-        json={"telegram_chat_id": str(chat_id)},
-        timeout=20,
-    )
-    if r.status_code >= 300:
+    """코드에 해당하는 프로필에 chat_id를 저장한다. 성공하면 True.
+
+    저장과 동시에 그 코드를 새 값으로 바꾼다. 코드를 그대로 두면
+    화면 캡처나 로그로 한 번 새어 나간 코드가 계속 유효해서,
+    남이 그 코드를 봇에 보내면 알림이 그 사람 대화방으로 넘어간다.
+    """
+    for attempt in range(5):
+        r = requests.patch(
+            f"{SUPABASE_URL}/rest/v1/profiles",
+            headers={**HEADERS, "Prefer": "return=representation"},
+            params={"link_code": f"eq.{code.upper()}"},
+            json={"telegram_chat_id": str(chat_id), "link_code": new_code()},
+            timeout=20,
+        )
+        if r.status_code < 300:
+            return bool(r.json())
+        # 새로 뽑은 코드가 이미 쓰이는 값이면 다른 값으로 다시 뽑는다.
+        # 이때 응답 본문에는 남의 코드가 들어 있으므로 찍지 않는다.
+        if r.status_code == 409:
+            if attempt < 4:
+                continue
+            print("  ! 코드 재발급 실패 409 (중복)")
+            return False
         print(f"  ! Supabase 오류 {r.status_code}: {r.text[:200]}")
         return False
-    return bool(r.json())
+    return False
+
+
+def already_linked(chat_id):
+    """이 대화방이 이미 어떤 프로필에 연결돼 있는지."""
+    try:
+        r = requests.get(
+            f"{SUPABASE_URL}/rest/v1/profiles",
+            headers=HEADERS,
+            params={
+                "telegram_chat_id": f"eq.{chat_id}",
+                "select": "telegram_chat_id",
+                "limit": 1,
+            },
+            timeout=20,
+        )
+        return r.status_code < 300 and bool(r.json())
+    except Exception:
+        return False
 
 
 def main():
@@ -108,10 +151,15 @@ def main():
 
         code = m.group(1).upper()
         if link_code_to_chat(code, chat_id):
-            print(f"  연결 성공: {code} → {chat_id}")
-            send(chat_id, f"✅ 연결 완료! (코드 {code})\n이제 이 대화방으로 알림이 전송됩니다.")
+            print(f"  연결 성공: {mask(code)} -> {mask(chat_id)}")
+            send(chat_id, "✅ 연결 완료!\n이제 이 대화방으로 알림이 전송됩니다.")
+        elif already_linked(chat_id):
+            # 코드는 연결과 동시에 새로 발급된다. 같은 코드를 두 번 보내면
+            # 두 번째는 맞는 코드가 없으니, 이미 연결된 경우를 갈라낸다.
+            print(f"  이미 연결됨: {mask(chat_id)}")
+            send(chat_id, "✅ 이미 연결되어 있습니다.")
         else:
-            print(f"  코드 없음: {code}")
+            print(f"  코드 없음: {mask(code)}")
             send(chat_id, "❌ 일치하는 코드가 없습니다. 앱에서 코드를 다시 확인해주세요.")
 
     if max_id != offset:

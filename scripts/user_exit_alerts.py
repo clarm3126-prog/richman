@@ -57,6 +57,12 @@ def claim_alert(user_id, code, sig_type):
     return bool(r.json())  # 중복이면 빈 배열
 
 
+def mask(value):
+    """Actions 로그가 공개되므로 chat_id는 뒤 3자리만 남긴다."""
+    s = str(value)
+    return "***" + s[-3:] if len(s) > 3 else "***"
+
+
 def send(chat_id, text):
     try:
         r = requests.post(
@@ -66,10 +72,10 @@ def send(chat_id, text):
         )
         ok = r.json().get("ok", False)
         if not ok:
-            print(f"  ! 발송 실패 {chat_id}: {r.text[:150]}")
+            print(f"  ! 발송 실패 {mask(chat_id)}: {r.text[:150]}")
         return ok
     except Exception as e:
-        print(f"  ! 발송 예외 {chat_id}: {e}")
+        print(f"  ! 발송 예외 {mask(chat_id)}: {e}")
         return False
 
 
