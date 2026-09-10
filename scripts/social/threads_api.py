@@ -21,6 +21,12 @@ class ThreadsError(RuntimeError):
     pass
 
 
+def _not_found_yet(err):
+    """'컨테이너가 아직 안 보인다'는 일시적 오류인지 판단한다."""
+    s = str(err)
+    return "4279009" in s or "cannot be found" in s
+
+
 class Threads:
     def __init__(self, user_id, token):
         self.user_id = user_id
@@ -69,15 +75,52 @@ class Threads:
         if not creation_id:
             raise ThreadsError(f"컨테이너 생성 실패: {container}")
 
-        # 이미지는 서버가 내려받을 시간이 필요하다
-        if image_url:
-            time.sleep(10)
+        self._wait_finished(creation_id)
+        return self._publish(creation_id)
 
-        published = self._post(f"{self.user_id}/threads_publish", creation_id=creation_id)
-        media_id = published.get("id")
-        if not media_id:
-            raise ThreadsError(f"발행 실패: {published}")
-        return media_id
+    def _wait_finished(self, container_id, tries=40, delay=3):
+        """서버가 컨테이너를 다 처리할 때까지 기다린다.
+
+        만든 직후에는 컨테이너가 조회조차 되지 않는 구간이 있다
+        (code 24 / subcode 4279009 "Media Not Found").
+        그래서 조회 실패도 '아직 준비 안 됨'으로 보고 계속 기다린다.
+        """
+        last = ""
+        for _ in range(tries):
+            try:
+                info = self._get(container_id, fields="status,error_message")
+            except ThreadsError as e:
+                last = str(e)[:200]
+                time.sleep(delay)
+                continue
+            status = info.get("status") or ""
+            if status in ("FINISHED", "PUBLISHED"):
+                return
+            if status in ("ERROR", "EXPIRED"):
+                raise ThreadsError(
+                    f"컨테이너 처리 실패({status}): {info.get('error_message') or ''}"
+                )
+            last = status
+            time.sleep(delay)
+        raise ThreadsError(f"컨테이너 처리 시간 초과 (마지막 상태: {last})")
+
+    def _publish(self, creation_id, tries=3, delay=10):
+        """발행. 컨테이너가 아직 안 보인다는 응답이면 잠시 뒤 다시 시도한다."""
+        for i in range(tries):
+            try:
+                published = self._post(
+                    f"{self.user_id}/threads_publish", creation_id=creation_id
+                )
+            except ThreadsError as e:
+                if i == tries - 1 or not _not_found_yet(e):
+                    raise
+                print(f"  쓰레드 발행 재시도 ({i + 1}/{tries - 1})")
+                time.sleep(delay)
+                continue
+            media_id = published.get("id")
+            if not media_id:
+                raise ThreadsError(f"발행 실패: {published}")
+            return media_id
 
     # --- 조회 ---
 
