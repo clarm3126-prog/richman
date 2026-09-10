@@ -63,10 +63,7 @@ CARDS = {
 
 
 def main():
-    for name, spec in CARDS.items():
-        out = card.CARD_DIR / name
-        card.render_promo_card(spec, out)
-        print(f"만듦: {out.relative_to(card.ROOT)}")
+    card.build_cards(CARDS, card.render_promo_card)
 
 
 if __name__ == "__main__":

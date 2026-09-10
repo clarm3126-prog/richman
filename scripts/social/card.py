@@ -118,24 +118,59 @@ def _wrap(draw, text, font, max_w):
     return lines
 
 
-def _headline(d, lines, inner_w, top):
+def _segments(line):
+    """'이게 *다* 나옵니다' -> [('이게 ', False), ('다', True), (' 나옵니다', False)]"""
+    out, buf, on = [], "", False
+    for ch in line:
+        if ch == "*":
+            if buf:
+                out.append((buf, on))
+            buf, on = "", not on
+            continue
+        buf += ch
+    if buf:
+        out.append((buf, on))
+    return out
+
+
+def _plain(line):
+    return line.replace("*", "")
+
+
+def _headline(d, lines, inner_w, top, fill=FG, accent=None, min_size=48):
     """썸네일에서도 읽히도록 큰 글씨로 헤드라인을 얹는다.
 
     폭에 맞을 때까지 글자 크기를 줄인다. 줄이 늘어나면 크기도 함께 낮춘다.
+
+    accent 색을 주면 *별표*로 감싼 구간만 그 색으로 그린다. 이때는
+    줄을 자르지 않는다. 강조가 없으면 폭을 넘는 줄을 말줄임표로 자른다.
     """
     size = 96 if len(lines) <= 2 else 78
-    while size > 48:
+    while size > min_size:
         f = _font(True, size)
-        if all(d.textlength(l, font=f) <= inner_w for l in lines):
+        if all(d.textlength(_plain(l), font=f) <= inner_w for l in lines):
             break
         size -= 4
     f = _font(True, size)
     lh = int(size * 1.18)
     y = top
     for line in lines:
-        d.text((PAD, y), _fit(d, line, f, inner_w), font=f, fill=FG)
+        if accent is None:
+            d.text((PAD, y), _fit(d, line, f, inner_w), font=f, fill=fill)
+        else:
+            x = PAD
+            for text, on in _segments(line):
+                d.text((x, y), text, font=f, fill=accent if on else fill)
+                x += d.textlength(text, font=f)
         y += lh
     return y
+
+
+def build_cards(cards, render, **kwargs):
+    """{파일명: 스펙}을 전부 그린다. 카드 생성 스크립트 두 개가 같이 쓴다."""
+    for name, spec in cards.items():
+        render(spec, CARD_DIR / name, **kwargs)
+        print(f"카드 생성: assets/cards/{name}")
 
 
 def render_card(post, out_path, brand="종목노트", url=""):
@@ -335,45 +370,6 @@ P_HL_BG = (220, 252, 231)
 P_HL_FG = (22, 101, 52)
 
 
-def _segments(line):
-    """'이게 *다* 나옵니다' -> [('이게 ', False), ('다', True), (' 나옵니다', False)]"""
-    out, buf, on = [], "", False
-    for ch in line:
-        if ch == "*":
-            if buf:
-                out.append((buf, on))
-            buf, on = "", not on
-            continue
-        buf += ch
-    if buf:
-        out.append((buf, on))
-    return out
-
-
-def _plain(line):
-    return line.replace("*", "")
-
-
-def _promo_headline(d, lines, inner_w, top):
-    """강조 구간만 색을 바꿔 그린다. 폭에 맞을 때까지 크기를 줄인다."""
-    size = 96 if len(lines) <= 2 else 78
-    while size > 46:
-        f = _font(True, size)
-        if all(d.textlength(_plain(l), font=f) <= inner_w for l in lines):
-            break
-        size -= 4
-    f = _font(True, size)
-    lh = int(size * 1.20)
-    y = top
-    for line in lines:
-        x = PAD
-        for text, accent in _segments(line):
-            d.text((x, y), text, font=f, fill=P_ACCENT if accent else P_FG)
-            x += d.textlength(text, font=f)
-        y += lh
-    return y
-
-
 def render_promo_card(spec, out_path):
     """무료 배포·소개용 밝은 카드.
 
@@ -408,7 +404,10 @@ def render_promo_card(spec, out_path):
         d.text((PAD, y), spec["eyebrow"], font=f_eyebrow, fill=P_ACCENT)
         y += 56
 
-    y = _promo_headline(d, spec.get("headline") or [], inner_w, y)
+    y = _headline(
+        d, spec.get("headline") or [], inner_w, y,
+        fill=P_FG, accent=P_ACCENT, min_size=46,
+    )
     y += 34
 
     foot_y = H - PAD - 56

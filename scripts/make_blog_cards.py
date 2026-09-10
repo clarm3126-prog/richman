@@ -157,10 +157,7 @@ def main():
 
     # url을 비워 넘겨 꼬리말의 주소를 뺀다.
     # 이 카드들은 링크로 유도하는 글이 아니라 매매 기록이라 주소가 필요 없다.
-    for name, spec in CARDS.items():
-        rel = f"assets/cards/{name}"
-        card.render_about_card(spec, config.ROOT / rel, brand=brand, url="")
-        print(f"카드 생성: {rel}")
+    card.build_cards(CARDS, card.render_about_card, brand=brand, url="")
 
 
 if __name__ == "__main__":
