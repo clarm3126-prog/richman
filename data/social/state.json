@@ -28,6 +28,16 @@
    "date": "2026-09-10",
    "kind": "kr_close",
    "threads_id": "18111961315845321"
+  },
+  {
+   "date": "2026-09-11",
+   "ig_id": "18136297429532601",
+   "images": [
+    "assets/cards/promo-what.jpg",
+    "assets/cards/promo-list.jpg"
+   ],
+   "kind": "promo",
+   "threads_id": "18104954087252903"
   }
  ],
  "queue_done": []
