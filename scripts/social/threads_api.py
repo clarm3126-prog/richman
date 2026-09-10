@@ -138,6 +138,10 @@ class Threads:
             "data", []
         )
 
+    def insights(self, media_id, metrics):
+        """글 하나의 지표. 응답 원본을 그대로 돌려준다."""
+        return self._get(f"{media_id}/insights", metric=",".join(metrics))
+
     def permalink(self, media_id):
         try:
             return self._get(media_id, fields="permalink").get("permalink", "")

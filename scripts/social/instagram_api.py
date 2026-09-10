@@ -145,6 +145,10 @@ class Instagram:
         fields = "id,text,username,timestamp,from"
         return self._get(f"{media_id}/comments", fields=fields, limit=limit).get("data", [])
 
+    def insights(self, media_id, metrics):
+        """글 하나의 지표. 응답 원본을 그대로 돌려준다."""
+        return self._get(f"{media_id}/insights", metric=",".join(metrics))
+
     # --- 응답 ---
 
     def reply_to_comment(self, comment_id, message):
