@@ -18,6 +18,11 @@
     "assets/cards/about.jpg"
    ],
    "kind": "screener"
+  },
+  {
+   "date": "2026-09-10",
+   "kind": "momentum",
+   "threads_id": "18102303566200038"
   }
  ],
  "queue_done": []
