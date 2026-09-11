@@ -11,6 +11,9 @@
   - 댓글을 달지 않은 사람에게는 보내지 않는다 (정책 위반이자 계정 정지 사유)
 쓰레드에는 DM API가 없어서 링크를 공개 답글에 담아 보낸다.
 
+운영자가 손으로 먼저 답글을 단 댓글에는 봇이 또 달지 않는다.
+handled.json에 없더라도 실제 댓글창을 보고 내 답글이 있으면 건너뛴다.
+
 처리한 댓글은 data/social/handled.json에 ID만 기록한다.
 저장소가 Public이므로 작성자 아이디나 댓글 본문은 남기지 않는다.
 
@@ -70,6 +73,8 @@ class Runner:
         self.budget = int(self.engage.get("max_actions_per_run") or 20)
         self.log = []
         self.problems = []
+        # 이미 답글이 달려 있어 건너뛴 댓글 수. 공개 로그라 아이디는 남기지 않는다.
+        self.already = 0
         # 쓰레드는 DM API가 없다. 링크를 원한 사람은 여기 모아뒀다가
         # 운영자에게 텔레그램으로 알려서 직접 보내게 한다.
         self.manual_dm = []
@@ -83,7 +88,37 @@ class Runner:
     def done(self, bucket, key):
         return key in self.handled[bucket]
 
+    def skip_already(self, *keys):
+        """이미 답글이 달린 댓글. 다시 보지 않도록 닫아둔다."""
+        for bucket, key in keys:
+            self.mark(bucket, key)
+        self.already += 1
+
     # --- 쓰레드 ---
+
+    def threads_answered(self, api, post_id, me):
+        """이 글에서 내가 이미 답글을 단 댓글 ID 모음.
+
+        운영자가 손으로 먼저 답글을 달았는데 봇이 또 달면 댓글이 겹친다.
+        /replies는 최상위 답글만 주므로 댓글 아래 달린 내 답글은 보이지 않는다.
+        대화 전체를 주는 /conversation을 읽어 replied_to로 부모를 찾는다.
+        """
+        try:
+            convo = api.conversation(post_id)
+        except Exception as e:
+            # 대화를 못 읽으면 중복 여부를 알 수 없다.
+            # 겹친 댓글보다 빠진 답글이 낫다고 보고 이 글은 통째로 건너뛴다.
+            self.problems.append(f"쓰레드 대화 조회 실패 {post_id}: {e}")
+            return None
+
+        answered = set()
+        for item in convo:
+            if (item.get("username") or "") != me:
+                continue
+            parent = (item.get("replied_to") or {}).get("id")
+            if parent:
+                answered.add(str(parent))
+        return answered
 
     def run_threads(self, creds):
         api = Threads(creds["user_id"], creds["token"])
@@ -104,6 +139,8 @@ class Runner:
                 self.problems.append(f"쓰레드 답글 조회 실패 {post['id']}: {e}")
                 continue
 
+            answered = None  # 답할 댓글이 있을 때만 대화를 읽는다
+
             for reply in replies:
                 if self.spent():
                     break
@@ -115,6 +152,15 @@ class Runner:
 
                 key = f"threads:{reply['id']}"
                 if self.done("replied", key):
+                    continue
+
+                if answered is None:
+                    answered = self.threads_answered(api, post["id"], me)
+                    if answered is None:
+                        break  # 대화를 못 읽었다 - 이 글은 다음 실행에서
+                if str(reply["id"]) in answered:
+                    # 운영자가 손으로 먼저 답글을 달았다. 겹쳐 달지 않는다.
+                    self.skip_already(("replied", key))
                     continue
 
                 hit = matcher.match(reply.get("text"), self.engage)
@@ -142,6 +188,7 @@ class Runner:
                 else:
                     try:
                         api.publish_text(text[:500], reply_to_id=reply["id"])
+                        answered.add(str(reply["id"]))
                         self.mark("replied", key)
                         self.budget -= 1
                         self.log.append(f"쓰레드 답글 @{author} ({name})")
@@ -152,6 +199,18 @@ class Runner:
                         self.problems.append(f"쓰레드 답글 실패 @{author}: {e}")
 
     # --- 인스타그램 ---
+
+    @staticmethod
+    def ig_answered(comment, me):
+        """이 댓글에 내 계정이 이미 답글을 달았는지.
+
+        인스타는 댓글을 조회할 때 replies를 같이 주므로 따로 부르지 않아도 된다.
+        """
+        for r in ((comment.get("replies") or {}).get("data") or []):
+            who = r.get("username") or (r.get("from") or {}).get("username") or ""
+            if who == me:
+                return True
+        return False
 
     def run_instagram(self, creds):
         api = Instagram(creds["user_id"], creds["token"])
@@ -179,6 +238,16 @@ class Runner:
                     continue
 
                 key = f"ig:{c['id']}"
+                if self.done("replied", key) and self.done("dm", key):
+                    continue
+
+                # 운영자가 손으로 먼저 답글을 달았으면 이 댓글은 건드리지 않는다.
+                # 답글이 겹치는 것도 문제지만, 사람이 이미 응대한 댓글에
+                # 봇 DM까지 따라 나가면 두 번 받는 꼴이 된다.
+                if self.ig_answered(c, me):
+                    self.skip_already(("replied", key), ("dm", key))
+                    continue
+
                 hit = matcher.match(c.get("text"), self.engage)
                 if not hit:
                     self.mark("replied", key)
@@ -257,6 +326,9 @@ class Runner:
                 print(f"  - {line}")
         else:
             print("\n새로 처리한 댓글 없음")
+
+        if self.already:
+            print(f"이미 답글이 달려 있어 건너뜀 {self.already}건")
 
         # 쓰레드는 DM API가 없어 봇이 링크를 못 보낸다.
         # 답글로 "디엠 드릴게요"라고 해뒀으니 실제 발송은 운영자 몫이다.

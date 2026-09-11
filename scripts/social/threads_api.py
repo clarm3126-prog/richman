@@ -138,6 +138,18 @@ class Threads:
             "data", []
         )
 
+    def conversation(self, media_id, limit=100):
+        """글 하나의 대화 전체. 답글에 달린 답글까지 평평하게 돌려준다.
+
+        /replies가 최상위 답글만 주는 것과 달리, 여기에는 중첩된 답글도
+        들어 있다. replied_to.id로 어떤 댓글에 달린 답글인지 알 수 있어
+        "이미 답글이 달린 댓글"을 가려내는 데 쓴다.
+        """
+        fields = "id,text,username,timestamp,hide_status,replied_to,root_post,is_reply"
+        return self._get(
+            f"{media_id}/conversation", fields=fields, reverse="false", limit=limit
+        ).get("data", [])
+
     def insights(self, media_id, metrics):
         """글 하나의 지표. 응답 원본을 그대로 돌려준다."""
         return self._get(f"{media_id}/insights", metric=",".join(metrics))

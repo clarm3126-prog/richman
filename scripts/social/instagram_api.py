@@ -148,7 +148,11 @@ class Instagram:
             return ""
 
     def comments(self, media_id, limit=50):
-        fields = "id,text,username,timestamp,from"
+        """글에 달린 댓글. replies까지 같이 받아온다.
+
+        replies가 있어야 "내가 이미 답글을 단 댓글"인지 알 수 있다.
+        """
+        fields = "id,text,username,timestamp,from,replies{id,username,from,timestamp}"
         return self._get(f"{media_id}/comments", fields=fields, limit=limit).get("data", [])
 
     def insights(self, media_id, metrics):
