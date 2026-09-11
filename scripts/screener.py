@@ -356,27 +356,61 @@ def is_uptrend(values, period, min_days=20):
     return recent_ma > past_ma
 
 
-def calc_rs_rating(stock_history, market_history):
-    """Relative Strength: 종목 N일 수익률 vs 시장 N일 수익률.
+def calc_rs_raw(stock_closes, market_closes):
+    """시장 대비 초과 수익률(원재료). 3개월에 가장 큰 가중치를 준다.
     가중: 3월×40% + 6월×20% + 9월×20% + 12월×20%
-    Returns 0~100 percentile-like score (간단한 비율 기반).
+
+    이 값 자체는 등급이 아니다. 미너비니가 쓰는 RS Rating은 이 값을
+    전 종목과 견줘 매긴 **등수(백분위)** 이고, 70은 "상위 30% 안에 든다"는
+    뜻이다. 종목 하나만 봐서는 등수를 알 수 없으므로 등급은
+    apply_rs_percentile()에서 전부 평가한 뒤에 매긴다.
+
+    1년치(252거래일)가 없으면 계산하지 않는다.
     """
-    if len(stock_history) < 252 or len(market_history) < 252:
+    if len(stock_closes) < 252 or len(market_closes) < 252:
         return None
     weights = [(63, 0.4), (126, 0.2), (189, 0.2), (252, 0.2)]
-    score = 0
+    score = 0.0
     for days, w in weights:
-        s_ret = (stock_history[-1] / stock_history[-days] - 1) if stock_history[-days] else 0
-        m_ret = (market_history[-1] / market_history[-days] - 1) if market_history[-days] else 0
-        # 종목이 시장보다 얼마나 잘했나 (비율)
-        if m_ret >= 0:
-            outperform = s_ret - m_ret
-        else:
-            outperform = s_ret - m_ret  # both negative comparison
-        score += outperform * w
-    # Convert to 0-100 scale
-    # outperform 0% = 50, outperform +100% = 100, outperform -100% = 0
-    return max(0, min(100, 50 + score * 50))
+        base_s = stock_closes[-days]
+        base_m = market_closes[-days]
+        if not base_s or not base_m:
+            return None
+        s_ret = stock_closes[-1] / base_s - 1
+        m_ret = market_closes[-1] / base_m - 1
+        score += (s_ret - m_ret) * w
+    return score
+
+
+def apply_rs_percentile(results):
+    """시장 대비 강도를 전 종목 등수로 바꾸고, 점수를 다시 매긴다.
+
+    evaluate_minervini()는 종목을 하나씩 보므로 등수를 알 수 없다. 그래서
+    원재료(_rs_raw)만 담아두고 rs_rating_70plus는 False로 둔 채 돌려준다.
+    전 종목 평가가 끝난 뒤 이 함수를 한 번 불러야 8번째 조건이 확정된다.
+
+    이걸 부르지 않으면 8개 조건을 전부 통과하는 종목이 영원히 0개가 된다.
+    """
+    scored = [
+        r for r in results
+        if (r.get("trend_template") or {}).get("_rs_raw") is not None
+    ]
+    if not scored:
+        print("  ⚠ 시장 대비 강도를 계산한 종목이 0개 — 지수 히스토리가 252일보다 짧습니다")
+        return
+
+    scored.sort(key=lambda r: r["trend_template"]["_rs_raw"])
+    n = len(scored)
+    for i, r in enumerate(scored):
+        # 나보다 낮은 종목의 비율. 꼴찌가 0, 1등이 100이다.
+        pct = (i / (n - 1) * 100) if n > 1 else 50.0
+        tt = r["trend_template"]
+        tt["_rs_value"] = round(pct, 1)
+        tt["rs_rating_70plus"] = pct >= 70
+        score_evaluation(r)
+
+    passed = sum(1 for r in scored if r["trend_template"]["rs_rating_70plus"])
+    print(f"  RS 등수: {n}개 중 70 이상 {passed}개 (전체 {len(results)}개)")
 
 
 # ================================
@@ -466,10 +500,11 @@ def evaluate_minervini(stock_code, history, financials, market_history):
     low_52w = min(lows[-252:])
     tt["within_25pct_of_52w_high"] = high_52w > 0 and cur_close >= high_52w * 0.75
     tt["above_25pct_from_52w_low"] = low_52w > 0 and cur_close >= low_52w * 1.25
-    # RS Rating
-    rs = calc_rs_rating(closes, market_history) if market_history else None
-    tt["rs_rating_70plus"] = rs is not None and rs >= 70
-    tt["_rs_value"] = round(rs, 1) if rs else None
+    # 시장 대비 강도 — 여기서는 원재료만 담는다.
+    # 등수는 전 종목을 모아야 나오므로 apply_rs_percentile()이 확정한다.
+    tt["_rs_raw"] = calc_rs_raw(closes, market_history) if market_history else None
+    tt["rs_rating_70plus"] = False
+    tt["_rs_value"] = None
 
     # === Setup / Liquidity ===
     setup = {}
@@ -594,13 +629,40 @@ def evaluate_minervini(stock_code, history, financials, market_history):
             "op_margin_3y_avg": 0, "op_margin_3y_avg_20pct": False,
         }
 
-    # === 점수 계산 ===
-    # Trend Template 8 (40점 만점, 5점씩)
-    tt_score = sum([
+    evaluation = {
+        "eligible": True,
+        "trend_template": tt,
+        "setup": setup,
+        "fundamentals": fund,
+        "current_price": cur_close,
+        "high_52w": high_52w,
+        "low_52w": low_52w,
+        "ma50": ma50,
+        "ma150": ma150,
+        "ma200": ma200,
+    }
+    score_evaluation(evaluation)
+    return evaluation
+
+
+def score_evaluation(ev):
+    """조건 통과 여부에서 점수와 판정을 다시 계산한다.
+
+    RS 등수가 나중에 확정되므로(apply_rs_percentile) 같은 종목에 대해 두 번
+    불린다. 계산식이 한 곳에만 있어야 두 번 부른 결과가 어긋나지 않는다.
+    ev를 그 자리에서 고친다.
+    """
+    tt = ev["trend_template"]
+    setup = ev["setup"]
+    fund = ev["fundamentals"]
+
+    trend_checks = [
         tt["price_above_ma50"], tt["price_above_ma150"], tt["price_above_ma200"],
         tt["ma50_above_ma150"], tt["ma150_above_ma200"],
         tt["ma200_uptrend"], tt["within_25pct_of_52w_high"], tt["rs_rating_70plus"],
-    ]) * 5
+    ]
+    # Trend Template 8 (40점 만점, 5점씩)
+    tt_score = sum(trend_checks) * 5
     # Setup 4 (20점 만점)
     setup_score = sum([
         setup["5day_tightness_10pct"], setup["5day_open_close_5pct"],
@@ -609,41 +671,26 @@ def evaluate_minervini(stock_code, history, financials, market_history):
     # Fundamentals 6 (40점 만점)
     fund_score = sum([
         fund["eps_growth_25pct"], fund["eps_accelerating"], fund["sales_growth_15pct"],
-        fund["op_margin_q_10pct"], fund["op_margin_annual_10pct"], fund["op_margin_3y_avg_20pct"],
+        fund["op_margin_q_10pct"], fund["op_margin_annual_10pct"],
+        fund["op_margin_3y_avg_20pct"],
     ]) * (40 / 6)
-    total_score = round(tt_score + setup_score + fund_score, 1)
 
-    # Trend Template 8개 모두 통과해야 진짜 미너비니 후보
-    tt_passed = sum([
-        tt["price_above_ma50"], tt["price_above_ma150"], tt["price_above_ma200"],
-        tt["ma50_above_ma150"], tt["ma150_above_ma200"],
-        tt["ma200_uptrend"], tt["within_25pct_of_52w_high"], tt["rs_rating_70plus"],
-    ])
+    tt_passed = sum(trend_checks)
     fund_passed = sum([
         fund["eps_growth_25pct"], fund["sales_growth_15pct"],
         fund["op_margin_3y_avg_20pct"],
     ])
 
-    return {
-        "eligible": True,
-        "trend_template": tt,
-        "setup": setup,
-        "fundamentals": fund,
-        "tt_score": tt_score,
-        "setup_score": setup_score,
-        "fund_score": round(fund_score, 1),
-        "total_score": total_score,
-        "tt_passed_count": tt_passed,
-        "fund_passed_count": fund_passed,
-        "minervini_strict": tt_passed >= 8,
-        "minervini_strong": tt_passed >= 6 and fund_passed >= 2,
-        "current_price": cur_close,
-        "high_52w": high_52w,
-        "low_52w": low_52w,
-        "ma50": ma50,
-        "ma150": ma150,
-        "ma200": ma200,
-    }
+    ev["tt_score"] = tt_score
+    ev["setup_score"] = setup_score
+    ev["fund_score"] = round(fund_score, 1)
+    ev["total_score"] = round(tt_score + setup_score + fund_score, 1)
+    ev["tt_passed_count"] = tt_passed
+    ev["fund_passed_count"] = fund_passed
+    # Trend Template 8개를 모두 통과해야 진짜 미너비니 후보
+    ev["minervini_strict"] = tt_passed >= 8
+    ev["minervini_strong"] = tt_passed >= 6 and fund_passed >= 2
+    return ev
 
 
 # ================================
@@ -970,6 +1017,11 @@ def main():
         })
     if skipped_pump:
         print(f"  filtered out {skipped_pump} stocks: {skip_reasons}")
+
+    # 6.5 시장 대비 강도를 등수로 바꾼다.
+    # 종목 하나씩은 등수를 알 수 없어서 전부 평가한 뒤 여기서 매긴다.
+    # 이 줄이 빠지면 8개 조건을 전부 통과하는 종목이 영원히 0개가 된다.
+    apply_rs_percentile(results)
 
     # 7. 정렬: total_score 높은 순
     results.sort(key=lambda x: x["total_score"], reverse=True)

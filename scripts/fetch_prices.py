@@ -115,17 +115,16 @@ def fetch_market(sosok):
     return out
 
 
-def fetch_index_history(code, count=60):
-    """네이버 지수 일봉 OHLC. code: KOSPI 또는 KOSDAQ"""
-    url = f"https://api.stock.naver.com/chart/domestic/index/{code}?periodType=dayCandle&count={count}"
+def _index_history_legacy(code):
+    """구 API. count를 아무리 크게 줘도 110개까지만 돌려준다."""
+    url = f"https://api.stock.naver.com/chart/domestic/index/{code}?periodType=dayCandle&count=500"
     headers = {**HEADERS, "Referer": "https://stock.naver.com/"}
     try:
         r = requests.get(url, headers=headers, timeout=10)
         if r.status_code != 200:
             return []
-        data = r.json()
         out = []
-        for p in data.get("priceInfos", []):
+        for p in r.json().get("priceInfos", []):
             d = p.get("localDate")
             if not d:
                 continue
@@ -142,8 +141,74 @@ def fetch_index_history(code, count=60):
         out.sort(key=lambda x: x["date"])
         return out
     except Exception as e:
-        print(f"  index_history {code} failed: {e}")
+        print(f"  index_history(legacy) {code} failed: {e}")
         return []
+
+
+def _index_history_range(code, days):
+    """기간을 지정해 받는다. 종목 일봉을 받는 곳과 같은 주소다.
+    응답이 JSON이 아니라 Python 리터럴(작은따옴표)이라 literal_eval로 읽는다.
+    """
+    import ast as _ast
+    from datetime import timedelta as _td
+
+    today = datetime.now(KST)
+    # days 거래일을 확보하려고 달력 날짜로 1.6배 + 30일 여유
+    start = (today - _td(days=int(days * 1.6) + 30)).strftime("%Y%m%d")
+    end = today.strftime("%Y%m%d")
+    url = "https://m.stock.naver.com/front-api/external/chart/domestic/info"
+    params = {
+        "symbol": code,
+        "requestType": 1,
+        "startTime": start,
+        "endTime": end,
+        "timeframe": "day",
+    }
+    headers = {**HEADERS, "Referer": "https://m.stock.naver.com/"}
+    try:
+        r = requests.get(url, params=params, headers=headers, timeout=15)
+        if r.status_code != 200 or not r.text.strip():
+            return []
+        data = _ast.literal_eval(r.text.strip())
+        if not data or len(data) < 2:
+            return []
+        # data[0] = 머리글 ['날짜','시가','고가','저가','종가','거래량','외국인소진율']
+        out = []
+        for row in data[1:]:
+            if len(row) < 5:
+                continue
+            try:
+                out.append({
+                    "date": str(row[0]),
+                    "open": float(row[1]),
+                    "high": float(row[2]),
+                    "low": float(row[3]),
+                    "close": float(row[4]),
+                })
+            except (ValueError, TypeError):
+                continue
+        out.sort(key=lambda x: x["date"])
+        return out
+    except Exception as e:
+        print(f"  index_history(range) {code} failed: {e}")
+        return []
+
+
+def fetch_index_history(code, days=252):
+    """네이버 지수 일봉 OHLC. code: KOSPI 또는 KOSDAQ.
+
+    미너비니 RS 등수를 매기려면 지수도 1년치(252거래일)가 있어야 한다.
+    구 API는 110개까지만 줘서 RS가 아예 계산되지 않았고, 그 탓에 8개 조건을
+    전부 통과하는 종목이 늘 0개였다. 그래서 기간을 지정할 수 있는 쪽을 먼저
+    쓰고, 막히면 구 API로 내려간다 (짧아도 없는 것보다는 낫다).
+    """
+    out = _index_history_range(code, days)
+    if len(out) < days:
+        legacy = _index_history_legacy(code)
+        if len(legacy) > len(out):
+            print(f"  index_history {code}: 기간 조회 {len(out)}일 → 구 API {len(legacy)}일 사용")
+            out = legacy
+    return out[-days:] if len(out) > days else out
 
 
 def fetch_index(code):
@@ -941,8 +1006,9 @@ def main():
         "kosdaq": fetch_index("KOSDAQ"),
     }
     print(f"Indices: {indices}")
-    kospi_hist = fetch_index_history("KOSPI", 60)
-    kosdaq_hist = fetch_index_history("KOSDAQ", 60)
+    # 252일 = 1년 거래일. 미너비니 RS 등수 계산에 필요한 최소치다.
+    kospi_hist = fetch_index_history("KOSPI", 252)
+    kosdaq_hist = fetch_index_history("KOSDAQ", 252)
     if indices.get("kospi") and kospi_hist:
         indices["kospi"]["history"] = kospi_hist
     if indices.get("kosdaq") and kosdaq_hist:

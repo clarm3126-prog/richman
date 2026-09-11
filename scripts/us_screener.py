@@ -31,7 +31,7 @@ import requests
 from bs4 import BeautifulSoup
 
 sys.path.insert(0, str(Path(__file__).parent))
-from screener import evaluate_minervini  # noqa: E402
+from screener import apply_rs_percentile, evaluate_minervini  # noqa: E402
 from momentum_screener import evaluate_momentum  # noqa: E402
 
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36"
@@ -323,6 +323,10 @@ def main():
                 mom_results.append(res["mom"])
             if res["ath"]:
                 ath_results.append(res["ath"])
+
+    # 시장(S&P500) 대비 강도를 등수로 바꾼다. 한국 스크리너와 같은 이유로
+    # 이 줄이 빠지면 8개 조건 전부 통과가 영원히 0개가 된다.
+    apply_rs_percentile(mv_results)
 
     mv_results.sort(key=lambda x: x.get("total_score", 0), reverse=True)
     mom_results.sort(key=lambda x: x.get("total_score", 0), reverse=True)
