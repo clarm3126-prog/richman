@@ -1,7 +1,7 @@
 {
  "posts": [
   {
-   "checked": "2026-09-11",
+   "checked": "2026-09-12",
    "date": "2026-09-08",
    "kind": "theme",
    "media_id": "18078061262512062",
@@ -11,12 +11,12 @@
     "replies": 0,
     "reposts": 0,
     "shares": 0,
-    "views": 11
+    "views": 31
    },
    "platform": "threads"
   },
   {
-   "checked": "2026-09-11",
+   "checked": "2026-09-12",
    "date": "2026-09-08",
    "kind": "theme",
    "media_id": "18339177343282180",
@@ -32,7 +32,7 @@
    "platform": "instagram"
   },
   {
-   "checked": "2026-09-11",
+   "checked": "2026-09-12",
    "date": "2026-09-09",
    "kind": "screener",
    "media_id": "18104454422611253",
@@ -43,27 +43,27 @@
     "saved": 0,
     "shares": 0,
     "total_interactions": 0,
-    "views": 3
+    "views": 5
    },
    "platform": "instagram"
   },
   {
-   "checked": "2026-09-11",
+   "checked": "2026-09-12",
    "date": "2026-09-10",
    "kind": "momentum",
    "media_id": "18102303566200038",
    "metrics": {
-    "likes": 2,
+    "likes": 3,
     "quotes": 0,
     "replies": 0,
     "reposts": 0,
     "shares": 0,
-    "views": 164
+    "views": 292
    },
    "platform": "threads"
   },
   {
-   "checked": "2026-09-11",
+   "checked": "2026-09-12",
    "date": "2026-09-10",
    "kind": "kr_close",
    "media_id": "18111961315845321",
@@ -73,30 +73,92 @@
     "replies": 0,
     "reposts": 0,
     "shares": 0,
-    "views": 25
+    "views": 69
    },
    "platform": "threads"
   },
   {
-   "checked": "2026-09-11",
+   "checked": "2026-09-12",
    "date": "2026-09-11",
    "kind": "promo",
    "media_id": "18104954087252903",
+   "metrics": {
+    "likes": 10,
+    "quotes": 0,
+    "replies": 65,
+    "reposts": 0,
+    "shares": 0,
+    "views": 848
+   },
+   "platform": "threads"
+  },
+  {
+   "checked": "2026-09-12",
+   "date": "2026-09-11",
+   "kind": "promo",
+   "media_id": "18136297429532601",
+   "metrics": {
+    "comments": 0,
+    "likes": 0,
+    "reach": 1,
+    "saved": 0,
+    "shares": 0,
+    "total_interactions": 0,
+    "views": 4
+   },
+   "platform": "instagram"
+  },
+  {
+   "checked": "2026-09-12",
+   "date": "2026-09-11",
+   "kind": "theme",
+   "media_id": "17907153183523730",
    "metrics": {
     "likes": 1,
     "quotes": 0,
     "replies": 0,
     "reposts": 0,
     "shares": 0,
-    "views": 12
+    "views": 4
    },
    "platform": "threads"
   },
   {
-   "checked": "2026-09-11",
+   "checked": "2026-09-12",
    "date": "2026-09-11",
+   "kind": "theme",
+   "media_id": "18343097488284417",
+   "metrics": {
+    "comments": 0,
+    "likes": 0,
+    "reach": 1,
+    "saved": 0,
+    "shares": 0,
+    "total_interactions": 0,
+    "views": 6
+   },
+   "platform": "instagram"
+  },
+  {
+   "checked": "2026-09-12",
+   "date": "2026-09-12",
    "kind": "promo",
-   "media_id": "18136297429532601",
+   "media_id": "17900244150596249",
+   "metrics": {
+    "likes": 2,
+    "quotes": 0,
+    "replies": 1,
+    "reposts": 0,
+    "shares": 0,
+    "views": 0
+   },
+   "platform": "threads"
+  },
+  {
+   "checked": "2026-09-12",
+   "date": "2026-09-12",
+   "kind": "promo",
+   "media_id": "17916806784443490",
    "metrics": {
     "comments": 0,
     "likes": 0,
@@ -109,5 +171,5 @@
    "platform": "instagram"
   }
  ],
- "updated": "2026-09-11"
+ "updated": "2026-09-12"
 }
