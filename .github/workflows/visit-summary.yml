@@ -1,0 +1,51 @@
+name: Visit Summary
+
+on:
+  schedule:
+    # 매일 09:10 KST (00:10 UTC). 전날 방문을 정리해서 텔레그램으로 보낸다.
+    - cron: "10 0 * * *"
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "며칠치를 볼지 (기본 1)"
+        default: "1"
+      dry_run:
+        description: "텔레그램 발송 없이 로그로만 확인"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: visit-summary
+  cancel-in-progress: false
+
+jobs:
+  summary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install requests
+
+      # 커밋할 것이 없다. 집계는 Supabase에 있고 여기서는 읽어서 보낼 뿐이다.
+      - name: Send visit summary
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: >
+          python scripts/visit_summary.py
+          --days ${{ inputs.days || '1' }}
+          ${{ inputs.dry_run && '--dry-run' || '' }}

@@ -1523,6 +1523,53 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 window.sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// --- 방문 집계 ---
+// 하루에 한 번, 어디서 들어왔는지만 남긴다.
+// 개인을 알아볼 수 있는 값은 보내지 않는다. visitor는 이 브라우저가
+// 스스로 만든 임의 번호이고 서버는 그걸 세기만 한다.
+// 실패해도 화면에는 아무 영향이 없어야 하므로 전부 try로 감싼다.
+function logVisit() {
+  try {
+    const params = new URLSearchParams(location.search);
+    const fromUrl = (params.get('from') || '').slice(0, 20).toLowerCase();
+
+    // 주소에 꼬리표가 있으면 기억해두고 주소창에서는 지운다.
+    // 링크를 다시 열지 않아도 유입원이 유지되고, 주소가 깔끔해진다.
+    if (fromUrl) {
+      try { sessionStorage.setItem('snote_src', fromUrl); } catch {}
+      params.delete('from');
+      const q = params.toString();
+      history.replaceState(null, '', location.pathname + (q ? '?' + q : '') + location.hash);
+    }
+    let src = fromUrl;
+    if (!src) { try { src = sessionStorage.getItem('snote_src') || ''; } catch {} }
+
+    // 앱 안 브라우저(쓰레드·인스타)는 referrer가 없을 때가 많다.
+    // 꼬리표가 없을 때만 참고로 쓴다.
+    if (!src && document.referrer) {
+      const host = new URL(document.referrer).hostname.replace(/^www\./, '');
+      if (!host.endsWith('github.io') && host !== location.hostname) src = host;
+    }
+
+    let vid = localStorage.getItem('snote_vid');
+    if (!vid) {
+      vid = Math.random().toString(36).slice(2) + Date.now().toString(36);
+      localStorage.setItem('snote_vid', vid);
+    }
+
+    // 같은 브라우저는 하루 한 번만 기록한다
+    const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+    const last = localStorage.getItem('snote_hit_day');
+    if (last === today) return;
+    localStorage.setItem('snote_hit_day', today);
+
+    window.sb.from('page_hits')
+      .insert({ src: src.slice(0, 40), path: location.pathname.slice(0, 80), visitor: vid })
+      .then(() => {}, () => {});
+  } catch {}
+}
+logVisit();
+
 const { data: { session } } = await window.sb.auth.getSession();
 window.CURRENT_USER = session ? session.user : null;
 updateAuthBtn();

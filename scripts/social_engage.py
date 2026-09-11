@@ -64,8 +64,10 @@ class Runner:
     def __init__(self, cfg, dry_run=False):
         self.cfg = cfg
         self.engage = cfg.get("engage") or {}
-        self.link = (cfg.get("link") or {}).get("url", "")
-        self.brand = (cfg.get("link") or {}).get("label", "")
+        link_cfg = cfg.get("link") or {}
+        self.link = link_cfg.get("url", "")
+        self.brand = link_cfg.get("label", "")
+        self.source_param = (link_cfg.get("source_param") or "").strip()
         self.dry_run = dry_run
         self.handled = store.load(HANDLED, {"replied": {}, "dm": {}})
         self.handled.setdefault("replied", {})
@@ -78,6 +80,17 @@ class Runner:
         # 쓰레드는 DM API가 없다. 링크를 원한 사람은 여기 모아뒀다가
         # 운영자에게 텔레그램으로 알려서 직접 보내게 한다.
         self.manual_dm = []
+
+    def link_for(self, platform):
+        """플랫폼 꼬리표를 붙인 링크.
+
+        같은 주소를 보내면 방문자가 쓰레드에서 왔는지 인스타에서 왔는지
+        알 수 없다. 꼬리표를 붙여야 어느 쪽이 사람을 데려오는지 보인다.
+        """
+        if not (self.link and self.source_param):
+            return self.link
+        sep = "&" if "?" in self.link else "?"
+        return f"{self.link}{sep}{self.source_param}={platform}"
 
     def spent(self):
         return self.budget <= 0
@@ -171,7 +184,7 @@ class Runner:
 
                 text = matcher.fill(
                     matcher.pick(rule, "reply", "threads"),
-                    user=author, link=self.link, brand=self.brand,
+                    user=author, link=self.link_for("threads"), brand=self.brand,
                 )
                 if not text:
                     self.mark("replied", key)
@@ -261,7 +274,7 @@ class Runner:
                 #    DM 결과를 먼저 확정하고 그에 맞는 답글을 고른다.
                 dm = matcher.fill(
                     matcher.pick(rule, "dm", "instagram"),
-                    user=author, link=self.link, brand=self.brand,
+                    user=author, link=self.link_for("instagram"), brand=self.brand,
                 )
                 dm_ok = True
 
@@ -296,7 +309,7 @@ class Runner:
                         matcher.pick(rule, field, "instagram")
                         or matcher.pick(rule, "reply_fallback", "instagram")
                         or matcher.pick(rule, "reply", "threads"),
-                        user=author, link=self.link, brand=self.brand,
+                        user=author, link=self.link_for("instagram"), brand=self.brand,
                     )
                     if not text:
                         self.mark("replied", key)
