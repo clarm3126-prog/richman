@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
-"""스크리너 백테스트 — 과거 N일 전 strict/strong 통과 종목의 30/60일 후 수익률.
+"""스크리너 백테스트 — 과거에 조건을 통과한 종목을 그냥 들고 있었으면 어땠나.
 
-매주 1회 실행 (일요일).
 - data/screener_results_history/{YYYYMMDD}.json 누적된 결과 활용 (없으면 비어있음)
-- 또는 현재 결과를 매일 history에 저장하면서 점진적으로 백테스트 가능
-- 1차: 단순 30일 후 종가 비교
+- 보유 기간별로 따로 낸다 (HORIZONS). 짧게 보면 손실인데 길게 보면 다른 경우가
+  있어서, 기간 하나만 보고 기법을 판단하면 안 된다.
 - 통계: 승률, 평균 수익률, 최대 수익률, 최대 손실
 - 카테고리별 집계: minervini_strict / minervini_strong / momentum_strong / pre_breakout
+
+**손절선도 트레일링도 걸지 않은 숫자다.** 조건에 걸린 날 사서 N거래일 뒤
+종가에 판 것뿐이다. 이 단서를 빼고 인용하면 기법을 잘못 평가하게 된다.
 
 출력: data/backtest_stats.json
 """
@@ -22,6 +24,19 @@ sys.path.insert(0, str(Path(__file__).parent))
 from screener import fetch_all_stock_history
 
 KST = pytz.timezone("Asia/Seoul")
+
+# 보유 기간(거래일). 여기만 고치면 전체가 따라온다.
+#
+# 긴 기간일수록 그만큼 오래된 snapshot이 있어야 값이 나온다. 120일짜리는
+# 약 6개월(178일) 이상 지난 snapshot이 필요해서, 기록을 그만큼 모으기 전에는
+# null로 남는다. 버그가 아니라 아직 채워지지 않은 것이고,
+# horizon_ready에 언제부터 값이 나오는지 적어둔다.
+HORIZONS = [30, 60, 120]
+
+# 종목 하나당 받아오는 일봉 길이.
+# 산 날짜가 이 창 안에 있어야 그 뒤 종가를 찾을 수 있으므로,
+# 가장 긴 보유 기간보다 넉넉해야 한다.
+HISTORY_DAYS = max(252, max(HORIZONS) + 130)
 
 
 def load_history_files(dir_name):
@@ -42,6 +57,16 @@ def load_history_files(dir_name):
     return out
 
 
+def calendar_days_for(days_forward):
+    """거래일 N일을 달력 날짜로 바꾼다.
+
+    1년에 거래일이 약 252일, 달력은 365일이라 1.45배쯤 된다. 휴장이 몰린
+    구간을 감안해 5일을 더 얹는다. snapshot이 이만큼 오래돼야 그 뒤
+    N거래일 종가가 실제로 존재한다.
+    """
+    return int(days_forward * 365 / 252) + 5
+
+
 def evaluate_picks(snapshots, category_filter, days_forward=30, max_picks_per_day=20):
     """과거 snapshot에서 카테고리 통과 종목 → days_forward 후 수익률.
 
@@ -49,10 +74,7 @@ def evaluate_picks(snapshots, category_filter, days_forward=30, max_picks_per_da
     category_filter: lambda r → bool
     """
     today = datetime.now(KST)
-    # days_forward는 trading days로 계산하지만 cutoff는 calendar days로 변환 필요.
-    # 252 trading days/year ≈ 365 calendar → ratio ~1.45. 안전마진 +5일 추가.
-    calendar_cutoff_days = int(days_forward * 365 / 252) + 5
-    cutoff = today - timedelta(days=calendar_cutoff_days)
+    cutoff = today - timedelta(days=calendar_days_for(days_forward))
     cutoff_str = cutoff.strftime("%Y%m%d")
 
     # cutoff_str보다 오래된 snapshot만 사용 (충분히 미래 가격 확보됨)
@@ -149,6 +171,41 @@ def stats_summary(returns):
         "best_picks": sorted(returns, key=lambda x: x["return_pct"], reverse=True)[:5],
         "worst_picks": sorted(returns, key=lambda x: x["return_pct"])[:5],
     }
+
+
+def horizon_readiness(snapshots):
+    """보유 기간별로 값이 나올 준비가 됐는지, 아니면 언제부터 나오는지.
+
+    긴 기간이 null인 게 고장인지 아직 덜 모은 건지 화면에서 구분하려고 낸다.
+    이게 없으면 사람이 "왜 비어 있지" 하고 코드를 뒤지게 된다.
+    """
+    today = datetime.now(KST)
+    ages = []
+    oldest = None
+    for snap in snapshots:
+        d = snap.get("_date") or ""
+        try:
+            dt = KST.localize(datetime.strptime(d, "%Y%m%d"))
+        except ValueError:
+            continue
+        ages.append((today - dt).days)
+        if oldest is None or dt < oldest:
+            oldest = dt
+
+    out = {}
+    for h in HORIZONS:
+        need = calendar_days_for(h)
+        usable = sum(1 for a in ages if a >= need)
+        info = {
+            "needs_snapshot_older_than_days": need,
+            "snapshots_usable": usable,
+            "ready": usable > 0,
+        }
+        if usable == 0 and oldest is not None:
+            # 가장 오래된 기록이 need일을 채우는 날. 그날부터 값이 나온다.
+            info["first_value_on"] = (oldest + timedelta(days=need)).strftime("%Y-%m-%d")
+        out[f"{h}d"] = info
+    return out
 
 
 def save_current_screener_to_history():
@@ -256,13 +313,12 @@ def main():
     all_picks_by_cat = {}
     all_codes = set()
     for cat, (snaps, filt) in categories.items():
-        picks_30 = evaluate_picks(snaps, filt, days_forward=30)
-        picks_60 = evaluate_picks(snaps, filt, days_forward=60)
-        if picks_30:
-            all_codes.update(p["code"] for p in picks_30)
-        if picks_60:
-            all_codes.update(p["code"] for p in picks_60)
-        all_picks_by_cat[cat] = (picks_30 or [], picks_60 or [])
+        by_horizon = {}
+        for h in HORIZONS:
+            picks = evaluate_picks(snaps, filt, days_forward=h) or []
+            all_codes.update(p["code"] for p in picks)
+            by_horizon[h] = picks
+        all_picks_by_cat[cat] = by_horizon
 
     if not all_codes:
         print("  not enough historical data with sufficient time to evaluate")
@@ -270,26 +326,30 @@ def main():
         out_path.write_text(json.dumps({
             "updated": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
             "status": "warming_up",
-            "message": "30일 이상 지난 snapshot이 부족합니다. 계속 누적 중...",
+            "message": f"{min(HORIZONS)}일 이상 지난 snapshot이 부족합니다. 계속 누적 중...",
             "categories": {},
         }, ensure_ascii=False), encoding="utf-8")
         return
 
     print(f"\n[OHLC] fetching prices for {len(all_codes)} unique codes...")
-    histories = fetch_all_stock_history(list(all_codes), days=120)
+    histories = fetch_all_stock_history(list(all_codes), days=HISTORY_DAYS)
 
-    # 4. 카테고리별 수익률 계산 + 통계
+    # 4. 카테고리별 · 보유 기간별 수익률 계산 + 통계
     cat_results = {}
-    for cat, (picks_30, picks_60) in all_picks_by_cat.items():
-        ret_30 = compute_returns(picks_30, histories, days_forward=30) if picks_30 else []
-        ret_60 = compute_returns(picks_60, histories, days_forward=60) if picks_60 else []
-        cat_results[cat] = {
-            "30d": stats_summary(ret_30),
-            "60d": stats_summary(ret_60),
-        }
-        if ret_30:
-            s = cat_results[cat]["30d"]
-            print(f"  [{cat}] 30d: n={s['count']} win_rate={s['win_rate']}% avg={s['avg_return']}%")
+    for cat, by_horizon in all_picks_by_cat.items():
+        stats = {}
+        for h in HORIZONS:
+            picks = by_horizon.get(h) or []
+            rets = compute_returns(picks, histories, days_forward=h) if picks else []
+            stats[f"{h}d"] = stats_summary(rets)
+        cat_results[cat] = stats
+        for h in HORIZONS:
+            st = stats[f"{h}d"]
+            if st:
+                print(f"  [{cat}] {h}d: n={st['count']} "
+                      f"win_rate={st['win_rate']}% avg={st['avg_return']}%")
+            else:
+                print(f"  [{cat}] {h}d: 아직 데이터 없음")
 
     # 5. 저장
     out_path = Path("data/backtest_stats.json")
@@ -300,6 +360,8 @@ def main():
             "minervini": len(minervini_snaps),
             "momentum": len(momentum_snaps),
         },
+        "horizons": HORIZONS,
+        "horizon_ready": horizon_readiness(minervini_snaps + momentum_snaps),
         "categories": cat_results,
     }, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     print(f"\n✅ Saved backtest_stats.json")

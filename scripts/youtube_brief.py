@@ -196,9 +196,15 @@ def show_backtest():
         "momentum_strong": "거래량 실린 돌파",
         "pre_breakout": "돌파 직전",
     }
+    # 보유 기간은 backtest.py의 HORIZONS를 따라간다. 여기서 목록을 따로 들고
+    # 있으면 기간을 늘렸을 때 이쪽만 옛날 것을 보여주게 된다.
+    horizons = [f"{h}d" for h in (data.get("horizons") or [30, 60])]
+    ready = data.get("horizon_ready") or {}
+
     for key, label in names.items():
         cat = (data.get("categories") or {}).get(key) or {}
-        for horizon in ("30d", "60d"):
+        shown = False
+        for horizon in horizons:
             v = cat.get(horizon)
             if not v:
                 continue
@@ -206,7 +212,24 @@ def show_backtest():
             print(f"  {label} · {days} 보유 ({v['count']}건)")
             print(f"    이긴 비율 {v['win_rate']}% · 평균 {v['avg_return']:+.1f}%"
                   f" · 가운데값 {v['median_return']:+.1f}%")
+            shown = True
+        if not shown:
+            print(f"  {label}: 아직 데이터 없음")
     print()
+
+    # 값이 없는 기간이 고장인지 아직 덜 모은 건지 구분해준다.
+    waiting = [
+        (h, info) for h, info in ready.items()
+        if not info.get("ready") and info.get("first_value_on")
+    ]
+    if waiting:
+        print("  --- 아직 기다리는 기간 ---")
+        for h, info in waiting:
+            days = h.replace("d", "일")
+            print(f"    {days} 보유: {info['first_value_on']}부터 값이 나옵니다"
+                  f" (기록을 {info['needs_snapshot_older_than_days']}일 모아야 함)")
+        print("    영상에서 이 기간을 언급하려면 그때까지 기다리세요.")
+        print()
 
 
 def main(argv):

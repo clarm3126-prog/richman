@@ -3559,16 +3559,26 @@ function renderBacktestBanner(category) {
   }
   const cat = (BACKTEST_DATA.categories || {})[category];
   if (!cat) return '';
-  const s30 = cat["30d"];
-  const s60 = cat["60d"];
-  if (!s30 && !s60) return '';
-  const fmt = (s) => s
-    ? `n=${s.count} · 승률 <b>${s.win_rate}%</b> · 평균 <b style="color:${s.avg_return >= 0 ? '#dc2626' : '#2563eb'}">${s.avg_return >= 0 ? '+' : ''}${s.avg_return}%</b> · 최대 +${s.max_return}% / 최소 ${s.min_return}%`
-    : '데이터 부족';
+  // 보유 기간은 backtest.py의 HORIZONS를 따라간다. 옛 파일에는 horizons가
+  // 없으므로 그때는 30/60으로 돌아간다.
+  const horizons = BACKTEST_DATA.horizons || [30, 60];
+  const ready = BACKTEST_DATA.horizon_ready || {};
+  const rows = horizons.map(h => ({ h, key: h + 'd', s: cat[h + 'd'] }));
+  if (!rows.some(r => r.s)) return '';
+  const fmt = (s) => `n=${s.count} · 승률 <b>${s.win_rate}%</b> · 평균 <b style="color:${s.avg_return >= 0 ? '#dc2626' : '#2563eb'}">${s.avg_return >= 0 ? '+' : ''}${s.avg_return}%</b> · 최대 +${s.max_return}% / 최소 ${s.min_return}%`;
+  // 값이 없는 기간은 고장이 아니라 기록을 더 모아야 하는 것이다. 그렇게 적어준다.
+  const pending = (r) => {
+    const info = ready[r.key];
+    if (info && info.first_value_on) return `${info.first_value_on}부터 표시`;
+    return '데이터 부족';
+  };
+  const lines = rows.map(r =>
+    `<div style="font-size:11px;color:var(--fg-mid);margin-top:2px">${r.h}일 후: ${r.s ? fmt(r.s) : `<span style="color:var(--fg-faint)">${pending(r)}</span>`}</div>`
+  ).join('');
   return `<div class="strength-section" style="background:var(--bg-card-tint-blue);border-color:var(--border-blue)">
     <div style="font-size:11px;font-weight:700;color:var(--accent-blue-text);margin-bottom:4px">📊 과거 검증 (${category})</div>
-    <div style="font-size:11px;color:var(--fg-mid)">30일 후: ${fmt(s30)}</div>
-    ${s60 ? `<div style="font-size:11px;color:var(--fg-mid);margin-top:2px">60일 후: ${fmt(s60)}</div>` : ''}
+    ${lines}
+    <div style="font-size:10px;color:var(--fg-faint);margin-top:4px">조건에 걸린 날 사서 그냥 들고 있었을 때입니다. 손절선·트레일링 미적용.</div>
   </div>`;
 }
 
