@@ -38,6 +38,16 @@
    ],
    "kind": "promo",
    "threads_id": "18104954087252903"
+  },
+  {
+   "date": "2026-09-11",
+   "ig_id": "18343097488284417",
+   "images": [
+    "assets/cards/2026-09-11-theme.jpg",
+    "assets/cards/about.jpg"
+   ],
+   "kind": "theme",
+   "threads_id": "17907153183523730"
   }
  ],
  "queue_done": []
