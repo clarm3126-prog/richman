@@ -198,6 +198,10 @@ def prepare(dry_run=False, only=None, force=False, auto=False, queue_only=False,
             # 뭉쳐서, 성과 요약에서 어떤 형식이 먹혔는지 구분할 수 없다.
             "kind": (manual.get("kind") or "manual").strip(),
             "key": text_key(text),
+            # 쓰레드는 기본이 글만이다. 사진을 붙이면 첫 화면에서 글이 접혀
+            # 읽히는 양이 줄기 때문에, 사진이 본론인 글에만 켠다.
+            # 켜면 image의 첫 장이 쓰레드에도 올라간다.
+            "threads_image": bool(manual.get("threads_image")),
             "platforms": targets,
             "texts": {
                 p: (f"{text}\n\n{tags}" if p == "instagram" and tags else text)
@@ -352,9 +356,21 @@ def publish():
         try:
             if platform == "threads":
                 api = Threads(creds["threads"]["user_id"], creds["threads"]["token"])
-                media_id = api.publish_text(text)
+                # 인스타와 같은 이유로 Pages 배포가 끝나야 한다. 쓰레드도
+                # 우리 서버에서 이미지를 내려받아 가기 때문이다.
+                th_image = None
+                if plan.get("threads_image") and image_urls:
+                    if images_ready is None:
+                        images_ready = all(wait_for_image(u) for u in image_urls)
+                    if images_ready:
+                        th_image = image_urls[0]
+                    else:
+                        # 사진 없이라도 글은 내보낸다. 글이 통째로 빠지는
+                        # 것보다 낫다.
+                        problems.append("쓰레드: 이미지 URL이 안 열려 글만 올립니다")
+                media_id = api.publish_text(text, image_url=th_image)
                 record["threads_id"] = media_id
-                print(f"쓰레드 발행 완료: {media_id}")
+                print(f"쓰레드 발행 완료: {media_id}" + (" (사진 포함)" if th_image else ""))
 
             elif platform == "instagram":
                 if not image_urls:

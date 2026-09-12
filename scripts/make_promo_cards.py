@@ -110,6 +110,22 @@ CARDS = {
         "handle": HANDLE,
         "tagline": TAGLINE,
     },
+    # 두 탭 차이 설명 카드. 실제로 받은 질문("모멘텀은 미너비니 통과 종목
+    # 중에서 고르나요?")에서 나왔다. 답이 "아니오"라는 게 카드의 전부다.
+    "minervini-vs-momentum.jpg": {
+        "eyebrow": "받은 질문 — 두 탭은 무슨 관계인가요",
+        "headline": ["같은 종목이 아니라", "*다른 시점*입니다"],
+        "rows": [
+            {"label": "미너비니", "value": "추세가 만들어진 뒤"},
+            {"label": "모멘텀", "value": "200일선을 막 뚫은 때"},
+            {"label": "미너비니가 보는 것", "value": "정배열 · 고점 25% 이내"},
+            {"label": "모멘텀이 보는 것", "value": "VCP · 거래량 · 피벗"},
+            {"label": "둘 다 걸리면", "value": "합류로 따로 표시"},
+        ],
+        "highlight": "모멘텀 탭이 미너비니 통과 종목 중에서 고르는 게 아닙니다. 각각 전 종목을 따로 훑습니다.",
+        "handle": HANDLE,
+        "tagline": TAGLINE,
+    },
 }
 
 
