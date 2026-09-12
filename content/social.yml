@@ -10,7 +10,7 @@
 # 문구를 목록으로 여러 개 적으면 그중 하나를 무작위로 고릅니다.
 
 link:
-  url: "https://clarm3126-prog.github.io/richman/"
+  url: "https://stage2.kr/"
   label: "종목노트"
   # 유입원 꼬리표. 링크 끝에 ?from=threads 처럼 붙어서
   # 사이트가 "어디서 들어온 사람인지"를 셀 수 있게 합니다.

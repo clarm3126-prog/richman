@@ -15,7 +15,7 @@ CONFIG_FILE = ROOT / "content" / "social.yml"
 POSTS_FILE = ROOT / "content" / "posts.yml"
 
 # 저장소에 공개 배포되는 주소 (인스타 이미지 호스팅에 사용)
-PAGES_BASE = "https://clarm3126-prog.github.io/richman"
+PAGES_BASE = "https://stage2.kr"
 
 THREADS_API = "https://graph.threads.net/v1.0"
 THREADS_AUTH = "https://graph.threads.net"
