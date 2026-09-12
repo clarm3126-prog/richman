@@ -32,6 +32,7 @@ KIND_LABELS = {
     "screener": "스크리너",
     "momentum": "모멘텀",
     "theme": "테마",
+    "guide": "사용 안내",
     "manual": "직접 쓴 글",
 }
 
