@@ -2772,6 +2772,9 @@ function renderInvestorView() {
 
 // === 📓 매매 일지 ===
 const TELEGRAM_BOT_USERNAME = '@stage2_note_bot';
+// alert/confirm 안의 줄바꿈. 소스에 직접 적다가 진짜 줄바꿈이 섞여
+// 들어가면 스크립트 전체가 문법 오류로 죽는다.
+const NL = String.fromCharCode(10);
 const JOURNAL_KEY = 'trade_journal_v1';
 let JOURNAL = [];
 
@@ -6935,31 +6938,20 @@ async function openTelegramLinkModal() {
   // 봇 아이디를 안 채웠으면 엉뚱한 안내를 내보내지 않는다.
   const handle = (TELEGRAM_BOT_USERNAME || '').trim();
   if (!handle || handle.includes('여기에')) {
-    alert('텔레그램 알림이 아직 준비되지 않았습니다.
-
-연결 코드는 ' + code +
-          ' 입니다. 준비되면 안내드릴게요.');
+    alert('텔레그램 알림이 아직 준비되지 않았습니다.' + NL + NL +
+          '연결 코드는 ' + code + ' 입니다. 준비되면 안내드릴게요.');
     return;
   }
 
   // 검색해서 찾으라고 하면 비슷한 이름의 다른 봇으로 가는 사람이 생긴다.
   // 주소를 바로 열어주는 편이 안전하고 빠르다.
   const botUrl = 'https://t.me/' + handle.replace(/^@/, '');
-  const msg = '📱 텔레그램 알림 연결
-
-' +
-    '1) 확인을 누르면 코드가 복사되고 봇 대화창이 열립니다
-' +
-    '2) 봇 화면 아래 [시작] 버튼을 누르세요
-' +
-    '3) 복사된 코드를 붙여넣어 보내면 끝입니다
-
-' +
-    '      ' + code + '
-
-' +
-    '봇: ' + handle + '
-연결 확인까지 최대 5분 걸립니다.';
+  const msg = '📱 텔레그램 알림 연결' + NL + NL +
+    '1) 확인을 누르면 코드가 복사되고 봇 대화창이 열립니다' + NL +
+    '2) 봇 화면 아래 [시작] 버튼을 누르세요' + NL +
+    '3) 복사된 코드를 붙여넣어 보내면 끝입니다' + NL + NL +
+    '      ' + code + NL + NL +
+    '봇: ' + handle + NL + '연결 확인까지 최대 5분 걸립니다.';
   if (confirm(msg)) {
     try {
       await navigator.clipboard.writeText(code);
