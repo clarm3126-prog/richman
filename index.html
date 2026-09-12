@@ -6932,16 +6932,40 @@ async function openTelegramLinkModal() {
     return;
   }
 
-  const msg = '📱 텔레그램 알림 연결\n\n' +
-    '1) 텔레그램에서 ' + TELEGRAM_BOT_USERNAME + ' 을 검색해 대화를 시작하세요\n' +
-    '2) 아래 6자리 코드를 그대로 보내세요\n\n' +
-    '      ' + code + '\n\n' +
-    '연결까지 최대 5분 걸립니다.\n확인을 누르면 코드가 복사됩니다.';
+  // 봇 아이디를 안 채웠으면 엉뚱한 안내를 내보내지 않는다.
+  const handle = (TELEGRAM_BOT_USERNAME || '').trim();
+  if (!handle || handle.includes('여기에')) {
+    alert('텔레그램 알림이 아직 준비되지 않았습니다.
+
+연결 코드는 ' + code +
+          ' 입니다. 준비되면 안내드릴게요.');
+    return;
+  }
+
+  // 검색해서 찾으라고 하면 비슷한 이름의 다른 봇으로 가는 사람이 생긴다.
+  // 주소를 바로 열어주는 편이 안전하고 빠르다.
+  const botUrl = 'https://t.me/' + handle.replace(/^@/, '');
+  const msg = '📱 텔레그램 알림 연결
+
+' +
+    '1) 확인을 누르면 코드가 복사되고 봇 대화창이 열립니다
+' +
+    '2) 봇 화면 아래 [시작] 버튼을 누르세요
+' +
+    '3) 복사된 코드를 붙여넣어 보내면 끝입니다
+
+' +
+    '      ' + code + '
+
+' +
+    '봇: ' + handle + '
+연결 확인까지 최대 5분 걸립니다.';
   if (confirm(msg)) {
     try {
       await navigator.clipboard.writeText(code);
-      showToast('📋 코드 복사됨: ' + code, 4000);
-    } catch { showToast('코드: ' + code, 6000); }
+      showToast('📋 코드 복사됨: ' + code + ' — 봇 대화창에 붙여넣으세요', 6000);
+    } catch { showToast('코드: ' + code + ' — 봇에게 보내주세요', 8000); }
+    window.open(botUrl, '_blank', 'noopener');
   }
 }
 
