@@ -109,9 +109,16 @@ def prepare(dry_run=False, only=None, force=False, auto=False, queue_only=False,
 
     state = store.load(STATE, {"posts": [], "queue_done": []})
     today = store.today_kst()
-    today_count = sum(1 for p in state.get("posts", []) if p.get("date") == today)
+    # 시황 글은 하루 상한과 따로 센다. 세는 쪽에서 빼야 실제로 따로 세는 것이
+    # 된다. 예전에는 여기서 시황 글까지 세는 바람에, 08:00 미장과 16:00 국장이
+    # 다 나간 날은 누적이 이미 2가 돼서 19:00 종목글과 21:00 대기열이 조용히
+    # 건너뛰어졌다. 로그에만 "건너뜀"이 찍히고 알림도 안 갔다.
+    today_count = sum(
+        1 for p in state.get("posts", [])
+        if p.get("date") == today and p.get("kind") not in compose.BRIEFS
+    )
     cap = int(post_cfg.get("max_per_day") or 1)
-    # 시황 글은 정해진 시각에 한 번씩만 나가므로 하루 상한과 따로 센다.
+    # 시황 글 자신은 정해진 시각에 한 번씩만 나가므로 상한을 보지 않는다.
     # 대신 같은 종류가 하루에 두 번 나가지 않게 막는다 (워크플로 재실행 대비).
     if brief:
         done = any(
