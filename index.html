@@ -3624,7 +3624,19 @@ function renderBacktestBanner(category) {
   const ready = BACKTEST_DATA.horizon_ready || {};
   const rows = horizons.map(h => ({ h, key: h + 'd', s: cat[h + 'd'] }));
   if (!rows.some(r => r.s)) return '';
-  const fmt = (s) => `n=${s.count} · 승률 <b>${s.win_rate}%</b> · 평균 <b style="color:${s.avg_return >= 0 ? '#dc2626' : '#2563eb'}">${s.avg_return >= 0 ? '+' : ''}${s.avg_return}%</b> · 최대 +${s.max_return}% / 최소 ${s.min_return}%`;
+  const pct = (v) => `<b style="color:${v >= 0 ? '#dc2626' : '#2563eb'}">${v >= 0 ? '+' : ''}${v}%</b>`;
+  // 픽 수만 적으면 독립 시행 888번으로 읽힌다. 조건에 걸린 종목은 며칠씩
+  // 계속 걸려 있어서 같은 종목이 여러 번 들어간다. 종목 수를 앞에 둔다.
+  const fmt = (s) => `${s.unique_codes ? `종목 ${s.unique_codes}개 · ` : ''}${s.count}건 · 승률 <b>${s.win_rate}%</b> · 평균 ${pct(s.avg_return)} · 최대 +${s.max_return}% / 최소 ${s.min_return}%`;
+  // 아래 두 줄이 이 배너의 핵심이다. 평균 -15%가 혼자 떠 있으면 "형편없다"로
+  // 읽히지만, 같은 기간 지수가 -10%였고 손절을 지켰으면 -6%였다는 걸 같이
+  // 보면 전혀 다른 뜻이 된다.
+  const sub = (s) => {
+    const out = [];
+    if (s.rules) out.push(`<div style="font-size:11px;color:var(--fg-mid);margin-left:12px">└ -7% 손절·트레일링을 지켰다면: 승률 <b>${s.rules.win_rate}%</b> · 평균 ${pct(s.rules.avg_return)} · 최소 ${s.rules.min_return}%</div>`);
+    if (s.benchmark) out.push(`<div style="font-size:11px;color:var(--fg-mid);margin-left:12px">└ 같은 기간 코스피: 플러스 <b>${s.benchmark.win_rate}%</b> · 평균 ${pct(s.benchmark.avg_return)}</div>`);
+    return out.join('');
+  };
   // 값이 없는 기간은 고장이 아니라 기록을 더 모아야 하는 것이다. 그렇게 적어준다.
   const pending = (r) => {
     const info = ready[r.key];
@@ -3633,11 +3645,12 @@ function renderBacktestBanner(category) {
   };
   const lines = rows.map(r =>
     `<div style="font-size:11px;color:var(--fg-mid);margin-top:2px">${r.h}일 후: ${r.s ? fmt(r.s) : `<span style="color:var(--fg-faint)">${pending(r)}</span>`}</div>`
+    + (r.s ? sub(r.s) : '')
   ).join('');
   return `<div class="strength-section" style="background:var(--bg-card-tint-blue);border-color:var(--border-blue)">
     <div style="font-size:11px;font-weight:700;color:var(--accent-blue-text);margin-bottom:4px">📊 과거 검증 (${category})</div>
     ${lines}
-    <div style="font-size:10px;color:var(--fg-faint);margin-top:4px">조건에 걸린 날 사서 그냥 들고 있었을 때입니다. 손절선·트레일링 미적용.</div>
+    <div style="font-size:10px;color:var(--fg-faint);margin-top:4px">첫 줄은 조건에 걸린 날 사서 그냥 들고 있었을 때입니다. 손절선을 지킨 경우와 같은 기간 지수를 아래에 함께 적었습니다.</div>
   </div>`;
 }
 

@@ -111,7 +111,75 @@ def evaluate_picks(snapshots, category_filter, days_forward=30, max_picks_per_da
     return all_picks
 
 
-def compute_returns(picks, histories, days_forward=30):
+# 도구가 안내하는 매도 규칙. index.html의 안내 문구, exit_signals.py의
+# 실제 알림과 같은 값이어야 한다. 한쪽만 바뀌면 "화면과 다르다"가 된다.
+STOP_PCT = -7.0
+TRAIL_STEPS = [(50.0, 50), (20.0, 21)]  # (이익률, 이탈을 볼 이동평균) — 높은 쪽 먼저
+
+
+def _sma_at(closes, i, period):
+    """i번째 날까지의 period일 단순이동평균."""
+    if i + 1 < period:
+        return None
+    return sum(closes[i + 1 - period:i + 1]) / period
+
+
+def apply_rules(history, entry_idx, target_idx):
+    """-7% 손절과 이익 구간 트레일링을 적용했을 때의 수익률.
+
+    기존 숫자는 조건에 걸린 날 사서 기간이 끝날 때까지 그냥 들고 있은
+    결과다. 정작 도구는 -7%에 자르고 이익이 나면 이동평균을 따라 올리라고
+    안내한다. 안내대로 했을 때의 숫자가 없으면, 도구를 쓰는 사람이 실제로
+    겪을 결과를 아무도 모르는 셈이다.
+
+    손절가는 -7% 정확히가 아니라 **그날 종가**로 잡는다. 갭 하락으로 한 번에
+    더 빠지는 날이 있어서, -7%로 적으면 실제보다 좋게 나온다.
+
+    돌려주는 값: (수익률, 며칠 만에, 왜 팔았는지)
+    """
+    closes = [h["close"] for h in history]
+    entry = closes[entry_idx]
+    if entry <= 0:
+        return None
+    peak = 0.0
+    for i in range(entry_idx + 1, target_idx + 1):
+        c = closes[i]
+        if c <= 0:
+            continue
+        gain = (c - entry) / entry * 100
+        if gain <= STOP_PCT:
+            return gain, i - entry_idx, "손절"
+        peak = max(peak, gain)
+        for need, period in TRAIL_STEPS:
+            if peak >= need:
+                ma = _sma_at(closes, i, period)
+                if ma and c < ma:
+                    return gain, i - entry_idx, f"MA{period} 이탈"
+                break
+    return (closes[target_idx] - entry) / entry * 100, target_idx - entry_idx, "기간 만료"
+
+
+def benchmark_return(index_closes, entry_date, days_forward):
+    """같은 날 사서 같은 기간 지수를 들고 있었을 때.
+
+    승률 20%가 낮아 보이는지 아닌지는 같은 기간 시장이 어땠는지를 알아야
+    말할 수 있다. 이 줄이 없으면 숫자가 혼자 떠서 오해를 부른다.
+    """
+    dates = sorted(index_closes)
+    try:
+        i = dates.index(entry_date)
+    except ValueError:
+        return None
+    j = i + days_forward
+    if j >= len(dates):
+        return None
+    a, b = index_closes[dates[i]], index_closes[dates[j]]
+    if a <= 0:
+        return None
+    return (b / a - 1) * 100
+
+
+def compute_returns(picks, histories, days_forward=30, index_closes=None):
     """pick의 entry 날짜 + N일 종가로 수익률 계산.
 
     매수가도 매도가와 **같은 일봉 시리즈**에서 읽는다. 네이버 일봉은 수정주가라
@@ -154,14 +222,24 @@ def compute_returns(picks, histories, days_forward=30):
             if snap and abs(entry_price / snap - 1) > 0.02:
                 adjusted_n += 1
             ret = (exit_price - entry_price) / entry_price * 100
-            returns.append({
+            row = {
                 "code": pick["code"],
                 "name": pick["name"],
                 "date": entry_date,
                 "entry": entry_price,
                 "exit": exit_price,
                 "return_pct": round(ret, 2),
-            })
+            }
+            ruled = apply_rules(history, entry_idx, target_idx)
+            if ruled:
+                row["ruled_pct"] = round(ruled[0], 2)
+                row["ruled_days"] = ruled[1]
+                row["ruled_reason"] = ruled[2]
+            if index_closes:
+                b = benchmark_return(index_closes, entry_date, days_forward)
+                if b is not None:
+                    row["bench_pct"] = round(b, 2)
+            returns.append(row)
     if adjusted_n:
         # 수정주가로 조정된 픽이 몇 개인지 남긴다. 이 줄이 0으로 바뀌면
         # 가격 소스가 원주가로 바뀐 것이므로 이 함수의 전제를 다시 봐야 한다.
@@ -177,8 +255,12 @@ def stats_summary(returns):
     win_n = sum(1 for r in rs if r > 0)
     big_win_n = sum(1 for r in rs if r >= 20)
     big_loss_n = sum(1 for r in rs if r <= -10)
-    return {
+    out = {
         "count": n,
+        # 픽 수는 같은 종목이 여러 날 다시 잡힌 것까지 센 값이다. 조건에
+        # 걸린 종목은 며칠씩 계속 걸려 있으므로, n을 독립 시행 수로 읽으면
+        # 표본이 실제보다 훨씬 많아 보인다. 종목 수를 같이 낸다.
+        "unique_codes": len({r["code"] for r in returns}),
         "win_rate": round(win_n / n * 100, 1),
         "avg_return": round(sum(rs) / n, 2),
         "median_return": round(sorted(rs)[n // 2], 2),
@@ -189,6 +271,36 @@ def stats_summary(returns):
         "best_picks": sorted(returns, key=lambda x: x["return_pct"], reverse=True)[:5],
         "worst_picks": sorted(returns, key=lambda x: x["return_pct"])[:5],
     }
+
+    # 도구 안내대로 -7% 손절과 트레일링을 적용했을 때
+    ruled = [r["ruled_pct"] for r in returns if r.get("ruled_pct") is not None]
+    if ruled:
+        rn = len(ruled)
+        reasons = {}
+        for r in returns:
+            if r.get("ruled_reason"):
+                reasons[r["ruled_reason"]] = reasons.get(r["ruled_reason"], 0) + 1
+        out["rules"] = {
+            "count": rn,
+            "win_rate": round(sum(1 for x in ruled if x > 0) / rn * 100, 1),
+            "avg_return": round(sum(ruled) / rn, 2),
+            "median_return": round(sorted(ruled)[rn // 2], 2),
+            "max_return": round(max(ruled), 2),
+            "min_return": round(min(ruled), 2),
+            "exit_reasons": reasons,
+        }
+
+    # 같은 날 사서 같은 기간 코스피를 들고 있었을 때
+    bench = [r["bench_pct"] for r in returns if r.get("bench_pct") is not None]
+    if bench:
+        bn = len(bench)
+        out["benchmark"] = {
+            "count": bn,
+            "win_rate": round(sum(1 for x in bench if x > 0) / bn * 100, 1),
+            "avg_return": round(sum(bench) / bn, 2),
+            "median_return": round(sorted(bench)[bn // 2], 2),
+        }
+    return out
 
 
 def horizon_readiness(snapshots):
@@ -319,6 +431,20 @@ def main():
         }, ensure_ascii=False), encoding="utf-8")
         return
 
+    # 지수 히스토리. screener.py가 시장 대비 강도를 낼 때 쓰는 것과 같은
+    # 출처(data/market.json)를 쓴다. 화면에 뜨는 지수와 어긋나면 안 된다.
+    index_closes = {}
+    try:
+        mk = json.loads(Path("data/market.json").read_text(encoding="utf-8"))
+        for row in (mk.get("indices", {}).get("kospi", {}).get("history") or []):
+            d = str(row.get("date") or "").replace("-", "")
+            if d and row.get("close"):
+                index_closes[d] = row["close"]
+    except Exception as e:
+        print(f"  지수 히스토리를 못 읽었습니다 ({e}) — 지수 대비는 건너뜁니다")
+    if index_closes:
+        print(f"  지수 히스토리: {len(index_closes)}일")
+
     # 3. 카테고리별 평가
     categories = {
         "minervini_strict": (minervini_snaps, lambda r: r.get("minervini_strict")),
@@ -358,7 +484,8 @@ def main():
         stats = {}
         for h in HORIZONS:
             picks = by_horizon.get(h) or []
-            rets = compute_returns(picks, histories, days_forward=h) if picks else []
+            rets = compute_returns(picks, histories, days_forward=h,
+                                   index_closes=index_closes) if picks else []
             stats[f"{h}d"] = stats_summary(rets)
         cat_results[cat] = stats
         for h in HORIZONS:
