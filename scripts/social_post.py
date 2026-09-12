@@ -408,12 +408,18 @@ def publish():
         announce(record, creds)
         state.setdefault("posts", []).append(record)
         state["posts"] = state["posts"][-60:]
-        _save_state = True
-    else:
-        _save_state = paused_now
+        # 올라간 큐 글은 여기서 done으로 찍는다. 이 표시가 없으면
+        # pick_from_queue가 다음 실행에서 같은 글을 다시 집어서, 큐가
+        # 첫 글에 멈춘 채 그 글만 매일 반복된다. 뒤에 쌓아둔 글은
+        # 영영 나가지 않는다.
         if plan.get("source") == "manual" and plan.get("key"):
             state.setdefault("queue_done", []).append(plan["key"])
             state["queue_done"] = state["queue_done"][-200:]
+        _save_state = True
+    else:
+        # 한 곳도 못 올렸으면 done으로 찍지 않는다. 다음 실행에서 다시
+        # 시도해야 한다.
+        _save_state = paused_now
 
     if _save_state:
         store.save(STATE, state)

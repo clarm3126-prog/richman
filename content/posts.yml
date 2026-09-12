@@ -38,7 +38,9 @@ queue:
     image:
       - assets/cards/promo-what.jpg
       - assets/cards/promo-list.jpg
-    published: false
+    # 2026-09-11과 09-12에 두 번 나갔다. queue_done이 기록되지 않던 탓에
+    # 같은 글이 이틀 연속 올라갔다. 세 번째로 나가지 않게 여기서 닫는다.
+    published: true
     text: |-
       종목 코드만 넣으면 지금이 살 자리인지 재주는 걸 만들었습니다. 무료로 풉니다.
 
