@@ -921,6 +921,11 @@
   .theme-dark .idx-name { color: #9ca3af; }
   .theme-dark .nav-btn { background: #2a2f3a; border-color: #3a414f; color: #e5e7eb; }
   .theme-dark .nav-btn:active { background: #e5e7eb; color: #0f1115; border-color: #e5e7eb; }
+  /* 지금 보고 있는 탭. setView()가 .active를 붙여주고 있었는데 다크 테마에서는
+     표시가 나지 않았다. .nav-btn.active와 .theme-dark .nav-btn의 우선순위가
+     같고 후자가 뒤에 선언돼서 배경색이 덮여버리기 때문이다. .tab.active와
+     같은 방식으로 칠해 두 곳의 '선택됨' 표시를 맞춘다. */
+  .theme-dark .nav-btn.active { background: #e5e7eb; color: #0f1115; border-color: #e5e7eb; }
   .theme-dark .tabs-toggle { background: #2a2f3a; border-color: #3a414f; color: #e5e7eb; }
   .theme-dark .tabs-toggle:active { background: #3a414f; }
   .theme-dark .tabs-toggle-arrow { color: #9ca3af; }
