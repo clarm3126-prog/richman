@@ -28,9 +28,14 @@ CARD_DIR = ROOT / "assets" / "cards"
 W, H = 1080, 1350
 PAD = 76
 
+# 강조색은 밝은 카드와 어두운 카드가 같은 값을 쓴다. 예전에는 어두운 쪽이
+# 보라(124,58,237)였는데, 같은 계정 피드에 보라 카드와 주황 카드가 번갈아
+# 올라가면 밝기보다 이게 먼저 "다른 계정"으로 읽힌다.
+ACCENT = (234, 88, 12)
+
 BG = (20, 22, 27)
-PANEL = (30, 34, 42)
-ACCENT = (124, 58, 237)
+PANEL = (32, 36, 45)
+BORDER = (58, 65, 79)
 FG = (233, 236, 241)
 FG_DIM = (150, 158, 170)
 UP = (239, 68, 68)      # 국내 관행: 상승 빨강
@@ -173,6 +178,23 @@ def build_cards(cards, render, **kwargs):
         print(f"카드 생성: assets/cards/{name}")
 
 
+def _panel(d, top, bottom, fill, border=None, bar=None, radius=16):
+    """카드 안의 박스 하나. 밝은 쪽과 어두운 쪽이 같은 함수를 쓴다.
+
+    왼쪽 액센트 막대는 사이트 종목 카드의 border-left에서 가져왔다
+    (index.html의 .mv-card). 사진과 사이트가 같은 표시를 쓰면, 사진을 보고
+    들어온 사람이 같은 물건으로 알아본다.
+
+    막대는 둥근 사각형을 겹쳐 그린 뒤 오른쪽을 패널 색으로 덮는다. 그래야
+    바깥 모서리는 둥글고 안쪽은 각져서 패널에 붙어 보인다.
+    """
+    d.rounded_rectangle([PAD, top, W - PAD, bottom], radius=radius,
+                        fill=fill, outline=border, width=2 if border else 0)
+    if bar:
+        d.rounded_rectangle([PAD, top, PAD + 14, bottom], radius=radius, fill=bar)
+        d.rectangle([PAD + 8, top + 2, PAD + 16, bottom - 2], fill=fill)
+
+
 def render_card(post, out_path, brand="종목노트", url=""):
     """compose.py가 만든 post dict를 카드 이미지로 그린다."""
     img = Image.new("RGB", (W, H), BG)
@@ -217,9 +239,9 @@ def render_card(post, out_path, brand="종목노트", url=""):
 
     for i, it in enumerate(items, 1):
         top = y
-        d.rounded_rectangle([PAD, top, W - PAD, top + row_h - 14], radius=18, fill=PANEL)
+        _panel(d, top, top + row_h - 14, PANEL, border=BORDER, bar=ACCENT, radius=18)
 
-        bx = PAD + 22
+        bx = PAD + 36  # 왼쪽 액센트 막대(14px)를 피한다
         d.rounded_rectangle([bx, top + 30, bx + 46, top + 76], radius=12, fill=ACCENT)
         d.text((bx + 16, top + 38), str(i), font=f_rank, fill=(255, 255, 255))
 
@@ -360,12 +382,16 @@ def prune_cards(keep_days=60):
 # headline 각 줄에서 *별표*로 감싼 부분만 강조색으로 그린다.
 #   ["이게 *다* 나옵니다"]
 
-P_BG = (250, 249, 246)
+# 배경을 낮춘다. 흰 패널이 상한이라 더 밝힐 데가 없어서, 대비를 벌리려면
+# 배경을 내려야 한다. 예전 값(250,249,246)은 패널과 명도차가 6밖에 안 돼
+# 피드에서 축소되고 압축까지 먹으면 박스가 사라졌다.
+P_BG = (240, 237, 231)
 P_FG = (24, 24, 27)
 P_DIM = (113, 113, 122)
-P_ACCENT = (234, 88, 12)
+P_ACCENT = ACCENT
 P_PANEL = (255, 255, 255)
-P_BORDER = (228, 228, 231)
+P_BORDER = (213, 207, 196)
+P_CHIP = (245, 242, 236)
 P_HL_BG = (220, 252, 231)
 P_HL_FG = (22, 101, 52)
 
@@ -420,36 +446,52 @@ def render_promo_card(spec, out_path):
 
     rows = spec.get("rows") or []
     if rows:
-        h = min(124, max(72, (body_bottom - y) // max(1, len(rows))))
+        h = min(124, max(78, (body_bottom - y) // max(1, len(rows))))
         # 남는 자리는 위아래로 나눠 블록을 가운데 둔다.
         # 그러지 않으면 강조 박스 위가 빈 공간으로 남는다.
         y += max(0, (body_bottom - y) - h * len(rows)) // 2
+        # 한 줄에만 mark를 주면 그 줄에만 막대가 붙는다. 답이 있는 표
+        # (예: 손절선 -7%)에서 "이게 내가 쓰는 값"이 그림으로 전달된다.
+        # mark가 하나도 없으면 모든 줄에 막대를 둔다 — 동등한 목록이라는 뜻이다.
+        any_mark = any(r.get("mark") for r in rows)
         for r in rows:
-            d.rounded_rectangle(
-                [PAD, y, W - PAD, y + h - 12], radius=16,
-                fill=P_PANEL, outline=P_BORDER, width=2,
-            )
-            d.text((PAD + 28, y + (h - 12) // 2 - 22), _fit(d, r.get("label", ""), f_label, inner_w // 2),
+            top, bot = y, y + h - 12
+            _panel(d, top, bot, P_PANEL, border=P_BORDER,
+                   bar=P_ACCENT if (not any_mark or r.get("mark")) else None)
+            cy = (top + bot) // 2
+            d.text((PAD + 34, cy - 20), _fit(d, r.get("label", ""), f_label, inner_w // 2),
                    font=f_label, fill=P_DIM)
+            # 값은 칩 위에 올린다. 라벨과 값이 양끝으로 벌어지면 시선이
+            # 가운데서 끊기는데, 칩이 오른쪽에서 시선을 붙잡는다.
             val = r.get("value", "")
             vw = d.textlength(val, font=f_value)
-            d.text((W - PAD - 28 - vw, y + (h - 12) // 2 - 24), val, font=f_value, fill=P_FG)
+            right = W - PAD - 18
+            d.rounded_rectangle([right - vw - 32, cy - 30, right, cy + 30],
+                                radius=12, fill=P_CHIP)
+            d.text((right - vw - 16, cy - 24), val, font=f_value, fill=P_FG)
             y += h
 
     items = spec.get("items") or []
     if items:
-        h = min(150, max(88, (body_bottom - y) // max(1, len(items))))
+        # 예전에는 번호와 글자가 맨바닥에 놓여 있었다. rows 카드에는 박스가
+        # 있고 여기에는 없어서, 같은 계정 카드인데 다른 물건처럼 보였다.
+        h = min(156, max(104, (body_bottom - y) // max(1, len(items))))
         y += max(0, (body_bottom - y) - h * len(items)) // 2
         for i, it in enumerate(items, 1):
-            cy = y + 10
-            d.ellipse([PAD, cy, PAD + 54, cy + 54], fill=P_ACCENT)
+            top, bot = y, y + h - 14
+            _panel(d, top, bot, P_PANEL, border=P_BORDER, bar=P_ACCENT)
+            cy = (top + bot) // 2
+            d.ellipse([PAD + 34, cy - 28, PAD + 90, cy + 28], fill=P_ACCENT)
             nw = d.textlength(str(i), font=f_num)
-            d.text((PAD + 27 - nw / 2, cy + 7), str(i), font=f_num, fill=(255, 255, 255))
-            tx = PAD + 82
-            tw = W - PAD - tx
-            d.text((tx, y + 6), _fit(d, it.get("title", ""), f_title, tw), font=f_title, fill=P_FG)
-            if it.get("note"):
-                d.text((tx, y + 58), _fit(d, it["note"], f_note, tw), font=f_note, fill=P_DIM)
+            d.text((PAD + 62 - nw / 2, cy - 21), str(i), font=f_num, fill=(255, 255, 255))
+            tx = PAD + 110
+            tw = W - PAD - tx - 24
+            has_note = bool(it.get("note"))
+            d.text((tx, cy - (34 if has_note else 20)),
+                   _fit(d, it.get("title", ""), f_title, tw), font=f_title, fill=P_FG)
+            if has_note:
+                d.text((tx, cy + 12), _fit(d, it["note"], f_note, tw),
+                       font=f_note, fill=P_DIM)
             y += h
 
     if hl_lines:
