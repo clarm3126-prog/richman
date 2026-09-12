@@ -7,8 +7,10 @@
 - 통계: 승률, 평균 수익률, 최대 수익률, 최대 손실
 - 카테고리별 집계: minervini_strict / minervini_strong / momentum_strong / pre_breakout
 
-**손절선도 트레일링도 걸지 않은 숫자다.** 조건에 걸린 날 사서 N거래일 뒤
-종가에 판 것뿐이다. 이 단서를 빼고 인용하면 기법을 잘못 평가하게 된다.
+**손절선도 트레일링도 걸지 않은 숫자다.** 조건에 걸린 날 종가에 사서
+N거래일 뒤 종가에 판 것뿐이다. 이 단서를 빼고 인용하면 기법을 잘못 평가하게 된다.
+
+매수가·매도가 모두 수정주가 일봉에서 읽는다. 이유는 compute_returns()에.
 
 출력: data/backtest_stats.json
 """
@@ -89,14 +91,16 @@ def evaluate_picks(snapshots, category_filter, days_forward=30, max_picks_per_da
         results = snap.get("results", []) or []
         passed = [r for r in results if category_filter(r)][:max_picks_per_day]
         for r in passed:
-            entry_price = r.get("price") or r.get("current_price")
-            if not entry_price:
+            # snapshot에 적힌 값은 그날의 원주가다. 매수가로 쓰면 매도가(수정주가)와
+            # 기준이 어긋나므로 compute_returns()에서 대조용으로만 본다.
+            snapshot_price = r.get("price") or r.get("current_price")
+            if not snapshot_price:
                 continue
             all_picks.append({
                 "date": date,
                 "code": r["code"],
                 "name": r.get("name", r["code"]),
-                "entry_price": entry_price,
+                "snapshot_price": snapshot_price,
             })
 
     if not all_picks:
@@ -107,17 +111,19 @@ def evaluate_picks(snapshots, category_filter, days_forward=30, max_picks_per_da
     return all_picks
 
 
-def fetch_exit_prices(picks, days_forward=30):
-    """각 pick의 entry+N일 종가를 fetch. 한 번의 OHLC fetch로 여러 pick 처리."""
-    codes = list({p["code"] for p in picks})
-    print(f"  fetching exit prices for {len(codes)} unique stocks...")
-    histories = fetch_all_stock_history(codes, days=120)  # 충분히 긴 윈도우
-    return histories
-
-
 def compute_returns(picks, histories, days_forward=30):
-    """pick의 entry 날짜 + N일 종가로 수익률 계산."""
+    """pick의 entry 날짜 + N일 종가로 수익률 계산.
+
+    매수가도 매도가와 **같은 일봉 시리즈**에서 읽는다. 네이버 일봉은 수정주가라
+    증자·분할이 있으면 그 이전 구간이 소급해서 조정된다. 반면 snapshot에는
+    그날 거래되던 원주가가 그대로 적혀 있다. 둘을 섞으면 권리락이 한쪽에만
+    반영돼서, 주식 수가 늘어난 것이 그대로 손실로 찍힌다.
+    (티엘비 356860: 2026-07 1:1 무상증자 → 30일 수익률이 -78.9%로 기록됐다.)
+    같은 시리즈에서 읽으면 조정 계수가 분자·분모에서 상쇄되므로, 나중에 또
+    증자가 나와서 과거 구간이 다시 조정돼도 수익률은 그대로 남는다.
+    """
     returns = []
+    adjusted_n = 0
     for pick in picks:
         history = histories.get(pick["code"], [])
         if not history:
@@ -131,23 +137,35 @@ def compute_returns(picks, histories, days_forward=30):
             if h_date == entry_date:
                 entry_idx = i
                 break
+        # 일봉에 그날이 없으면(상장폐지·거래정지·fetch 실패) 이 pick은 버린다.
+        # snapshot 가격으로 때우면 기준이 다른 두 값을 다시 섞는 셈이라,
+        # 표본 몇 개를 잃더라도 빼는 쪽이 맞다. 매도가가 없어 어차피 빠지던
+        # 픽들이라 표본 수는 고치기 전과 같다.
         if entry_idx is None:
             continue
         # +N 거래일 (대략 N일 ≈ N * 252/365 ≈ N*0.7 거래일이지만 N일 = N 거래일로 단순화)
         target_idx = entry_idx + days_forward
         if target_idx >= len(history):
             continue
+        entry_price = history[entry_idx]["close"]
         exit_price = history[target_idx]["close"]
-        if exit_price > 0 and pick["entry_price"] > 0:
-            ret = (exit_price - pick["entry_price"]) / pick["entry_price"] * 100
+        if exit_price > 0 and entry_price > 0:
+            snap = pick.get("snapshot_price") or 0
+            if snap and abs(entry_price / snap - 1) > 0.02:
+                adjusted_n += 1
+            ret = (exit_price - entry_price) / entry_price * 100
             returns.append({
                 "code": pick["code"],
                 "name": pick["name"],
                 "date": entry_date,
-                "entry": pick["entry_price"],
+                "entry": entry_price,
                 "exit": exit_price,
                 "return_pct": round(ret, 2),
             })
+    if adjusted_n:
+        # 수정주가로 조정된 픽이 몇 개인지 남긴다. 이 줄이 0으로 바뀌면
+        # 가격 소스가 원주가로 바뀐 것이므로 이 함수의 전제를 다시 봐야 한다.
+        print(f"    ({adjusted_n}/{len(returns)} picks: snapshot 원주가와 수정주가가 2% 넘게 다름)")
     return returns
 
 
@@ -361,6 +379,9 @@ def main():
             "momentum": len(momentum_snaps),
         },
         "horizons": HORIZONS,
+        # 어떤 가격으로 낸 수익률인지 파일만 봐도 알게 적어둔다. 원주가로 낸
+        # 옛 파일에는 이 키가 없으므로, 숫자가 왜 달라졌는지 구분이 된다.
+        "price_basis": "adjusted_close",
         "horizon_ready": horizon_readiness(minervini_snaps + momentum_snaps),
         "categories": cat_results,
     }, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
