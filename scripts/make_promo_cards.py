@@ -125,6 +125,22 @@ CARDS = {
         "handle": HANDLE,
         "tagline": TAGLINE,
     },
+    # 손절선 민감도 카드. scripts/stop_sensitivity.py 출력을 옮긴 것이다.
+    # 숫자를 다시 뽑으면 이 카드와 10-02 글을 같이 고쳐야 한다.
+    "stop-levels.jpg": {
+        "eyebrow": "조건 통과 888건에 대입",
+        "headline": ["손절선을 몇 %로", "*잡아야 하나*"],
+        "rows": [
+            {"label": "-5%", "value": "평균 -6.1% · 승률 11.9%"},
+            {"label": "-7%", "value": "평균 -6.7% · 승률 13.9%"},
+            {"label": "-10%", "value": "평균 -7.8% · 승률 17.5%"},
+            {"label": "-15%", "value": "평균 -9.6% · 승률 21.5%"},
+            {"label": "안 걸면", "value": "평균 -13.6% · 최악 -60.9%"},
+        ],
+        "highlight": "좁을수록 평균이 낫고 승률은 떨어집니다. 다만 이 넉 달은 하락장이었습니다.",
+        "handle": HANDLE,
+        "tagline": TAGLINE,
+    },
 }
 
 
