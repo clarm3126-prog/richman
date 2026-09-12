@@ -68,6 +68,16 @@
    ],
    "kind": "screener",
    "threads_id": "18097702511067552"
+  },
+  {
+   "date": "2026-09-12",
+   "ig_id": "18194245852386600",
+   "images": [
+    "assets/cards/2026-09-12-momentum.jpg",
+    "assets/cards/about.jpg"
+   ],
+   "kind": "momentum",
+   "threads_id": "17984950947073082"
   }
  ],
  "queue_done": []
