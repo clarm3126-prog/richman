@@ -188,6 +188,25 @@ def show_backtest():
     print("  ※ 조건에 걸린 날 사고 그냥 들고만 있었을 때입니다.")
     print("     손절선도, 따라 올리는 매도도 걸지 않은 숫자입니다.")
     print("     영상에서 이 단서를 빼면 거짓말이 됩니다.")
+
+    # 표본이 어떤 장이었는지를 맨 위에 못 박는다. 이 줄이 없으면 승률만
+    # 옮겨 적게 되고, 낙폭이 컸던 구간이라는 사실이 영상에서 빠진다.
+    period = None
+    for cat in (data.get("categories") or {}).values():
+        for v in (cat or {}).values():
+            p = (v or {}).get("period")
+            if p and (period is None or p.get("entry_days", 0) > period.get("entry_days", 0)):
+                period = p
+    if period:
+        def d(s):
+            s = str(s)
+            return f"{s[:4]}-{s[4:6]}-{s[6:]}" if len(s) == 8 else s
+        print(f"  ※ 측정 구간: {d(period['first_entry'])} ~ {d(period['last_entry'])} 매수분")
+        idx = period.get("index")
+        if idx:
+            print(f"     이 기간 코스피 {idx['change_pct']:+.1f}%,"
+                  f" 최대낙폭 {idx['max_drawdown_pct']:.1f}%")
+            print("     한쪽으로 크게 기운 장이라 '이 기법의 실력'으로 말하면 안 됩니다.")
     print()
 
     names = {
@@ -209,9 +228,45 @@ def show_backtest():
             if not v:
                 continue
             days = horizon.replace("d", "일")
-            print(f"  {label} · {days} 보유 ({v['count']}건)")
+            uniq = v.get("unique_codes")
+            head = f"{v['count']}건" + (f" · 종목 {uniq}개" if uniq else "")
+            print(f"  {label} · {days} 보유 ({head})")
+            # 표본이 적으면 숫자를 아예 찍지 않는다. 여기 찍힌 값은 그대로
+            # 대본에 붙는다. 종목 9개로 낸 승률이 영상에서 "75%"로 나가면
+            # 되돌릴 수 없다. 기준 판정은 backtest.py가 한다.
+            smp = v.get("sample")
+            ok = smp["enough"] if smp else not (uniq is not None and uniq < 30)
+            if not ok:
+                need = (f"종목 {smp['min_codes']}개 · 매수일 {smp['min_days']}일"
+                        if smp else "종목 30개")
+                got = f" (지금 매수일 {smp['days']}일)" if smp else ""
+                print(f"    표본이 적어 승률을 내지 않습니다 — {need} 이상 필요{got}")
+                print("    영상에서 이 줄의 숫자를 말하지 마세요.")
+                shown = True
+                continue
             print(f"    이긴 비율 {v['win_rate']}% · 평균 {v['avg_return']:+.1f}%"
                   f" · 가운데값 {v['median_return']:+.1f}%")
+            # 같은 종목이 며칠씩 걸려 있어 픽 단위로 세면 같은 베팅이 반복
+            # 계산된다. 날짜 단위 승률이 크게 낮으면 위 숫자를 그대로
+            # 말하면 안 된다.
+            bd = v.get("by_date")
+            if bd:
+                print(f"    날짜별로 세면 {bd['days']}거래일 중 이긴 날"
+                      f" {bd['win_rate']}% · 평균 {bd['avg_return']:+.1f}%")
+            # 손절을 지킨 경우. 보유일과 '그동안의 지수'를 반드시 붙여 적는다.
+            # 이 둘 없이 평균만 말하면 실제보다 좋게 들린다.
+            r = v.get("rules")
+            if r:
+                held = f" · 평균 {r['avg_days']}일 만에 청산" if r.get("avg_days") else ""
+                print(f"    -7% 손절을 지켰다면 {r['win_rate']}% ·"
+                      f" 평균 {r['avg_return']:+.1f}%{held}")
+                bm = r.get("benchmark_matched")
+                if bm:
+                    print(f"      └ 그 기간 코스피는 {bm['avg_return']:+.1f}%"
+                          f" (같은 날수라 이 둘만 견줄 수 있습니다)")
+            b = v.get("benchmark")
+            if b:
+                print(f"    코스피를 {days} 들고 있었다면 {b['avg_return']:+.1f}%")
             shown = True
         if not shown:
             print(f"  {label}: 아직 데이터 없음")
