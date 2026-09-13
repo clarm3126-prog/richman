@@ -32,6 +32,15 @@ H = {"Content-Type": "application/json",
 
 
 def _parse(resp):
+    """SSE 응답에서 result 를 꺼낸다.
+
+    **인코딩을 직접 지정한다.** 브리지가 charset 을 안 붙여 보내면 requests
+    가 latin-1 로 읽어 한글 제목이 깨진 바이트가 되고, 그 줄은 JSON 으로
+    파싱되지 않는다. 그러면 응답이 멀쩡한데도 "브리지가 죽었다"로 보고된다.
+    실제로 그렇게 오진했다. 탭 제목이 영문인 포트만 통과해서 특정 포트만
+    죽은 것처럼 보였다.
+    """
+    resp.encoding = "utf-8"
     text = resp.text
     if "data:" not in text:
         return resp.json()
