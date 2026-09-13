@@ -60,58 +60,117 @@ def parse_change(cell):
     return abs(val)
 
 
+# ================================
+# 네이버 모바일 JSON API
+# ================================
+#
+# 2026년 9월, 네이버가 finance.naver.com의 HTML 시세표를 stock.naver.com
+# SPA로 옮겼다. 옛 주소는 301로 넘어가고 받아지는 문서에 <table>이 아예
+# 없다. 정규식이든 BeautifulSoup이든 파싱할 것이 남아 있지 않다.
+#
+# 같은 값을 모바일 JSON API가 그대로 준다. 화면을 긁는 대신 이쪽을 쓴다.
+# 표 구조가 바뀌어도 깨지지 않고, 숫자를 *Raw 필드로 받아 콤마를 풀 일도
+# 없다. common.py의 fetch_theme_members()가 이미 같은 API를 쓰고 있었다.
+#
+# 살아남은 옛 주소가 하나 있다. item/sise_day.naver(일별시세)는 그대로라
+# screener.py의 fetch_stock_history()는 건드리지 않았다.
+
+MOBILE_API = "https://m.stock.naver.com/api"
+MOBILE_HEADERS = {
+    "User-Agent": HEADERS["User-Agent"],
+    "Referer": "https://m.stock.naver.com/",
+    "Accept": "application/json",
+}
+
+# 한 번에 받을 수 있는 최대치. 200을 넣으면 JSON이 아닌 것이 돌아온다.
+PAGE_SIZE = 100
+
+
+def _mapi(path, params=None, timeout=12, retries=2):
+    """모바일 API 한 번 호출. 실패하면 None을 돌려준다.
+
+    429는 잠깐 쉬었다 다시 건다. 전 종목을 페이지로 훑으므로 몰아치면
+    막힌다. 그 밖의 오류는 호출한 쪽이 빈 값으로 처리하게 둔다.
+    """
+    url = f"{MOBILE_API}/{path.lstrip('/')}"
+    for attempt in range(retries + 1):
+        try:
+            r = requests.get(url, headers=MOBILE_HEADERS, params=params, timeout=timeout)
+            if r.status_code == 429:
+                time.sleep(1.5 * (attempt + 1))
+                continue
+            if r.status_code != 200:
+                return None
+            return r.json()
+        except Exception:
+            if attempt == retries:
+                return None
+            time.sleep(0.5)
+    return None
+
+
+def _api_int(raw, text=None):
+    """모바일 API의 정수. *Raw 필드가 있으면 그걸 쓰고, 없으면 콤마를 푼다.
+
+    응답에는 같은 값이 두 벌 들어 있다. closePrice는 "259,500" 같은
+    표시용 문자열이고 closePriceRaw는 259500이다. 사람이 읽을 일이
+    없으므로 Raw를 먼저 본다.
+    """
+    if isinstance(raw, (int, float)):
+        return int(raw)
+    if raw not in (None, ""):
+        return parse_int(str(raw))
+    return parse_int(text)
+
+
+def _api_float(value, default=0.0):
+    """등락률처럼 부호가 문자열에 들어 있는 값. %와 콤마를 떼고 읽는다."""
+    try:
+        return float(str(value).replace(",", "").replace("%", "").strip())
+    except (TypeError, ValueError):
+        return default
+
+
+def _fmt_bizdate(value):
+    """API의 20260911을 예전 화면 표기인 2026.09.11로 맞춘다.
+
+    이 값이 어디까지 흘러가는지 다 따라가기보다, 바꾸기 전과 같은 모양으로
+    내보내는 편이 안전하다.
+    """
+    s = str(value or "")
+    return f"{s[0:4]}.{s[4:6]}.{s[6:8]}" if len(s) == 8 and s.isdigit() else s
+
+
 def fetch_market(sosok):
-    """sosok=0: KOSPI, 1: KOSDAQ. 시가총액 페이지를 페이지별로 스크래핑."""
+    """sosok=0: KOSPI, 1: KOSDAQ. 전 종목 시세를 페이지로 훑는다."""
     market = "KOSPI" if sosok == 0 else "KOSDAQ"
     out = {}
     page = 1
-    empty_pages = 0
-    while page <= 50:  # KOSPI ~30, KOSDAQ ~40 페이지 (early-exit 가드 별도)
-        url = f"https://finance.naver.com/sise/sise_market_sum.naver?sosok={sosok}&page={page}"
-        try:
-            r = requests.get(url, headers=HEADERS, timeout=15)
-            r.encoding = "euc-kr"
-        except Exception as e:
-            print(f"  page {page} request failed: {e}")
+    # KOSPI 25페이지, KOSDAQ 19페이지면 끝난다. 가드는 넉넉히 둔다.
+    while page <= 60:
+        data = _mapi(f"stocks/marketValue/{market}",
+                     {"page": page, "pageSize": PAGE_SIZE})
+        rows = (data or {}).get("stocks") or []
+        if not rows:
             break
-
-        soup = BeautifulSoup(r.text, "html.parser")
-        rows = soup.select("table.type_2 tr")
-        found = 0
-        for row in rows:
-            cells = row.find_all("td")
-            if len(cells) < 11:
+        for s in rows:
+            code = str(s.get("itemCode") or "").strip().zfill(6)
+            if not code.isdigit():
                 continue
-            link = row.select_one("a.tltle")
-            if not link:
-                continue
-            name = link.get_text(strip=True)
-            m = re.search(r"code=(\d+)", link.get("href", ""))
-            if not m:
-                continue
-            code = m.group(1).zfill(6)
-            price = parse_int(cells[2].get_text())
-            change = parse_change(cells[4])
-            volume = parse_int(cells[9].get_text())
             out[code] = {
-                "name": name,
+                "name": (s.get("stockName") or "").strip(),
                 "market": market,
-                "price": price,
-                "change": change,
-                "volume": volume,
+                "price": _api_int(s.get("closePriceRaw"), s.get("closePrice")),
+                "change": _api_float(s.get("fluctuationsRatio")),
+                "volume": _api_int(s.get("accumulatedTradingVolumeRaw"),
+                                   s.get("accumulatedTradingVolume")),
             }
-            found += 1
-
-        if found == 0:
-            empty_pages += 1
-            if empty_pages >= 2:
-                break
-        else:
-            empty_pages = 0
+        if len(rows) < PAGE_SIZE:
+            break
         page += 1
-        time.sleep(0.15)
+        time.sleep(0.12)
 
-    print(f"  {market}: {len(out)} stocks ({page - 1} pages)")
+    print(f"  {market}: {len(out)} stocks ({page} pages)")
     return out
 
 
@@ -212,86 +271,59 @@ def fetch_index_history(code, days=252):
 
 
 def fetch_index(code):
-    """code='KOSPI' or 'KOSDAQ'. 지수 현재값과 등락률."""
-    url = f"https://finance.naver.com/sise/sise_index.naver?code={code}"
-    try:
-        r = requests.get(url, headers=HEADERS, timeout=15)
-        r.encoding = "euc-kr"
-        soup = BeautifulSoup(r.text, "html.parser")
-        value_el = soup.select_one("#now_value")
-        if not value_el:
-            return None
-        value_text = value_el.get_text(strip=True).replace(",", "")
-        try:
-            value = float(value_text)
-        except ValueError:
-            return None
-        change = 0.0
-        change_el = soup.select_one("#change_value_and_rate")
-        if change_el:
-            txt = change_el.get_text(strip=True)
-            m = re.search(r"([+-]?\d+\.\d+)\s*%", txt)
-            if m:
-                change = float(m.group(1))
-            html = str(change_el).lower()
-            if "ico_down" in html or "blue" in html:
-                change = -abs(change)
-            elif "ico_up" in html or "red" in html:
-                change = abs(change)
-        return {"value": value, "change": change}
-    except Exception as e:
-        print(f"  index {code} fetch failed: {e}")
+    """code='KOSPI' or 'KOSDAQ'. 지수 현재값과 등락률.
+
+    예전에는 #now_value와 #change_value_and_rate를 읽고, 부호가 글자에
+    없을 때 ico_up/ico_down 클래스로 방향을 알아냈다. API는 부호가 붙은
+    숫자를 바로 주므로 그 추측이 통째로 없어진다.
+    """
+    data = _mapi(f"index/{code}/basic")
+    if not data:
+        print(f"  index {code} fetch failed")
         return None
+    value = _api_float(data.get("closePrice"), None)
+    if value is None:
+        return None
+    return {"value": value, "change": _api_float(data.get("fluctuationsRatio"))}
+
+
+def _fetch_groups(kind, label):
+    """업종/테마 목록. 둘의 응답 모양이 같아서 한 함수로 쓴다.
+
+    예전에는 등락률의 부호를 red01/nv01 클래스로 알아내고, 상승·보합·하락
+    종목수는 td 순서를 세어 집었다. 표의 열이 하나 늘면 조용히 어긋나던
+    자리다. API는 riseCount/steadyCount/fallCount로 이름을 붙여 준다.
+    """
+    out = []
+    page = 1
+    while page <= 20:
+        data = _mapi(f"stocks/{kind}", {"page": page, "pageSize": PAGE_SIZE})
+        groups = (data or {}).get("groups") or []
+        if not groups:
+            break
+        for g in groups:
+            out.append({
+                "no": str(g.get("no") or ""),
+                "name": (g.get("name") or "").strip(),
+                "change": _api_float(g.get("changeRate")),
+                "total": int(g.get("totalCount") or 0),
+                "rise": int(g.get("riseCount") or 0),
+                "flat": int(g.get("steadyCount") or 0),
+                "fall": int(g.get("fallCount") or 0),
+            })
+        if len(groups) < PAGE_SIZE:
+            break
+        page += 1
+        time.sleep(0.12)
+
+    out.sort(key=lambda i: i["change"], reverse=True)
+    print(f"  Naver {label}: {len(out)}")
+    return out
 
 
 def fetch_naver_industries():
-    """네이버 금융 업종 리스트 (등락률·상승/하락 종목수 포함)."""
-    out = []
-    url = "https://finance.naver.com/sise/sise_group.naver?type=upjong"
-    try:
-        r = requests.get(url, headers=HEADERS, timeout=15)
-        r.encoding = "euc-kr"
-    except Exception as e:
-        print(f"  industries fetch failed: {e}")
-        return out
-    m = re.search(r'<table[^>]*type_1[^>]*>(.*?)</table>', r.text, re.S)
-    if not m:
-        return out
-    rows = re.findall(r'<tr[^>]*>(.*?)</tr>', m.group(1), re.S)
-    for row in rows:
-        nm = re.search(r'no=(\d+)[^>]*>([^<]+)</a>', row)
-        if not nm:
-            continue
-        pct = re.search(r'(red01|nv01)[^>]*>\s*([+\-]?\d+\.\d+)\s*%', row, re.S)
-        if pct:
-            cls, val = pct.groups()
-            change = float(val) if cls == "red01" else -abs(float(val))
-        else:
-            change = 0.0
-        text_tds = []
-        for td_m in re.finditer(r'<td[^>]*>(.*?)</td>', row, re.S):
-            text_tds.append(re.sub(r'<[^>]+>', ' ', td_m.group(1)).strip())
-        def n(i):
-            try:
-                return int(text_tds[i].replace(",", "").replace("+", "").replace("-", "").strip())
-            except (ValueError, IndexError):
-                return 0
-        total = n(2)
-        rise = n(3)
-        flat = n(4)
-        fall = n(5)
-        out.append({
-            "no": nm.group(1),
-            "name": nm.group(2).strip(),
-            "change": change,
-            "total": total,
-            "rise": rise,
-            "flat": flat,
-            "fall": fall,
-        })
-    out.sort(key=lambda i: i["change"], reverse=True)
-    print(f"  Naver industries: {len(out)}")
-    return out
+    """업종 목록 (등락률·상승/하락 종목수 포함)."""
+    return _fetch_groups("industry", "industries")
 
 
 def _enrich_with_stocks(items, kind, top_n=10):
@@ -540,32 +572,25 @@ def update_volume_data(stocks):
 
 
 def _fetch_stock_frgn(code):
-    """종목별 frgn.naver에서 최신 외국인/기관 순매매 주식수."""
-    url = f"https://finance.naver.com/item/frgn.naver?code={code}"
-    try:
-        r = requests.get(url, headers=HEADERS, timeout=8)
-        r.encoding = "euc-kr"
-        tables = re.findall(r'<table[^>]*class="[^"]*type2[^"]*"[^>]*>(.*?)</table>', r.text, re.S)
-        if len(tables) < 2:
-            return code, None
-        rows = re.findall(r'<tr[^>]*>(.*?)</tr>', tables[1], re.S)
-        for row in rows:
-            tds = re.findall(r'<td[^>]*>(.*?)</td>', row, re.S)
-            cleaned = [re.sub(r'<[^>]+>', ' ', td).strip() for td in tds]
-            cleaned = [re.sub(r'\s+', ' ', c) for c in cleaned if c.strip()]
-            if len(cleaned) < 7:
-                continue
-            if not re.match(r'\d{4}\.\d{2}\.\d{2}', cleaned[0]):
-                continue
-            try:
-                inst = int(cleaned[5].replace(",", "").replace("+", ""))
-                foreign = int(cleaned[6].replace(",", "").replace("+", ""))
-                return code, {"institution_net": inst, "foreign_net": foreign, "date": cleaned[0]}
-            except (ValueError, IndexError):
-                continue
+    """종목별 최신 외국인/기관 순매매 주식수.
+
+    예전에는 frgn.naver의 두 번째 표에서 td를 세어 5번째를 기관, 6번째를
+    외국인으로 읽었다. 열 순서에 기대는 코드라 표가 바뀌면 값이 서로
+    바뀌어도 알 길이 없었다. API는 이름이 붙어 있다.
+    """
+    rows = _mapi(f"stock/{code}/trend", {"pageSize": 2}, timeout=8, retries=1)
+    if not isinstance(rows, list) or not rows:
         return code, None
-    except Exception:
+    row = rows[0]
+    inst = row.get("organPureBuyQuant")
+    foreign = row.get("foreignerPureBuyQuant")
+    if inst is None or foreign is None:
         return code, None
+    return code, {
+        "institution_net": _api_int(None, inst),
+        "foreign_net": _api_int(None, foreign),
+        "date": _fmt_bizdate(row.get("bizdate")),
+    }
 
 
 def compute_investor_rankings(stocks, top_n_traded=80, top_n_per_list=15):
@@ -674,55 +699,8 @@ def fetch_watchlist_stock_history(days=7):
 
 
 def fetch_naver_themes():
-    """네이버 금융 테마 리스트 (등락률·상승/하락 종목수 포함)."""
-    out = []
-    seen_nos = set()
-    for page in range(1, 15):
-        url = f"https://finance.naver.com/sise/theme.naver?page={page}"
-        try:
-            r = requests.get(url, headers=HEADERS, timeout=15)
-            r.encoding = "euc-kr"
-        except Exception as e:
-            print(f"  themes page {page} failed: {e}")
-            break
-        m = re.search(r'<table[^>]*type_1\s+theme[^>]*>(.*?)</table>', r.text, re.S)
-        if not m:
-            break
-        rows = re.findall(r'<tr[^>]*>(.*?)</tr>', m.group(1), re.S)
-        found = 0
-        for row in rows:
-            nm = re.search(r'no=(\d+)[^>]*>([^<]+)</a>', row)
-            if not nm:
-                continue
-            theme_no = nm.group(1)
-            if theme_no in seen_nos:
-                continue
-            seen_nos.add(theme_no)
-            pct = re.search(r'col_type2.*?(red01|nv01)[^>]*>\s*([+\-]?\d+\.\d+)\s*%', row, re.S)
-            if pct:
-                cls, val = pct.groups()
-                change = float(val) if cls == "red01" else -abs(float(val))
-            else:
-                change = 0.0
-            nums = re.findall(r'col_type4[^>]*>\s*(\d+)\s*</td>', row)
-            rise = int(nums[0]) if len(nums) > 0 else 0
-            flat = int(nums[1]) if len(nums) > 1 else 0
-            fall = int(nums[2]) if len(nums) > 2 else 0
-            out.append({
-                "no": nm.group(1),
-                "name": nm.group(2).strip(),
-                "change": change,
-                "rise": rise,
-                "flat": flat,
-                "fall": fall,
-            })
-            found += 1
-        if found == 0:
-            break
-        time.sleep(0.15)
-    out.sort(key=lambda t: t["change"], reverse=True)
-    print(f"  Naver themes: {len(out)}")
-    return out
+    """테마 목록 (등락률·상승/하락 종목수 포함)."""
+    return _fetch_groups("theme", "themes")
 
 
 def fetch_52w_high_for_stock(code):

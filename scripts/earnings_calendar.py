@@ -25,7 +25,12 @@ import requests
 from bs4 import BeautifulSoup
 
 sys.path.insert(0, str(Path(__file__).parent))
-from common import load_dart_financials, load_json  # noqa: E402
+from common import (  # noqa: E402
+    load_dart_financials,
+    load_json,
+    supabase_get,
+    supabase_headers,
+)
 
 KST = pytz.timezone("Asia/Seoul")
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; EarningsCalendar/1.0)"}
@@ -285,33 +290,65 @@ def fetch_quarter_trend(stock_code, financials_cache):
     return out
 
 
-def collect_target_codes():
-    """알림 대상 종목 = watchlist + 미너비니 strict (8/8 통과만).
-    - 관심 종목: 사용자가 명시적으로 추가한 것
-    - strict: 8개 조건 모두 통과한 최강 종목만 (보통 0~10개)
-    노이즈 최소화. strong/momentum top 50은 제외 (너무 많아짐).
+def watchlist_codes_from_supabase():
+    """관심 종목 코드. 누가 담았는지는 가져오지 않는다.
+
+    종목 코드만 모아 하나의 집합으로 만든다. user_id를 받지 않으므로
+    "이 종목을 누가 보고 있나"는 여기서 알 수 없고, 로그에도 남지 않는다.
+    실적 공시 알림은 운영자 대화방으로만 가기 때문에 그 이상이 필요 없다.
+
+    환경변수가 없으면 빈 집합을 준다. 로컬에서 돌릴 때 키 없이도
+    나머지가 그대로 도는 편이 낫다.
     """
-    targets = set()
-    # 1. Watchlist
-    p = Path("data/watchlist.json")
-    if p.exists():
-        try:
-            data = load_json(p, {})
-            for item in data.get("watchlist", []):
-                code = str(item.get("code", "")).zfill(6)
-                if code:
-                    targets.add(code)
-        except Exception:
-            pass
-    # 2. Minervini strict only (8/8 통과)
+    url = os.environ.get("SUPABASE_URL", "").strip().rstrip("/")
+    key = os.environ.get("SUPABASE_SERVICE_KEY", "").strip()
+    if not (url and key):
+        print("  SUPABASE_URL/SERVICE_KEY 없음 - 관심 종목 건너뜀")
+        return set()
+    try:
+        rows = supabase_get(
+            url, supabase_headers(key), "watchlist",
+            {"select": "code", "limit": "5000"},
+        )
+    except Exception as e:
+        print(f"  관심 종목 조회 실패: {e}")
+        return set()
+    out = {
+        str(r.get("code") or "").strip().zfill(6)
+        for r in rows
+        if str(r.get("code") or "").strip()
+    }
+    print(f"  관심 종목 {len(out)}개")
+    return out
+
+
+def collect_target_codes():
+    """알림 대상 종목 = 관심 종목 + 미너비니 strict (8/8 통과만).
+
+    - 관심 종목: 사용자가 명시적으로 담은 것
+    - strict: 8개 조건을 모두 통과한 종목만 (보통 0~10개)
+
+    strong/momentum 상위 50은 넣지 않는다. 너무 많아져서 알림이 시끄럽다.
+
+    관심 종목은 예전에 data/watchlist.json에서 읽었다. 개인 매매 정보를
+    저장소에서 걷어내면서 그 파일을 지웠는데 이쪽 경로를 Supabase로
+    옮기지 않아, 남은 조건이 strict 하나뿐이 됐다. 그런데 strict는 8개를
+    전부 통과해야 해서 요즘 0개다. 대상이 0이면 공시를 다 받아놓고도
+    알림이 한 건도 나가지 않는다. 워크플로는 초록불이라 조용히 멈춰 있었다.
+    """
+    targets = watchlist_codes_from_supabase()
+
     p = Path("data/screener_results.json")
     if p.exists():
         try:
             data = load_json(p, {})
+            n = 0
             for r in (data.get("results") or []):
                 code = r.get("code")
                 if code and r.get("minervini_strict"):
                     targets.add(code)
+                    n += 1
+            print(f"  미너비니 strict {n}개")
         except Exception:
             pass
     return targets
