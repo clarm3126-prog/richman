@@ -45,7 +45,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          for f in data/screener_results.json data/dart_corp_codes.json data/dart_financials.json data/screener_alerted.json data/charts data/alert_log.json; do
+          for f in data/screener_results.json data/screener_conditions.json data/dart_corp_codes.json data/dart_financials.json data/screener_alerted.json data/charts data/alert_log.json; do
             git add "$f" 2>/dev/null || true
           done
           if git diff --cached --quiet; then
