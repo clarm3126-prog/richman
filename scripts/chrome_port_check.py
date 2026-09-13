@@ -82,14 +82,25 @@ def configured_port():
         spec = m.group(1) if m else ""
     except Exception:
         spec = ""
-    default = ""
+    # 파일이 "${CHROME_PORT:-12316}" 이면 환경변수가 이긴다.
+    # 그냥 "12317" 이면 환경변수를 무시하고 그 값이 쓰인다. 이 차이를
+    # 놓치면 "환경변수를 줬으니 괜찮다"고 잘못 판단한다. 실제로 그랬다.
     m = re.search(r":-(\d+)", spec)
     if m:
         default = m.group(1)
+        applied = env or default
+        overridable = True
     elif spec.isdigit():
         default = spec
+        applied = spec          # 하드코딩 — 환경변수는 무시된다
+        overridable = False
+    else:
+        default = ""
+        applied = env or ""
+        overridable = True
     return {"환경변수": env or None, "파일기본값": default or None,
-            "적용값": env or default or None, "파일표기": spec}
+            "적용값": applied or None, "파일표기": spec,
+            "환경변수우선": overridable}
 
 
 def main():
@@ -102,6 +113,8 @@ def main():
     print(f"  .mcp.json 표기 : {cfg['파일표기']}")
     print(f"  환경변수       : {cfg['환경변수'] or '(없음)'}")
     print(f"  적용될 값      : {cfg['적용값'] or '(없음)'}")
+    if not cfg["환경변수우선"]:
+        print("  ※ 파일에 포트가 하드코딩돼 있어 환경변수가 무시됩니다.")
 
     print("\n살아 있는 브리지")
     alive = {}
