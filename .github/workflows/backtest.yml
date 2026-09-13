@@ -39,11 +39,17 @@ jobs:
       - name: Run backtest
         run: python scripts/backtest.py
 
+      # 손절선별 표. backtest.py가 만든 픽을 그대로 쓰므로 반드시 그 뒤에
+      # 돌린다. 블로그와 카드가 이 숫자를 인용하는데, 손으로 돌리면 인용한
+      # 값이 언제 것인지 알 수 없게 된다.
+      - name: Run stop sensitivity
+        run: python scripts/stop_sensitivity.py
+
       - name: Commit and push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          for f in data/backtest_stats.json data/screener_results_history data/momentum_results_history data/ath_breakouts_history; do
+          for f in data/backtest_stats.json data/stop_sensitivity.json data/screener_results_history data/momentum_results_history data/ath_breakouts_history; do
             git add "$f" 2>/dev/null || true
           done
           if git diff --cached --quiet; then
