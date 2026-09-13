@@ -80,7 +80,9 @@ def compose_screener():
     items = []
     for r in picks:
         eps = (r.get("fundamentals") or {}).get("eps_growth_q_yoy")
-        note = f"EPS {eps:+.0f}%" if isinstance(eps, (int, float)) else f"{r.get('market', '')}"
+        # 화면은 "순이익 증가"로 쓴다. 본문에만 영어 약자가 남으면 화면과
+        # 어긋나고 rules.BANNED_TERMS 에도 걸린다.
+        note = f"순이익 {eps:+.0f}%" if isinstance(eps, (int, float)) else f"{r.get('market', '')}"
         items.append(
             {
                 "name": r.get("name") or r.get("code"),

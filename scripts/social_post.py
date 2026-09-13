@@ -30,7 +30,7 @@ import requests
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from social import card, compose, config, store  # noqa: E402
+from social import card, compose, config, rules, store  # noqa: E402
 from social.instagram_api import Instagram, InstagramError  # noqa: E402
 from social.notify import tell_owner  # noqa: E402
 from social.threads_api import Threads  # noqa: E402
@@ -265,6 +265,17 @@ def prepare(dry_run=False, only=None, force=False, auto=False, queue_only=False,
 
     plan["image_urls"] = [f"{config.PAGES_BASE}/{r}" for r in plan.get("image_rels") or []]
 
+    # 글쓰기 규칙 검사. 발행을 막지는 않는다 - 하루 한 건이 조용히 사라지는
+    # 것보다, 어긋난 채로 나가고 알림이 오는 편이 낫다.
+    #
+    # 수동 큐 글은 사람이 쓴 산문이라 줄 모양까지 본다. 자동 글은 종목 줄
+    # 길이를 사람이 줄일 수 없으므로 글자 수와 쓰면 안 되는 말만 본다.
+    threads_text = plan["texts"].get("threads")
+    if threads_text:
+        plan["warnings"] = rules.check(threads_text, prose=plan["source"] == "manual")
+        for w in plan["warnings"]:
+            print(f"  [규칙] {w}")
+
     if dry_run:
         for platform, text in plan["texts"].items():
             print(f"\n===== {platform} ({len(text)}자) =====\n{text}")
@@ -290,7 +301,7 @@ def wait_for_image(url, tries=20, delay=15):
     return False
 
 
-def announce(record, creds):
+def announce(record, creds, warnings=None):
     """발행 직후 운영자에게 알린다.
 
     쓰레드는 올리고 10분 안에 반응이 없으면 확산이 멈춘다. 워크플로가
@@ -331,6 +342,9 @@ def announce(record, creds):
     ]
     if links:
         lines += [""] + links
+    # 규칙에 걸린 채로 나갔으면 같이 알린다. 로그만 남기면 아무도 안 본다.
+    if warnings:
+        lines += ["", "글쓰기 규칙에 걸렸습니다"] + [f"- {w}" for w in warnings[:5]]
     tell_owner("\n".join(lines))
     print("발행 알림을 보냈습니다")
 
@@ -428,7 +442,7 @@ def publish():
                 )
 
     if record.get("threads_id") or record.get("ig_id"):
-        announce(record, creds)
+        announce(record, creds, plan.get("warnings"))
         state.setdefault("posts", []).append(record)
         state["posts"] = state["posts"][-60:]
         # 올라간 큐 글은 여기서 done으로 찍는다. 이 표시가 없으면

@@ -81,19 +81,37 @@ def wrap(text, limit=LINE_MAX):
     return "\n".join(out)
 
 
-def check(text):
-    """규칙 위반을 모아 돌려준다. 빈 목록이면 통과다."""
+def check(text, prose=True):
+    """규칙 위반을 모아 돌려준다. 빈 목록이면 통과다.
+
+    prose=False 면 줄 모양 규칙(줄 수, 한 줄 길이, 한 줄 평균)을 건너뛴다.
+
+    자동 생성 목록 글은 "1. HD현대마린솔루션 247,000원 (+7.6%)" 처럼 한 줄이
+    길 수밖에 없다. 종목 이름과 가격이 정하는 길이라 사람이 줄일 수 없는데,
+    거기에 산문 규칙을 들이대면 매일 같은 경고가 울리고 결국 아무도 안 본다.
+    경고는 고칠 수 있는 것만 울려야 읽힌다.
+
+    글자 수 상한과 쓰면 안 되는 말은 글의 형식과 무관하므로 항상 본다.
+    상한을 넘으면 쓰레드에서 잘려 나가고, 영어 약자는 화면 라벨과 어긋난다.
+    둘 다 자동 글에서도 그대로 사고다.
+    """
     problems = []
     lines = [l for l in text.split("\n") if l.strip()]
 
     if not lines:
         return ["본문이 비었습니다"]
+    if len(text) > TEXT_MAX:
+        problems.append(f"글자 수 초과 ({len(text)}자, 최대 {TEXT_MAX})")
+    if not prose:
+        for term in BANNED_TERMS:
+            if term in text:
+                problems.append(f"쓰면 안 되는 말: {term}")
+        return problems
+
     if len(lines) < LINES_MIN:
         problems.append(f"줄이 너무 적습니다 ({len(lines)}줄, 최소 {LINES_MIN})")
     if len(lines) > LINES_MAX:
         problems.append(f"줄이 너무 많습니다 ({len(lines)}줄, 최대 {LINES_MAX})")
-    if len(text) > TEXT_MAX:
-        problems.append(f"글자 수 초과 ({len(text)}자, 최대 {TEXT_MAX})")
 
     over = [l for l in lines if len(l) > LINE_MAX]
     if over:
