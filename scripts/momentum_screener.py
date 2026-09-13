@@ -35,7 +35,7 @@ from screener import (
     fetch_all_stock_history,
     sma, send_telegram,
     load_metadata, is_pump_or_warning, is_excluded_security, DEDUP_RESET_DAYS,
-    save_chart_data, log_alert,
+    save_chart_data, log_alert, bits,
 )
 
 
@@ -665,6 +665,49 @@ def notify_confluence(momentum_results):
         print(f"  ❌ confluence telegram failed: {info}")
 
 
+# 접어서 보낼 모멘텀 조건. 화면은 이 목록을 파일에서 읽어 되푼다.
+MOM_BOOL_KEYS = [
+    "ma200_cross_recent", "vcp_contracting", "tight_action",
+    "volume_surge_2x", "volume_surge_15x", "pivot_breakout",
+    "higher_lows", "liquidity_ok", "theme_rising", "pocket_pivot",
+    "eps_accelerating",
+]
+# 칩에 숫자로 찍히는 것들 (예: "거래량 2.4x", "MA200 3일전 돌파")
+MOM_NUM_KEYS = [
+    "ma200_cross_days_ago", "vol_ratio", "theme_weight", "eps_growth_recent",
+]
+
+
+def save_momentum_conditions(results):
+    """평가한 전 종목의 모멘텀 조건. 접는 이유는 screener.bits()에."""
+    out = {}
+    for r in results:
+        code = r.get("code")
+        if not code:
+            continue
+        rec = {
+            "n": r.get("name"),
+            "b": bits(r, MOM_BOOL_KEYS),
+            "num": [r.get(k) for k in MOM_NUM_KEYS],
+            "sc": r.get("total_score"),
+        }
+        if r.get("momentum_strong"):
+            rec["strong"] = 1
+        if r.get("pre_breakout"):
+            rec["pre"] = 1
+        out[code] = rec
+    path = Path("data/momentum_conditions.json")
+    path.write_text(json.dumps({
+        "updated": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
+        "trading_day": datetime.now(KST).strftime("%Y%m%d"),
+        "bool_keys": MOM_BOOL_KEYS,
+        "num_keys": MOM_NUM_KEYS,
+        "stocks": out,
+    }, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    kb = path.stat().st_size / 1024
+    print(f"  saved momentum_conditions.json ({len(out)} stocks, {kb:.0f}KB)")
+
+
 # ================================
 # 메인
 # ================================
@@ -810,6 +853,10 @@ def main():
 
     # 9.5 차트 데이터 저장 (252일 OHLC) — 종목 모달용
     save_chart_data(to_save, histories)
+
+    # 9.6 조건 요약 — 관심 종목은 점수 순위와 무관하므로 전 종목을 담는다.
+    # screener.py의 save_conditions()와 같은 이유다. 자세한 사정은 거기에.
+    save_momentum_conditions(results)
 
     # 10. Telegram 알림
     print("\n[Telegram] 신규 모멘텀 종목 알림...")

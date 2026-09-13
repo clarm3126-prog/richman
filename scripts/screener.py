@@ -915,6 +915,89 @@ def save_chart_data(results, histories):
     print(f"  saved {saved} chart files to data/charts/")
 
 
+def bits(d, keys):
+    """불린 여러 개를 "10110" 한 줄로 접는다.
+
+    조건 이름을 그대로 쓰면 "within_25pct_of_52w_high" 같은 긴 키가 종목마다
+    되풀이돼서, 754종목이면 파일이 600KB를 넘는다. 값은 참/거짓 한 자리뿐인데
+    이름이 자리를 다 먹는 꼴이다. 접으면 8분의 1로 줄어든다.
+
+    푸는 쪽이 순서를 알아야 하므로, 키 목록을 파일 안에 같이 적어 보낸다.
+    화면에 순서를 따로 적어두면 조건을 하나 더할 때 한쪽만 고치게 된다.
+    """
+    return "".join("1" if (d or {}).get(k) else "0" for k in keys)
+
+
+# 접어서 보낼 조건들. 화면은 이 목록을 파일에서 읽어 되푼다.
+TT_BOOL_KEYS = [
+    "price_above_ma50", "price_above_ma150", "price_above_ma200",
+    "ma50_above_ma150", "ma150_above_ma200", "ma200_uptrend",
+    "within_25pct_of_52w_high", "above_25pct_from_52w_low", "rs_rating_70plus",
+]
+SETUP_BOOL_KEYS = [
+    "5day_tightness_10pct", "5day_open_close_5pct",
+    "trade_value_7B_1x", "impulse_25pct_20d",
+]
+FUND_BOOL_KEYS = [
+    "eps_growth_25pct", "eps_accelerating", "sales_growth_15pct",
+    "op_margin_q_10pct", "op_margin_annual_10pct", "op_margin_3y_avg_20pct",
+]
+# 칩에 숫자로 찍히는 것들 (예: "EPS YoY 1372%")
+FUND_NUM_KEYS = [
+    "eps_growth_q_yoy", "sales_growth_q_yoy",
+    "op_margin_q", "op_margin_annual", "op_margin_3y_avg",
+]
+
+
+def save_conditions(results):
+    """평가한 전 종목의 조건 통과 여부를 따로 저장한다.
+
+    screener_results.json에는 점수 상위 200개만 담는다. 그래서 관심 종목이
+    201등 밖이면 화면이 "평가 대상에 없다"고 말하는데, 사실은 평가했고
+    조건도 다 따져놨다. 결과 파일을 작게 두려고 잘라낸 것뿐이다.
+
+    관심 종목은 점수와 무관하게 고른 것이라 대부분 200등 밖이다. 관심 탭에서
+    종목을 눌렀을 때 조건을 보여주려면 전 종목이 있어야 한다.
+    """
+    out = {}
+    for r in results:
+        code = r.get("code")
+        if not code:
+            continue
+        tt = r.get("trend_template") or {}
+        fund = r.get("fundamentals") or {}
+        rec = {
+            "n": r.get("name"),
+            "tt": bits(tt, TT_BOOL_KEYS),
+            "su": bits(r.get("setup"), SETUP_BOOL_KEYS),
+            "fb": bits(fund, FUND_BOOL_KEYS),
+            "fn": [fund.get(k) for k in FUND_NUM_KEYS],
+            "sc": r.get("total_score"),
+            "ttn": r.get("tt_passed_count"),
+            "fdn": r.get("fund_passed_count"),
+        }
+        if tt.get("_rs_value") is not None:
+            rec["rs"] = tt["_rs_value"]
+        # 통과한 것만 적는다. 대부분 통과하지 못하므로 이 편이 작다.
+        if r.get("minervini_strict"):
+            rec["strict"] = 1
+        if r.get("minervini_strong"):
+            rec["strong"] = 1
+        out[code] = rec
+    path = Path("data/screener_conditions.json")
+    path.write_text(json.dumps({
+        "updated": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
+        "trading_day": datetime.now(KST).strftime("%Y%m%d"),
+        "tt_keys": TT_BOOL_KEYS,
+        "setup_keys": SETUP_BOOL_KEYS,
+        "fund_bool_keys": FUND_BOOL_KEYS,
+        "fund_num_keys": FUND_NUM_KEYS,
+        "stocks": out,
+    }, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    kb = path.stat().st_size / 1024
+    print(f"  saved screener_conditions.json ({len(out)} stocks, {kb:.0f}KB)")
+
+
 # ================================
 # 메인
 # ================================
@@ -1048,6 +1131,9 @@ def main():
 
     # 8.5 차트 데이터 저장 (252일 OHLC) — 종목 모달에서 사용
     save_chart_data(to_save, histories)
+
+    # 8.6 조건 요약 — 관심 종목은 점수 순위와 무관하므로 전 종목을 담는다
+    save_conditions(results)
 
     # 9. Telegram 알림 (신규 strict/strong만)
     print("\n[Telegram] 신규 미너비니 종목 알림...")
