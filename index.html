@@ -846,10 +846,10 @@
     display: flex; gap: 10px; align-items: flex-start;
     margin-bottom: 10px;
   }
-  .mv-rank { font-size: 13px; font-weight: 700; color: #6b7280; min-width: 28px; }
+  .mv-rank { font-size: 13px; font-weight: 700; color: #4b5563; min-width: 28px; }
   .mv-name-block { flex: 1; min-width: 0; }
   .mv-name { font-size: 14px; font-weight: 700; }
-  .mv-sub { font-size: 11px; color: #6b7280; margin-top: 2px; }
+  .mv-sub { font-size: 12px; color: #4b5563; margin-top: 2px; }
   .mv-sub .up { color: #dc2626; font-weight: 600; }
   .mv-sub .down { color: #2563eb; font-weight: 600; }
   .mv-score { text-align: right; }
@@ -858,22 +858,22 @@
     color: #059669;
     font-variant-numeric: tabular-nums;
   }
-  .mv-score-detail { font-size:11px; color: #6b7280; margin-top: 2px; }
+  .mv-score-detail { font-size:13px; font-weight: 600; color: #4b5563; margin-top: 3px; }
   .mv-section-label {
-    font-size:11px; font-weight: 700; color: #6b7280;
+    font-size:12px; font-weight: 700; color: #4b5563;
     margin: 8px 0 4px;
     text-transform: uppercase;
     letter-spacing: 0.04em;
   }
   .mv-chips { display: flex; flex-wrap: wrap; gap: 4px; }
   .mv-chip {
-    font-size:11px; padding: 3px 7px; border-radius: 10px;
-    font-weight: 600;
+    font-size:12px; padding: 3px 8px; border-radius: 10px;
+    font-weight: 700;
     border: 1px solid transparent;
     white-space: nowrap;
   }
   .mv-chip.pass { background: #d1fae5; color: #065f46; border-color: #6ee7b7; }
-  .mv-chip.fail { background: #f3f4f6; color: #9ca3af; border-color: #e5e7eb; }
+  .mv-chip.fail { background: #f3f4f6; color: #4b5563; border-color: #d1d5db; }
   .mv-ribbon {
     display: inline-block;
     margin-left: 6px;
@@ -1003,12 +1003,15 @@
   .theme-dark .cal-month-input { background: #2a2f3a; border-color: #3a414f; color: #e5e7eb; }
   .theme-dark .mv-card { background: #1a1d23; border-color: #2a2f3a; }
   .theme-dark .mv-card:active { background: #2a2f3a; }
-  .theme-dark .mv-rank, .mv-sub, .mv-section-label, .mv-score-detail { color: #9ca3af; }
+  .theme-dark .mv-rank,
+  .theme-dark .mv-sub,
+  .theme-dark .mv-section-label,
+  .theme-dark .mv-score-detail { color: #9ca3af; }
   .theme-dark .mv-sub .up { color: #fca5a5; }
   .theme-dark .mv-sub .down { color: #93c5fd; }
   .theme-dark .mv-score-total { color: #6ee7b7; }
   .theme-dark .mv-chip.pass { background: #064e3b; color: #6ee7b7; border-color: #065f46; }
-  .theme-dark .mv-chip.fail { background: #2a2f3a; color: #6b7280; border-color: #3a414f; }
+  .theme-dark .mv-chip.fail { background: #2a2f3a; color: #9ca3af; border-color: #3a414f; }
   .theme-dark .mv-ribbon.strict { background: #78350f; color: #fde68a; }
   .theme-dark .mv-ribbon.strong { background: #1e3a8a; color: #bfdbfe; }
   .theme-dark .update-badge { background: #2a2f3a; border-color: #3a414f; color: #9ca3af; }
