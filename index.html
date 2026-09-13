@@ -3852,12 +3852,12 @@ function renderMinerviniView() {
     else filtered = all;
     let html = '';
     html += `<div class="strength-section">
-      <div class="strength-title">🎯 미너비니 SEPA + Trend Template</div>
+      <div class="strength-title">🎯 미너비니 추세 조건</div>
       <div class="strength-meta">기준일 ${data.trading_day || '—'} · 평가 ${data.total_evaluated || 0}개 · 엄격 ${data.minervini_strict_count || 0}개 · 우량 ${data.minervini_strong_count || 0}개</div>
       <div style="margin-top:8px">${dateSelectorHTML('screener', null)}</div>
       <div class="market-filter" style="margin-top:8px">
         <button class="${filter==='strict'?'active':''}" onclick="setMinerviniFilter('strict')">엄격(8/8)</button>
-        <button class="${filter==='strong'?'active':''}" onclick="setMinerviniFilter('strong')">우량(6+/8 + 펀더멘털)</button>
+        <button class="${filter==='strong'?'active':''}" onclick="setMinerviniFilter('strong')">우량(6+/8 + 실적)</button>
         <button class="${filter==='all'?'active':''}" onclick="setMinerviniFilter('all')">전체</button>
       </div>
     </div>`;
@@ -6056,7 +6056,7 @@ function renderUsMinervini(mv) {
     <div style="font-size:11px;color:var(--fg-dim)">엄격 ${allStrict.length}개 · 우량 ${allStrong.length}개 (평가 ${mv.total_evaluated || all.length})</div>
     <div class="market-filter" style="margin-top:8px">
       <button class="${filter==='strict'?'active':''}" onclick="setUsMvFilter('strict')">엄격(8/8)</button>
-      <button class="${filter==='strong'?'active':''}" onclick="setUsMvFilter('strong')">우량(6+/8 + 펀더멘털)</button>
+      <button class="${filter==='strong'?'active':''}" onclick="setUsMvFilter('strong')">우량(6+/8 + 실적)</button>
       <button class="${filter==='all'?'active':''}" onclick="setUsMvFilter('all')">전체</button>
     </div></div>`;
   if (!filtered.length) return h + `<div class="strength-section"><div class="strength-loading">조건에 맞는 종목이 없습니다.</div></div>`;
@@ -6721,7 +6721,7 @@ function renderForecastBox(data) {
 
   let html = `<div class="strength-section" style="border-left:4px solid var(--accent-purple);background:var(--bg-card-tint-purple)">
     <div class="strength-title">🔮 다음 주 강세 예상 테마 ${trustBadge}</div>
-    <div class="strength-meta">기준일 ${data.trading_day} · 모멘텀+자금흐름+펀더멘털 결합 · ${data.history_days_available}일 데이터 기반</div>`;
+    <div class="strength-meta">기준일 ${data.trading_day} · 모멘텀+자금흐름+실적 결합 · ${data.history_days_available}일 데이터 기반</div>`;
   // top 10
   const top = data.top_themes.slice(0, 10);
   html += `<div style="margin-top:8px">`;
