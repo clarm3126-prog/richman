@@ -4105,14 +4105,14 @@ function renderMinerviniCardHTML(r, idx, strictRankMap, strongRankMap, allStrict
         </div>
         <div class="mv-score">
           <div class="mv-score-total">${r.total_score ?? 0}</div>
-          <div class="mv-score-detail">TT ${r.tt_score ?? '—'}/40 · S ${r.setup_score ?? '—'}/20 · F ${r.fund_score ?? '—'}/40</div>
+          <div class="mv-score-detail">추세 ${r.tt_score ?? '—'}/40 · 살자리 ${r.setup_score ?? '—'}/20 · 실적 ${r.fund_score ?? '—'}/40</div>
         </div>
       </div>
-      <div class="mv-section-label">Trend Template (${r.tt_passed_count ?? '—'}/8)</div>
+      <div class="mv-section-label">추세 조건 (${r.tt_passed_count ?? '—'}/8)</div>
       <div class="mv-chips">${ttIcons}</div>
-      <div class="mv-section-label">Fundamentals (${r.fund_passed_count ?? '—'}/3 핵심)</div>
+      <div class="mv-section-label">실적 조건 (${r.fund_passed_count ?? '—'}/3 핵심)</div>
       <div class="mv-chips">${fundIcons}</div>
-      <div class="mv-section-label">Setup / Liquidity</div>
+      <div class="mv-section-label">살 자리 조건</div>
       <div class="mv-chips">${setupIcons}</div>
     </div>`;
 }
@@ -4332,14 +4332,14 @@ function renderMomentumCardHTML(r, idx, momStrongRankMap, preRankMap, allMomStro
         </div>
         <div class="mv-score">
           <div class="mv-score-total">${r.total_score ?? 0}</div>
-          <div class="mv-score-detail">기술 ${r.technical_score ?? '—'}/60 · 자금 ${r.flow_score ?? '—'}/20 · 펀 ${r.fund_score ?? '—'}/20</div>
+          <div class="mv-score-detail">기술 ${r.technical_score ?? '—'}/60 · 자금 ${r.flow_score ?? '—'}/20 · 실적 ${r.fund_score ?? '—'}/20</div>
         </div>
       </div>
       <div class="mv-section-label">기술 신호</div>
       <div class="mv-chips">${techIcons}</div>
       <div class="mv-section-label">자금흐름</div>
       <div class="mv-chips">${flowIcons}</div>
-      <div class="mv-section-label">펀더멘털</div>
+      <div class="mv-section-label">실적</div>
       <div class="mv-chips">${fundIcons}</div>
     </div>`;
 }
