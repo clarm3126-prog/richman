@@ -1,0 +1,123 @@
+#!/usr/bin/env python3
+"""종목노트 글쓰기 규칙 — 재볼 수 있는 것만 규칙으로 둔다.
+
+숫자는 쓰레드에서 실제로 재서 나왔다. 좋아요가 많은 글 여러 편과 팔로워가
+많은 계정 넷(12만·5.3만·1만·524)의 글을 훑어 줄 길이를 세어 본 값이다.
+
+  장투대장 (12만)    한 줄 9~15자
+  더양봉맨 (5.3만)   한 줄 13~14자
+  프로브   (1만)     한 줄 21~24자
+
+팔로워가 많을수록 짧았다. 길이 자체가 반응을 만든다기보다, 짧게 끊어야
+휴대폰에서 한 줄이 한 줄로 보이기 때문으로 읽힌다. 40~70대가 보는 글이라
+이 효과가 더 크다.
+
+**규칙은 검사할 수 있는 것만 넣는다.** "첫 줄이 후킹이어야 한다" 같은 건
+사람이 판단할 몫이라 여기 두지 않는다. 대신 check()가 잡아내는 것들은
+전부 기계가 셀 수 있는 항목이다.
+"""
+import re
+
+# 한 줄 길이. 평균은 권고, 최장은 상한이다.
+LINE_AVG_TARGET = 15
+LINE_MAX = 25
+
+# 글 전체 길이. 쓰레드 본문 상한이 500자다. 여유를 두고 자른다.
+TEXT_MAX = 480
+LINES_MIN, LINES_MAX = 5, 20
+
+# 본문에 쓰면 안 되는 것들.
+#
+# 종목 이름을 본문에 쓰면 추천으로 읽힌다. 사진에 이름이 보이는 것과
+# 글에서 짚는 것은 받아들이는 쪽에서 전혀 다르다.
+#
+# 영어 약자는 화면에서 이미 걷어냈다. 글에만 남으면 화면과 어긋난다.
+BANNED_TERMS = [
+    "MA50", "MA150", "MA200", "MA21", "RS70", "52w",
+    "EPS", "OPM", "VCP", "Pivot", "Higher Lows",
+    "strict", "strong",
+    "추천드립니다", "매수하세요", "사세요", "지금이 기회",
+    "확실합니다", "보장", "수익률 보장",
+]
+
+# 글 끝에 붙이는 유도 문구. 본문에 링크를 넣지 않는다.
+#
+# 쓰레드는 밖으로 내보내는 링크를 반기지 않는다. 조사한 계정 넷 모두
+# 본문에 링크 대신 댓글을 유도했다. 이미 쓰던 방식이라 그대로 둔다.
+CTA = "댓글에 '노트'라고 남겨주세요.\n링크 디엠으로 보내드릴게요."
+
+# 면책. 조사한 계정은 소개란에 박아두고 본문에서는 뺀다. 우리는 글마다
+# 숫자를 들고 오므로 본문에도 남긴다.
+DISCLAIMER = "종목 추천이 아닙니다.\n조건에 걸렸는지만 계산합니다."
+
+
+def wrap(text, limit=LINE_MAX):
+    """긴 줄을 뜻이 끊기는 자리에서 나눈다.
+
+    글자 수만 보고 자르면 조사나 숫자 가운데가 갈린다. 문장부호 → 조사 →
+    공백 순으로 자를 자리를 찾고, 어디서도 못 찾으면 그냥 둔다. 억지로
+    자르느니 긴 줄 하나를 남기고 check()가 잡게 하는 편이 낫다.
+    """
+    out = []
+    for line in text.split("\n"):
+        line = line.rstrip()
+        while len(line) > limit:
+            # 상한 안에서 자를 수 있는 가장 뒤쪽 자리를 고른다. 상한을 넘는
+            # 자리를 고르면 자르고도 여전히 긴 줄이 남는다.
+            cut = 0
+            for pat in (r"[.!?·]\s", r"(?:니다|어요|세요|고요|구요|는데|지만|라서|으로|에서)\s", r"\s"):
+                for m in re.finditer(pat, line):
+                    if m.end() <= limit:
+                        cut = max(cut, m.end())
+                if cut:
+                    break  # 더 센 기준에서 찾았으면 약한 기준은 보지 않는다
+            if not cut:
+                # 상한 안에 자를 자리가 없다. 억지로 자르지 않고 남긴다.
+                # check()가 잡아 주므로 사람이 고쳐 쓰면 된다.
+                break
+            out.append(line[:cut].rstrip())
+            line = line[cut:].lstrip()
+        out.append(line)
+    return "\n".join(out)
+
+
+def check(text):
+    """규칙 위반을 모아 돌려준다. 빈 목록이면 통과다."""
+    problems = []
+    lines = [l for l in text.split("\n") if l.strip()]
+
+    if not lines:
+        return ["본문이 비었습니다"]
+    if len(lines) < LINES_MIN:
+        problems.append(f"줄이 너무 적습니다 ({len(lines)}줄, 최소 {LINES_MIN})")
+    if len(lines) > LINES_MAX:
+        problems.append(f"줄이 너무 많습니다 ({len(lines)}줄, 최대 {LINES_MAX})")
+    if len(text) > TEXT_MAX:
+        problems.append(f"글자 수 초과 ({len(text)}자, 최대 {TEXT_MAX})")
+
+    over = [l for l in lines if len(l) > LINE_MAX]
+    if over:
+        problems.append(f"{LINE_MAX}자 넘는 줄 {len(over)}개 (가장 긴 줄 {max(len(l) for l in over)}자)")
+
+    avg = sum(len(l) for l in lines) / len(lines)
+    if avg > LINE_AVG_TARGET + 5:
+        problems.append(f"한 줄 평균이 깁니다 ({avg:.0f}자, 목표 {LINE_AVG_TARGET}자)")
+
+    for term in BANNED_TERMS:
+        if term in text:
+            problems.append(f"쓰면 안 되는 말: {term}")
+
+    return problems
+
+
+def stats(text):
+    lines = [l for l in text.split("\n") if l.strip()]
+    if not lines:
+        return {}
+    lens = [len(l) for l in lines]
+    return {
+        "줄": len(lines),
+        "한줄평균": round(sum(lens) / len(lens)),
+        "최장": max(lens),
+        "글자수": len(text),
+    }
