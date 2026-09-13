@@ -29,7 +29,7 @@ from social import card  # noqa: E402
 SRC_DIR = card.ROOT / "assets" / "screenshots"
 
 HANDLE = "종목노트"
-TAGLINE = "· 결제 화면이 없는 종목 스크리너"
+TAGLINE = "· 매일 조건에 걸린 종목만 · 결제 화면이 없습니다"
 
 # 잘라낼 빈 구간을 고를 때 쓰는 값.
 # 기준 열과 색이 이만큼 안에서 같으면 '빈 열'로 본다. JPEG 압축 때문에
