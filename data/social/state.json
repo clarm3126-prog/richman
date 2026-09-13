@@ -78,7 +78,19 @@
    ],
    "kind": "momentum",
    "threads_id": "17984950947073082"
+  },
+  {
+   "date": "2026-09-13",
+   "ig_id": "18120485992926398",
+   "images": [
+    "assets/cards/telegram-guide.jpg",
+    "assets/cards/about.jpg"
+   ],
+   "kind": "guide",
+   "threads_id": "18078029951401231"
   }
  ],
- "queue_done": []
+ "queue_done": [
+  "c6323a1e1df7"
+ ]
 }
