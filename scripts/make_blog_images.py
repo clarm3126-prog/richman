@@ -5,7 +5,7 @@
 늘려 쓰면 글자가 뭉개지거나 잘리므로 자리마다 따로 그린다.
 
   타이틀      966x300   PC 블로그 홈 맨 위 띠
-  모바일커버  1280x720  휴대폰에서 블로그 들어가면 처음 보이는 그림
+  앱 커버     1200x1200 블로그 앱에서 처음 보이는 그림 (글자 없음)
   프로필      이미 assets/avatar.png 에 있다 (make_avatar.py)
 
 **타이틀은 오른쪽 400px 가 비어야 한다.** 네이버가 그 자리에 블로그
@@ -92,35 +92,28 @@ def title_image():
 
 
 def cover_image():
-    """휴대폰에서 블로그 들어가면 처음 보이는 그림. 1280x720.
+    """블로그 앱 커버. 1200x1200.
 
-    휴대폰은 위아래가 잘리는 일이 잦아 글자를 가운데에 모은다.
+    **글자를 넣지 않는다.** 앱이 커버 위에 블로그명·소개·방문수·프로필을
+    직접 얹는다. 여기에 '종목노트'를 또 그리면 같은 글자가 두 번 나오고
+    서로 겹친다. 실제로 그렇게 나왔다.
+
+    바탕을 주황으로 둔다. 앱이 커버 위에 흰 글자를 얹고 어두운 막을
+    씌우는데, 크림 바탕에서는 그 흰 글자가 묻힌다. 주황이면 막이 씌워져도
+    흰 글자가 또렷하다.
+
+    표식은 위쪽에만 둔다. 아래 절반은 앱이 글자와 버튼으로 채우는 자리라
+    비워야 한다.
+
+    정사각으로 만드는 이유는 기기마다 잘리는 비율이 달라서다. 가로로 길게
+    만들면 좁은 화면에서 좌우가 잘려 표식이 날아간다. 정사각에 여백을
+    넉넉히 두면 어느 쪽으로 잘려도 표식이 남는다.
     """
-    W, H = 1280, 720
-    img = Image.new("RGB", (W, H), card.P_BG)
+    S = 1200
+    img = Image.new("RGB", (S, S), card.ACCENT)
     d = ImageDraw.Draw(img)
-
-    d.rectangle([0, 0, W, 12], fill=card.P_ACCENT)
-
-    f_eyebrow = card._font(True, 34)
-    f_brand = card._font(True, 132)
-    f_tag = card._font(False, 44)
-    f_foot = card._font(False, 28)
-
-    def center(text, font, y, fill):
-        w = d.textlength(text, font=font)
-        d.text(((W - w) / 2, y), text, font=font, fill=fill)
-
-    _mark(d, W // 2, 188, 92, card.P_ACCENT)
-
-    y = 268
-    center(EYEBROW, f_eyebrow, y, card.P_ACCENT)
-    y += 62
-    center(BRAND, f_brand, y, card.P_FG)
-    y += 172
-    center(TAGLINE, f_tag, y, card.P_DIM)
-
-    center(FOOTER, f_foot, H - 78, card.P_DIM)
+    # 위에서 30% 지점. 아래는 앱 글자 자리로 비워 둔다.
+    _mark(d, S // 2, int(S * 0.30), 215, (255, 255, 255))
     return img
 
 
