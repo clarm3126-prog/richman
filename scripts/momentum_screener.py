@@ -745,7 +745,7 @@ def main():
         if tv < 3e9:  # 30억 미만 거래대금 제외
             continue
         # ETF/ETN/SPAC/우선주/채권 제외
-        excluded, reason = is_excluded_security(s.get("name", ""), code)
+        excluded, reason = is_excluded_security(s.get("name", ""), code, s.get("kind", ""))
         if excluded:
             excluded_counts[reason] = excluded_counts.get(reason, 0) + 1
             continue

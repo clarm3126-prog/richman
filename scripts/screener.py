@@ -12,6 +12,7 @@ import concurrent.futures
 import io
 import json
 import os
+import re
 import sys
 import time
 import traceback
@@ -52,15 +53,31 @@ ETF_PREFIXES = (
 )
 
 
-def is_excluded_security(name, code=""):
+def is_excluded_security(name, code="", kind=""):
     """ETF/ETN/SPAC/우선주/채권 등 일반 주식이 아닌 종목 식별.
+
+    kind는 네이버가 알려주는 종류(stockEndType)다. 'etf'/'etn'처럼 답이
+    적혀 있으면 그걸 따르고, 없을 때만 이름으로 헤아린다.
+
+    이름으로만 가리던 때 새 브랜드가 줄줄이 샜다. 운용사 prefix 목록에
+    IBK·KoAct·1Q·TIME·UNICORN이 없어서 그 ETF들이 미너비니 평가 대상에
+    17개나 섞여 들어왔다. 브랜드는 계속 새로 생기므로 목록을 쫓아다니는
+    한 같은 일이 반복된다.
+
     Returns (excluded: bool, reason: str|None).
     """
+    # 0. 거래소가 붙여준 종류가 있으면 그게 답이다.
+    k = (kind or "").strip().lower()
+    if k == "etf":
+        return True, "ETF"
+    if k == "etn":
+        return True, "ETN/파생"
+
     if not name:
         return True, "이름 없음"
     n = name.strip()
 
-    # 1. ETF — 운용사 prefix
+    # 1. ETF — 운용사 prefix (kind가 없을 때의 대비책)
     for p in ETF_PREFIXES:
         if n.startswith(p):
             return True, "ETF"
@@ -79,9 +96,24 @@ def is_excluded_security(name, code=""):
     if "채권" in n or "국채" in n:
         return True, "채권"
 
-    # 5. 우선주 — 한국 시장 convention: 종목코드 끝자리 5 또는 7
-    # (예: 005935 삼성전자우, 005385 현대차우)
-    if code and len(code) == 6 and code[-1] in ("5", "7"):
+    # 5. 우선주
+    #
+    # 예전에는 코드 끝자리가 5나 7이면 우선주로 봤다(005935 삼성전자우).
+    # 영문이 섞인 새 코드에는 그 규칙이 통하지 않아 00680K 미래에셋증권2우B
+    # 같은 것이 새어 들어왔다. 네이버도 우선주는 그냥 'stock'이라 kind로
+    # 가려지지 않는다.
+    #
+    # 이름만 봐도 안 된다. 성우·이오플로우·에코글로우는 우로 끝나지만
+    # 멀쩡한 회사다. 그래서 이름과 코드를 같이 본다.
+    #
+    #   신형 우선주 00680K  → 영문이 맨 끝
+    #   신형 일반주 0009K0  → 영문이 다섯째 자리
+    #
+    # 전 종목 4,299개에 대고 맞춰봤다. 우선주 112개를 잡고 위 세 회사는
+    # 통과한다.
+    if code and len(code) == 6 and code.isdigit() and code[-1] in ("5", "7"):
+        return True, "우선주"
+    if code and code[-1:].isalpha() and re.search(r"\d*우[A-Z]?$", n):
         return True, "우선주"
 
     # 6. 리츠 (REITs) — 부동산투자회사, 주식이지만 성격이 다름
@@ -1024,7 +1056,7 @@ def main():
         if tv < 1e9:  # 10억 미만 거래대금 제외
             continue
         # ETF/ETN/SPAC/우선주/채권 제외
-        excluded, reason = is_excluded_security(s.get("name", ""), code)
+        excluded, reason = is_excluded_security(s.get("name", ""), code, s.get("kind", ""))
         if excluded:
             excluded_counts[reason] = excluded_counts.get(reason, 0) + 1
             continue

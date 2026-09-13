@@ -185,6 +185,9 @@ def fetch_market(sosok):
                 "change": _api_float(s.get("fluctuationsRatio")),
                 "volume": _api_int(s.get("accumulatedTradingVolumeRaw"),
                                    s.get("accumulatedTradingVolume")),
+                # 거래소가 붙여준 종류(stock/etf/etn). 스크리너가 ETF를
+                # 가릴 때 이름으로 헤아리지 않아도 되게 같이 싣는다.
+                "kind": (s.get("stockEndType") or "").strip().lower(),
             }
         if len(rows) < PAGE_SIZE:
             break
@@ -822,7 +825,7 @@ def detect_ath_breakouts(stocks, investor_top, bot_token, chat_id):
         if not info:
             continue
         # ETF/ETN/선물/합성/SPAC/우선주 등 제외 (캐시가 오래돼도 실시간 필터)
-        excl, _ = is_excluded_security(s.get("name", ""), code)
+        excl, _ = is_excluded_security(s.get("name", ""), code, s.get("kind", ""))
         if excl:
             continue
         ath = info.get("ath", 0)

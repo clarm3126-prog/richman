@@ -125,7 +125,7 @@ def main():
     for c, s in stocks.items():
         if s.get("price", 0) <= 0 or s.get("volume", 0) <= 1000:
             continue
-        excl, _ = is_excluded_security(s.get("name", ""), c)
+        excl, _ = is_excluded_security(s.get("name", ""), c, s.get("kind", ""))
         if excl:
             excluded_n += 1
             continue
