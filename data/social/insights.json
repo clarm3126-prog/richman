@@ -1,7 +1,7 @@
 {
  "posts": [
   {
-   "checked": "2026-09-13",
+   "checked": "2026-09-14",
    "date": "2026-09-08",
    "kind": "theme",
    "media_id": "18078061262512062",
@@ -11,12 +11,12 @@
     "replies": 0,
     "reposts": 0,
     "shares": 0,
-    "views": 43
+    "views": 45
    },
    "platform": "threads"
   },
   {
-   "checked": "2026-09-13",
+   "checked": "2026-09-14",
    "date": "2026-09-08",
    "kind": "theme",
    "media_id": "18339177343282180",
@@ -32,7 +32,7 @@
    "platform": "instagram"
   },
   {
-   "checked": "2026-09-13",
+   "checked": "2026-09-14",
    "date": "2026-09-09",
    "kind": "screener",
    "media_id": "18104454422611253",
@@ -48,7 +48,7 @@
    "platform": "instagram"
   },
   {
-   "checked": "2026-09-13",
+   "checked": "2026-09-14",
    "date": "2026-09-10",
    "kind": "momentum",
    "media_id": "18102303566200038",
@@ -58,12 +58,12 @@
     "replies": 0,
     "reposts": 0,
     "shares": 0,
-    "views": 313
+    "views": 316
    },
    "platform": "threads"
   },
   {
-   "checked": "2026-09-13",
+   "checked": "2026-09-14",
    "date": "2026-09-10",
    "kind": "kr_close",
    "media_id": "18111961315845321",
@@ -73,12 +73,12 @@
     "replies": 0,
     "reposts": 0,
     "shares": 0,
-    "views": 99
+    "views": 102
    },
    "platform": "threads"
   },
   {
-   "checked": "2026-09-13",
+   "checked": "2026-09-14",
    "date": "2026-09-11",
    "kind": "promo",
    "media_id": "18104954087252903",
@@ -88,12 +88,12 @@
     "replies": 65,
     "reposts": 0,
     "shares": 0,
-    "views": 895
+    "views": 900
    },
    "platform": "threads"
   },
   {
-   "checked": "2026-09-13",
+   "checked": "2026-09-14",
    "date": "2026-09-11",
    "kind": "promo",
    "media_id": "18136297429532601",
@@ -109,7 +109,7 @@
    "platform": "instagram"
   },
   {
-   "checked": "2026-09-13",
+   "checked": "2026-09-14",
    "date": "2026-09-11",
    "kind": "theme",
    "media_id": "17907153183523730",
@@ -119,12 +119,12 @@
     "replies": 0,
     "reposts": 0,
     "shares": 0,
-    "views": 89
+    "views": 95
    },
    "platform": "threads"
   },
   {
-   "checked": "2026-09-13",
+   "checked": "2026-09-14",
    "date": "2026-09-11",
    "kind": "theme",
    "media_id": "18343097488284417",
@@ -140,22 +140,22 @@
    "platform": "instagram"
   },
   {
-   "checked": "2026-09-13",
+   "checked": "2026-09-14",
    "date": "2026-09-12",
    "kind": "promo",
    "media_id": "17900244150596249",
    "metrics": {
     "likes": 10,
     "quotes": 0,
-    "replies": 67,
+    "replies": 68,
     "reposts": 0,
     "shares": 0,
-    "views": 730
+    "views": 749
    },
    "platform": "threads"
   },
   {
-   "checked": "2026-09-13",
+   "checked": "2026-09-14",
    "date": "2026-09-12",
    "kind": "promo",
    "media_id": "17916806784443490",
@@ -171,7 +171,7 @@
    "platform": "instagram"
   },
   {
-   "checked": "2026-09-13",
+   "checked": "2026-09-14",
    "date": "2026-09-12",
    "kind": "screener",
    "media_id": "18097702511067552",
@@ -181,12 +181,12 @@
     "replies": 0,
     "reposts": 0,
     "shares": 0,
-    "views": 217
+    "views": 263
    },
    "platform": "threads"
   },
   {
-   "checked": "2026-09-13",
+   "checked": "2026-09-14",
    "date": "2026-09-12",
    "kind": "screener",
    "media_id": "18094886756418399",
@@ -202,7 +202,7 @@
    "platform": "instagram"
   },
   {
-   "checked": "2026-09-13",
+   "checked": "2026-09-14",
    "date": "2026-09-12",
    "kind": "momentum",
    "media_id": "17984950947073082",
@@ -212,12 +212,12 @@
     "replies": 0,
     "reposts": 0,
     "shares": 0,
-    "views": 35
+    "views": 45
    },
    "platform": "threads"
   },
   {
-   "checked": "2026-09-13",
+   "checked": "2026-09-14",
    "date": "2026-09-12",
    "kind": "momentum",
    "media_id": "18194245852386600",
@@ -231,7 +231,38 @@
     "views": 3
    },
    "platform": "instagram"
+  },
+  {
+   "checked": "2026-09-14",
+   "date": "2026-09-13",
+   "kind": "guide",
+   "media_id": "18078029951401231",
+   "metrics": {
+    "likes": 3,
+    "quotes": 0,
+    "replies": 0,
+    "reposts": 0,
+    "shares": 0,
+    "views": 29
+   },
+   "platform": "threads"
+  },
+  {
+   "checked": "2026-09-14",
+   "date": "2026-09-13",
+   "kind": "guide",
+   "media_id": "18120485992926398",
+   "metrics": {
+    "comments": 0,
+    "likes": 0,
+    "reach": 1,
+    "saved": 0,
+    "shares": 0,
+    "total_interactions": 0,
+    "views": 3
+   },
+   "platform": "instagram"
   }
  ],
- "updated": "2026-09-13"
+ "updated": "2026-09-14"
 }
