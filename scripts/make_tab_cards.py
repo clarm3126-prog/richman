@@ -28,7 +28,7 @@ from social import card  # noqa: E402
 # 스크린샷 원본을 두는 곳. 결과와 섞이지 않게 따로 둔다.
 SRC_DIR = card.ROOT / "assets" / "screenshots"
 
-HANDLE = "@stage2.kr"
+HANDLE = "종목노트"
 TAGLINE = "· 결제 화면이 없는 종목 스크리너"
 
 # 잘라낼 빈 구간을 고를 때 쓰는 값.

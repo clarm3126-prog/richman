@@ -21,7 +21,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from social import card  # noqa: E402
 
-HANDLE = "@stage2.kr"
+HANDLE = "종목노트"
 TAGLINE = "· 결제 화면이 없는 종목 스크리너"
 
 CARDS = {

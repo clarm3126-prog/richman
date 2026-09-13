@@ -1,5 +1,5 @@
 {
-  "name": "테마별 종목 노트",
+  "name": "종목노트",
   "short_name": "종목노트",
   "description": "한국 주식 테마별 종목 + 강도 TOP10 + 52주 신고가",
   "start_url": "./",
