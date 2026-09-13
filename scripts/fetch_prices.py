@@ -284,7 +284,30 @@ def fetch_index(code):
     value = _api_float(data.get("closePrice"), None)
     if value is None:
         return None
-    return {"value": value, "change": _api_float(data.get("fluctuationsRatio"))}
+    return {
+        "value": value,
+        "change": _api_float(data.get("fluctuationsRatio")),
+        # 이 값이 실제로 언제 것인지. 아래 trading_day를 여기서 뽑는다.
+        "traded_at": data.get("localTradedAt") or "",
+    }
+
+
+def trading_day_from(indices):
+    """장이 실제로 열린 날. 없으면 오늘 날짜로 물러선다.
+
+    예전에는 datetime.now()를 그대로 trading_day로 적었다. 평일 장중에만
+    도는 워크플로에서는 그 둘이 같아서 문제가 없었지만, 주말이나 휴장일에
+    손으로 한 번 돌리면 금요일 종가에 일요일 날짜가 붙는다. 화면이 "몇 일
+    전" 을 이 값으로 재기 때문에 그대로 거짓말이 된다.
+
+    API가 종가와 함께 그 값이 언제 것인지(localTradedAt)를 준다. 시계가
+    아니라 데이터에서 날짜를 가져오면 언제 돌려도 맞는다.
+    """
+    for key in ("kospi", "kosdaq"):
+        stamp = ((indices.get(key) or {}).get("traded_at") or "")[:10]
+        if len(stamp) == 10 and stamp[4] == "-":
+            return stamp.replace("-", "")
+    return datetime.now(KST).strftime("%Y%m%d")
 
 
 def _fetch_groups(kind, label):
@@ -999,11 +1022,13 @@ def main():
     print("Computing volume surges...")
     volume_surges = update_volume_data(stocks)
 
-    # 거래량 surge daily archive (장 마감 후만)
+    # 거래량 surge daily archive (장 마감 후만).
+    # 파일 이름도 시세가 언제 것인지를 따른다. 시계로 지으면 휴장일에 한 번
+    # 돌렸을 때 장이 열리지도 않은 날짜의 파일이 생긴다.
     if datetime.now(KST).hour >= 16 and volume_surges:
         archive_dir = Path("data/volume_history")
         archive_dir.mkdir(parents=True, exist_ok=True)
-        today_str = datetime.now(KST).strftime("%Y%m%d")
+        today_str = trading_day_from(indices)
         archive_path = archive_dir / f"{today_str}.json"
         # 가벼운 버전: top 30
         lite = [{
@@ -1038,12 +1063,13 @@ def main():
 
     update_descriptions(naver_themes, naver_industries)
 
-    day_str = datetime.now(KST).strftime("%Y%m%d")
+    # 시계가 아니라 시세가 언제 것인지를 따른다. 휴장일에 돌려도 맞는다.
+    day_str = trading_day_from(indices)
     save_history(naver_themes, naver_industries, day_str)
 
     out = {
         "updated": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
-        "trading_day": datetime.now(KST).strftime("%Y%m%d"),
+        "trading_day": day_str,
         "indices": indices,
         "stocks": stocks,
         "new_highs": new_highs,
