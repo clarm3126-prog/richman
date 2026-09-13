@@ -150,6 +150,24 @@ class Threads:
             f"{media_id}/conversation", fields=fields, reverse="false", limit=limit
         ).get("data", [])
 
+    # --- 검색 ---
+
+    def keyword_search(self, keyword, limit=25, search_type="RECENT"):
+        """공개 글 검색.
+
+        주의: 앱이 threads_keyword_search 심사를 통과하기 전에는 내 글만
+        돌아온다. 권한이 없다고 오류가 나는 게 아니라 조용히 범위만 좁아지므로,
+        부르는 쪽에서 돌아온 작성자를 보고 판단해야 한다.
+
+        하루 2,200건 제한이 있다. 결과가 없는 질의는 세지 않는다.
+        민감어로 분류된 키워드에는 빈 배열이 돌아온다.
+        """
+        fields = "id,text,username,permalink,timestamp,is_reply,has_replies"
+        params = {"q": keyword, "fields": fields, "limit": limit}
+        if search_type:
+            params["search_type"] = search_type
+        return self._get("keyword_search", **params).get("data", [])
+
     def insights(self, media_id, metrics):
         """글 하나의 지표. 응답 원본을 그대로 돌려준다."""
         return self._get(f"{media_id}/insights", metric=",".join(metrics))

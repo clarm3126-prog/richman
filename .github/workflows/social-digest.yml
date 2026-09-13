@@ -1,0 +1,73 @@
+name: Social Digest
+
+# 댓글 달 만한 남의 글을 하루 한 번 골라 텔레그램으로 보낸다.
+# 댓글을 대신 달지는 않는다. 자동 참여는 플랫폼이 금지하고 계정이 정지된다.
+
+on:
+  schedule:
+    # 20:00 KST (11:00 UTC), 평일.
+    # 스크리너(17:00 KST)가 끝난 뒤라 오늘 걸린 종목이 반영된다.
+    # 발행(19:00 KST) 다음이라 텔레그램을 한 번 볼 때 같이 보인다.
+    - cron: "0 11 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "텔레그램 발송 없이 무엇을 보낼지만 확인"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: social-digest
+  cancel-in-progress: false
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install requests pyyaml
+
+      - name: Pick posts worth commenting on
+        env:
+          THREADS_USER_ID: ${{ secrets.THREADS_USER_ID }}
+          THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python scripts/social_digest.py ${{ inputs.dry_run && '--dry-run' || '' }}
+
+      # 이미 보낸 글 ID만 기록한다. 작성자나 본문은 저장하지 않는다.
+      - name: Commit digest state
+        if: ${{ always() && !inputs.dry_run }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for p in data/social; do
+            if [ -e "$p" ]; then git add "$p"; fi
+          done
+          if git diff --cached --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+          git commit -m "chore: social digest state [auto]"
+          for i in 1 2 3; do
+            if git push; then exit 0; fi
+            git fetch origin main
+            git rebase -X theirs origin/main || { git rebase --abort; git pull --rebase=true -X theirs origin main; }
+            sleep 2
+          done
+          exit 1
