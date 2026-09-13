@@ -131,6 +131,27 @@ def _api_float(value, default=0.0):
         return default
 
 
+def _norm_code(value):
+    """종목 코드를 6자리로 맞춘다. 모양이 아니면 빈 문자열.
+
+    코드가 숫자뿐이라고 보면 안 된다. 6자리 숫자가 동나면서 한국거래소가
+    영문을 섞은 코드를 내주기 시작했다. 0009K0 에임드바이오, 0001A0
+    덕양에너젠, 0126Z0 삼성에피스홀딩스처럼 실제로 거래되는 종목들이다.
+    일별시세도 이 코드로 그대로 받아진다.
+
+    옛 코드는 링크에서 code=(\\d+)로 숫자만 뽑다가 0001A0에서 0001만 집어
+    zfill(6)으로 000001을 만들었다. 그렇게 만들어진 코드가 실재하는 다른
+    종목과 부딪혀 덮어썼다. 숫자가 아니라고 버려도 그 종목들이 통째로
+    사라지므로, 받은 코드를 그대로 쓴다.
+    """
+    code = str(value or "").strip().upper()
+    if not code:
+        return ""
+    if len(code) < 6:
+        code = code.zfill(6)
+    return code if len(code) == 6 and code.isalnum() else ""
+
+
 def _fmt_bizdate(value):
     """API의 20260911을 예전 화면 표기인 2026.09.11로 맞춘다.
 
@@ -154,8 +175,8 @@ def fetch_market(sosok):
         if not rows:
             break
         for s in rows:
-            code = str(s.get("itemCode") or "").strip().zfill(6)
-            if not code.isdigit():
+            code = _norm_code(s.get("itemCode"))
+            if not code:
                 continue
             out[code] = {
                 "name": (s.get("stockName") or "").strip(),
