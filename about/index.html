@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>종목노트는 어떤 서비스인가요</title>
+<meta name="description" content="장 마감 후 국내 전 종목을 훑어 오름세에 들어선 종목만 정리합니다. 목표가 알림과 매매일지까지 전부 무료이고 결제 화면이 없습니다. 종목 추천이 아닙니다.">
+
+<!-- 링크 미리보기(카톡·쓰레드·블로그). og:image는 상대경로가 통하지 않아 절대주소로 적는다. -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="종목노트">
+<meta property="og:title" content="종목노트는 어떤 서비스인가요">
+<meta property="og:description" content="매일 아침 조건에 걸린 종목만 정리해 드립니다. 목표가 알림과 매매일지까지 전부 무료입니다. 성적도 숨기지 않고 그대로 공개합니다.">
+<meta property="og:url" content="https://stage2.kr/about/">
+<meta property="og:image" content="https://stage2.kr/assets/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ko_KR">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="종목노트는 어떤 서비스인가요">
+<meta name="twitter:description" content="매일 아침 조건에 걸린 종목만 정리해 드립니다. 전부 무료이고 결제 화면이 없습니다.">
+<meta name="twitter:image" content="https://stage2.kr/assets/og.jpg">
+
+<link rel="icon" href="../icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<meta name="theme-color" content="#0f1115">
+
+<script>
+  // FOUC 방지: 본문이 그려지기 전에 테마를 정한다.
+  // 앱(index.html)과 같은 키를 읽으므로 사용자가 앱에서 고른 밝기가 그대로 이어진다.
+  (function () {
+    try {
+      var mode = localStorage.getItem('themeMode') || 'auto';
+      var sysDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      var useDark = mode === 'dark' || (mode === 'auto' && sysDark);
+      if (useDark) {
+        document.documentElement.classList.add('theme-dark');
+        document.documentElement.style.colorScheme = 'dark';
+      } else {
+        document.documentElement.style.colorScheme = 'light';
+      }
+    } catch (e) {}
+  })();
+</script>
+
+<style>
+  /* 앱(index.html)과 같은 색 이름을 쓴다. 두 화면의 톤이 갈라지지 않게 하려는 것이다. */
+  :root {
+    --fg-strong: #1a1a1a;
+    --fg-mid: #4b5563;
+    --fg-dim: #6b7280;
+    --bg-page: #f4f5f7;
+    --bg-card: #fff;
+    --border-light: #e5e7eb;
+    --accent: #7c3aed;
+    --accent-text: #5b21b6;
+    --tint-purple: #f5f3ff;
+    --tint-amber: #fef3c7;
+    --amber-text: #92400e;
+    --border-amber: #fcd34d;
+  }
+  .theme-dark {
+    --fg-strong: #e5e7eb;
+    --fg-mid: #d1d5db;
+    --fg-dim: #b0b8c4;
+    --bg-page: #0f1115;
+    --bg-card: #1a1d23;
+    --border-light: #2a2f3a;
+    --accent: #7c3aed;
+    --accent-text: #c4b5fd;
+    --tint-purple: #1f1640;
+    --tint-amber: #33260f;
+    --amber-text: #fcd34d;
+    --border-amber: #6b5417;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg-page);
+    color: var(--fg-mid);
+    /* 40~70대가 주 독자라 본문을 17px로 크게 잡는다. */
+    font: 17px/1.75 -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
+          "Malgun Gothic", "맑은 고딕", system-ui, sans-serif;
+    word-break: keep-all;      /* 한글이 어절 한가운데서 끊기지 않게 */
+    overflow-wrap: anywhere;
+  }
+  .wrap { max-width: 680px; margin: 0 auto; padding-inline: 20px; }
+
+  /* ── 머리말 ──────────────────────────────────────── */
+  .hero { padding-block: 56px 40px; text-align: center; }
+  .hero .logo { font-size: 40px; line-height: 1; }
+  .hero h1 {
+    margin: 14px 0 10px;
+    font-size: 30px; line-height: 1.35; font-weight: 800;
+    color: var(--fg-strong); letter-spacing: -0.02em;
+  }
+  .hero p { margin: 0 auto; max-width: 30em; color: var(--fg-dim); }
+  .badge {
+    display: inline-block; margin-top: 18px; padding: 6px 14px;
+    background: var(--tint-purple); color: var(--accent-text);
+    border-radius: 999px; font-size: 14px; font-weight: 700;
+  }
+
+  /* ── 본문 ────────────────────────────────────────── */
+  section { margin-bottom: 40px; }
+  h2 {
+    margin: 0 0 14px;
+    font-size: 21px; font-weight: 800; line-height: 1.4;
+    color: var(--fg-strong); letter-spacing: -0.01em;
+  }
+  p { margin: 0 0 14px; }
+  strong { color: var(--fg-strong); font-weight: 700; }
+
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 14px;
+    padding: 22px;
+  }
+  .card + .card { margin-top: 12px; }
+  .card h3 { margin: 0 0 6px; font-size: 17px; font-weight: 700; color: var(--fg-strong); }
+  .card p { margin: 0; font-size: 16px; }
+  .card .ico { font-size: 22px; line-height: 1; display: block; margin-bottom: 10px; }
+
+  /* 주가 4단계 그림 */
+  .stages { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 18px 0; }
+  .stage {
+    background: var(--bg-card); border: 1px solid var(--border-light);
+    border-radius: 12px; padding: 14px 8px; text-align: center;
+  }
+  .stage.on { background: var(--tint-purple); border-color: var(--accent); }
+  .stage .n { font-size: 13px; font-weight: 700; color: var(--fg-dim); }
+  .stage.on .n { color: var(--accent-text); }
+  .stage .art { font-size: 22px; line-height: 1.2; margin: 6px 0 4px; }
+  .stage .lb { font-size: 13px; font-weight: 700; color: var(--fg-strong); }
+
+  /* 성적 표 */
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { border-collapse: collapse; width: 100%; min-width: 420px; font-size: 16px; }
+  th, td { padding: 11px 10px; text-align: right; border-bottom: 1px solid var(--border-light); }
+  th:first-child, td:first-child { text-align: left; }
+  thead th { font-size: 14px; color: var(--fg-dim); font-weight: 700; }
+  tbody td { font-variant-numeric: tabular-nums; }
+  tbody th { text-align: left; font-weight: 700; color: var(--fg-strong); font-size: 15px; }
+  tbody td.gap { color: var(--fg-strong); font-weight: 700; }
+  tbody tr.sub th { font-weight: 400; color: var(--fg-dim); padding-left: 18px; }
+  .note { font-size: 15px; color: var(--fg-dim); margin-top: 12px; }
+
+  /* 실제 사례 한 건을 보여주는 상자 */
+  .case {
+    margin-top: 14px;
+    background: var(--bg-card); border: 1px solid var(--border-light);
+    border-radius: 12px; padding: 18px 20px;
+  }
+  .case h3 { margin: 0 0 10px; font-size: 16px; font-weight: 700; color: var(--fg-strong); }
+  .case dl { margin: 0; font-size: 16px; }
+  .case .row { display: flex; gap: 10px; padding: 7px 0; border-top: 1px solid var(--border-light); }
+  .case .row:first-of-type { border-top: 0; padding-top: 0; }
+  .case .row dt { flex: 0 0 9.5em; color: var(--fg-dim); margin: 0; }
+  .case .row dd { margin: 0; color: var(--fg-strong); font-variant-numeric: tabular-nums; }
+  .case p { margin: 12px 0 0; font-size: 15px; color: var(--fg-dim); }
+
+  .callout {
+    margin-top: 18px;
+    background: var(--tint-amber); border: 1px solid var(--border-amber);
+    border-radius: 12px; padding: 18px 20px; color: var(--amber-text);
+  }
+  .callout p { margin: 0; font-size: 16px; }
+  .callout p + p { margin-top: 10px; }
+
+  ul.plain { margin: 0; padding-left: 1.2em; }
+  ul.plain li { margin-bottom: 10px; }
+
+  /* ── 시작하기 ────────────────────────────────────── */
+  .cta { text-align: center; padding-top: 8px; }
+  .btn {
+    display: inline-block; padding: 15px 34px;
+    background: var(--accent); color: #fff;
+    border-radius: 12px; text-decoration: none;
+    font-size: 17px; font-weight: 700;
+  }
+  .btn:hover { filter: brightness(1.12); }
+  .cta .sub { margin-top: 12px; font-size: 15px; color: var(--fg-dim); }
+
+  footer {
+    padding-block: 30px 50px;
+    border-top: 1px solid var(--border-light);
+    font-size: 15px; color: var(--fg-dim); text-align: center;
+  }
+  footer a { color: var(--accent-text); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+  .disclaimer { margin-top: 18px; font-size: 14px; line-height: 1.7; }
+
+  @media (max-width: 480px) {
+    .hero { padding-block: 40px 32px; }
+    .hero h1 { font-size: 25px; }
+    .stages { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="hero">
+    <div class="logo">📓</div>
+    <h1>매일 아침,<br>조건에 걸린 종목만 정리해 드립니다</h1>
+    <p>사람이 고르지 않습니다. 장이 끝나면 국내 전 종목을 자동으로 계산합니다.</p>
+    <div class="badge">전부 무료 · 결제 화면이 없습니다</div>
+  </header>
+
+  <section>
+    <h2>stage2라는 이름의 뜻</h2>
+    <p>
+      주가는 대체로 네 단계를 지납니다. 오래 바닥을 다지고, 올라가고,
+      천장에서 오르내리다, 내려옵니다.
+    </p>
+    <div class="stages">
+      <div class="stage"><div class="n">1단계</div><div class="art">〰️</div><div class="lb">바닥 다지기</div></div>
+      <div class="stage on"><div class="n">2단계</div><div class="art">📈</div><div class="lb">오름세</div></div>
+      <div class="stage"><div class="n">3단계</div><div class="art">🔁</div><div class="lb">천장</div></div>
+      <div class="stage"><div class="n">4단계</div><div class="art">📉</div><div class="lb">내림세</div></div>
+    </div>
+    <p>
+      종목노트는 이 중 <strong>2단계에 막 들어선 종목</strong>만 찾습니다.
+      바닥에서 미리 사두는 것도, 천장에서 버티는 것도 하지 않습니다.
+      이미 오르기 시작한 것을 확인하고 따라붙는 쪽입니다.
+      주소가 <strong>stage2.kr</strong>인 이유입니다.
+    </p>
+  </section>
+
+  <section>
+    <h2>매일 무슨 일을 하나</h2>
+    <div class="card">
+      <span class="ico">🔍</span>
+      <h3>장 마감 후 전 종목을 훑습니다</h3>
+      <p>4,000개가 넘는 국내 상장 종목을 매일 계산합니다. 이미 오르기 시작했는지,
+         거래량이 늘었는지, 실적이 좋아지고 있는지를 봅니다. 사람의 감이 들어가지 않습니다.</p>
+    </div>
+    <div class="card">
+      <span class="ico">📱</span>
+      <h3>목표가에 닿으면 텔레그램으로 알려드립니다</h3>
+      <p>관심 종목에 목표가를 걸어두면 도달했을 때 알림이 갑니다.
+         보유 종목은 어디서 손절할지, 언제 팔지 신호도 함께 보내드립니다.</p>
+    </div>
+    <div class="card">
+      <span class="ico">📓</span>
+      <h3>매매일지가 같이 남습니다</h3>
+      <p>왜 샀고 왜 팔았는지를 적어두면, 나중에 같은 실수를 되풀이하는지 보입니다.
+         일지는 본인만 볼 수 있습니다.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>어떤 조건으로 거르나</h2>
+    <p>세 가지 방식으로 각각 따로 뽑습니다. 서로 다른 목록이 나옵니다.</p>
+    <div class="card">
+      <h3>🎯 미너비니</h3>
+      <p>주가가 이동평균선 위에 있는지, 이동평균선끼리 순서대로 정렬돼 있는지,
+         52주 고점에 가까운지, 시장 전체보다 강한지를 봅니다.
+         실적이 늘고 있는지도 함께 확인합니다.</p>
+    </div>
+    <div class="card">
+      <h3>🚀 모멘텀</h3>
+      <p>거래량이 평소의 두 배 이상 터졌는지, 눌림이 점점 짧아지는지,
+         전고점을 뚫었는지를 봅니다. 움직임이 막 시작된 종목을 찾습니다.</p>
+    </div>
+    <div class="card">
+      <h3>🏆 오닐 신고가</h3>
+      <p>52주 신고가를 새로 쓴 종목을 정리합니다.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>성적을 숨기지 않습니다</h2>
+    <p>
+      조건에 걸린 종목이 실제로 어떻게 됐는지 매일 다시 계산해서 공개합니다.
+      좋게 보이려고 고르거나 다듬지 않습니다.
+    </p>
+
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>사고 나서 어떻게 했나</th>
+            <th>조건 통과<br>종목</th>
+            <th>같은 날수<br>코스피</th>
+            <th>차이</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><th>30일 그대로 들고 있기</th><td>-15.1%</td><td>-10.8%</td><td class="gap">-4.3%p</td></tr>
+          <tr class="sub"><th>손절 규칙을 지킬 때 (평균 7.1일 보유)</th><td>-6.8%</td><td>-3.6%</td><td class="gap">-3.2%p</td></tr>
+          <tr><th>60일 그대로 들고 있기</th><td>-20.0%</td><td>-15.5%</td><td class="gap">-4.6%p</td></tr>
+          <tr class="sub"><th>손절 규칙을 지킬 때 (평균 7.7일 보유)</th><td>-6.3%</td><td>+0.7%</td><td class="gap">-7.0%p</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">
+      측정 기간 2026년 5월 11일 ~ 9월 8일 · 미너비니 조건 통과 896건 / 77종목 기준.
+      손절로 평균 7일 만에 빠져나오므로, 코스피도 <strong>똑같이 7일만 들고 있었을 때</strong>로
+      맞춰서 견줍니다. 30일짜리 손실을 7일짜리 지수와 견주면 비교가 성립하지 않습니다.
+    </p>
+
+    <div class="callout">
+      <p><strong>이 숫자를 이렇게 읽어 주세요.</strong></p>
+      <p>측정한 넉 달은 코스피가 11.1% 내리고 중간에 38.6%까지 빠진 하락장이었습니다.
+         그래서 전부 손실입니다.</p>
+      <p><strong>네 줄 모두 코스피보다 못했습니다.</strong>
+         조건에 걸린 종목을 사는 것보다 그 기간 코스피를 그냥 들고 있는 편이 나았습니다.
+         특히 60일 구간에서 코스피는 0.7% 올랐는데 조건 통과 종목은 6.3% 잃었습니다.</p>
+      <p>손절 규칙이 손실의 크기를 줄인 것은 맞습니다(-15.1% → -6.8%).
+         다만 그것은 <strong>일찍 빠져나왔기 때문</strong>이지 종목을 잘 골라서가 아닙니다.</p>
+      <p>표본은 아직 넉 달치뿐이고 상승장이 한 번도 들어 있지 않습니다.
+         120일 성적은 2026년 11월에 처음 나옵니다.
+         표본이 적은 구간은 승률을 아예 내지 않습니다.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>그럼 최대 수익률은</h2>
+    <p>
+      평균은 손실이지만 크게 오른 종목도 있었습니다. 가장 많이 오른 것은
+      <strong>화신정공</strong>으로, 조건에 걸린 날 사서 30일 뒤에 팔았다면
+      <strong>+109.7%</strong>, 60일까지 들고 있었다면 <strong>+130.2%</strong>였습니다.
+      같은 기간 코스피는 각각 17.2%, 16.2% 내렸습니다.
+    </p>
+
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>30일 보유 기준 · 896번의 신호 중</th><th>건수</th><th>비율</th></tr>
+        </thead>
+        <tbody>
+          <tr><th>20% 넘게 오른 신호</th><td>62건</td><td class="gap">6.9%</td></tr>
+          <tr><th>10% 넘게 잃은 신호</th><td>586건</td><td class="gap">65.4%</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">가장 크게 오른 신호 +109.7% · 가장 크게 잃은 신호 -60.9%</p>
+
+    <div class="callout">
+      <p><strong>최대 수익률만 보시면 안 되는 이유입니다.</strong>
+         열 번에 한 번도 안 되는 확률로 크게 오르고, 셋에 둘은 10% 넘게 잃습니다.
+         크게 오른 몇 건이 평균을 끌어올리지 못할 만큼 잃는 쪽이 많습니다.</p>
+    </div>
+
+    <div class="case">
+      <h3>하루 차이로 갈린 같은 종목</h3>
+      <dl>
+        <div class="row"><dt>7월 15일 매수</dt><dd>82,100원 → 153,900원 · <strong>+87.5%</strong></dd></div>
+        <div class="row"><dt>7월 16일 매수</dt><dd>84,800원 → 손절 <strong>-8.6%</strong> (하루 만에)</dd></div>
+      </dl>
+      <p>코스메카코리아 한 종목입니다. 7월 16일에 들어간 쪽도 그대로 뒀다면 76.7%
+         올랐을 자리였지만, 다음 날 손절선에 닿아 먼저 빠져나왔습니다.
+         같은 종목, 같은 조건, 하루 차이입니다.</p>
+      <p>종목노트가 종목을 찍어드리지 않는 이유가 여기 있습니다.
+         목록은 출발점일 뿐이고, 어디서 자를지를 정해두는 것은 각자의 몫입니다.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>하지 않는 것</h2>
+    <ul class="plain">
+      <li><strong>종목 추천과 리딩을 하지 않습니다.</strong>
+          조건에 걸린 목록을 보여줄 뿐이고, 사고파는 판단은 본인이 하셔야 합니다.</li>
+      <li><strong>결제 화면이 없습니다.</strong>
+          만든 사람이 쓰려고 만든 것이라 유료로 바꿀 계획이 없습니다.</li>
+      <li><strong>단체 채팅방을 운영하지 않습니다.</strong>
+          어디서도 돈을 받고 종목을 알려드리지 않습니다.</li>
+      <li><strong>필요 없는 정보를 모으지 않습니다.</strong>
+          방문 집계에 IP 주소나 기기 정보를 저장하지 않습니다.</li>
+    </ul>
+  </section>
+
+  <section class="cta">
+    <a class="btn" href="/?from=about">종목노트 열어보기</a>
+    <p class="sub">로그인 없이도 둘러볼 수 있습니다.<br>
+       구글 로그인을 하면 일지가 폰과 PC 어디서든 남습니다.</p>
+  </section>
+
+  <footer>
+    <p>만든 사람 ·
+      <a href="https://www.threads.com/@jongmoknote" target="_blank" rel="noopener">쓰레드 @jongmoknote</a>
+    </p>
+    <p class="disclaimer">
+      종목노트는 투자자문업자나 유사투자자문업자가 아닙니다.
+      이 사이트의 어떤 내용도 특정 종목의 매수·매도 권유가 아니며,
+      과거 성적이 앞으로의 수익을 보장하지 않습니다.
+      투자 판단과 그 결과에 대한 책임은 전적으로 이용자 본인에게 있습니다.
+    </p>
+  </footer>
+
+</div>
+
+</body>
+</html>
