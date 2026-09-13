@@ -12,6 +12,19 @@ N거래일 뒤 종가에 판 것뿐이다. 이 단서를 빼고 인용하면 기
 
 매수가·매도가 모두 수정주가 일봉에서 읽는다. 이유는 compute_returns()에.
 
+승률과 평균만으로는 이 숫자가 기법 탓인지 장 탓인지 가릴 수 없어서,
+읽는 데 필요한 세 가지를 같이 낸다.
+
+  period   표본이 언제 것이고 그때 지수가 어땠나 (최대낙폭 포함)
+           → index_window(). 이게 없으면 "이 기법은 승률 20%"로 인용된다.
+  by_date  하루를 관측 하나로 센 승률. 같은 종목이 며칠씩 걸려 있어
+           픽 단위로 세면 같은 베팅이 반복 계산되는데, 빠지는 구간일수록
+           오래 걸려 있으므로 표본이 그쪽으로 기운다.
+  rules.benchmark_matched
+           손절로 실제로 들고 있던 날수만큼의 지수. 규칙을 지키면 평균
+           7일 만에 빠져나오므로, 그 수익률을 30일짜리 지수와 견주면
+           비교가 성립하지 않는다. 같은 날수끼리만 견줄 수 있다.
+
 출력: data/backtest_stats.json
 """
 import json
@@ -179,6 +192,46 @@ def benchmark_return(index_closes, entry_date, days_forward):
     return (b / a - 1) * 100
 
 
+def index_window(index_closes, first_entry, last_entry, days_forward):
+    """이 통계가 실제로 덮는 구간에서 지수가 어땠나.
+
+    첫 매수일부터 '마지막 매수일 + 보유기간'까지가 이 숫자들이 실제로 겪은
+    구간이다. 그 구간에서 지수가 어디까지 올랐다 어디까지 빠졌는지를 같이
+    적지 않으면, 평균 -15%가 기법 탓인지 장 탓인지 읽는 사람이 가릴 수 없다.
+
+    최대낙폭을 굳이 같이 내는 이유가 있다. 시작과 끝만 적으면 조용한 장처럼
+    보이는 구간에도 중간에 반토막이 들어 있을 수 있다. 조건에 걸린 종목은
+    대개 지수보다 더 크게 움직이므로, 그 구간에 낙폭이 있었다는 사실 하나가
+    승률이 왜 그 모양인지를 거의 다 설명한다.
+    """
+    if not index_closes:
+        return None
+    dates = sorted(index_closes)
+    i = next((k for k, d in enumerate(dates) if d >= first_entry), None)
+    j = next((k for k in range(len(dates) - 1, -1, -1) if dates[k] <= last_entry), None)
+    if i is None or j is None or j < i:
+        return None
+    # 마지막 매수분이 팔릴 때까지 포함한다. 지수 기록이 거기까지 없으면
+    # 있는 데까지만 본다.
+    j = min(j + days_forward, len(dates) - 1)
+    span = [index_closes[d] for d in dates[i:j + 1] if index_closes[d] > 0]
+    if len(span) < 2:
+        return None
+    peak = span[0]
+    mdd = 0.0
+    for v in span:
+        peak = max(peak, v)
+        mdd = min(mdd, (v / peak - 1) * 100)
+    return {
+        "from": dates[i],
+        "to": dates[j],
+        "change_pct": round((span[-1] / span[0] - 1) * 100, 1),
+        "high": round(max(span), 2),
+        "low": round(min(span), 2),
+        "max_drawdown_pct": round(mdd, 1),
+    }
+
+
 def compute_returns(picks, histories, days_forward=30, index_closes=None):
     """pick의 entry 날짜 + N일 종가로 수익률 계산.
 
@@ -239,6 +292,17 @@ def compute_returns(picks, histories, days_forward=30, index_closes=None):
                 b = benchmark_return(index_closes, entry_date, days_forward)
                 if b is not None:
                     row["bench_pct"] = round(b, 2)
+                # 규칙을 지키면 평균 7일 만에 손절로 빠져나온다. 그렇게 나온
+                # 수익률을 30일 내내 들고 있은 지수와 나란히 적으면 종목을
+                # 잘 골랐던 것처럼 보이지만, 실제로는 대부분 현금으로 비켜서
+                # 있던 덕이다. 들고 있던 날수만큼의 지수도 같이 재둔다.
+                # 두 숫자가 하는 말이 다르다:
+                #   bench_pct         — 지수를 사서 기간 내내 들고 있었을 때
+                #   bench_matched_pct — 내가 실제로 물려 있던 날 동안의 지수
+                if ruled:
+                    bm = benchmark_return(index_closes, entry_date, ruled[1])
+                    if bm is not None:
+                        row["bench_matched_pct"] = round(bm, 2)
             returns.append(row)
     if adjusted_n:
         # 수정주가로 조정된 픽이 몇 개인지 남긴다. 이 줄이 0으로 바뀌면
@@ -247,7 +311,19 @@ def compute_returns(picks, histories, days_forward=30, index_closes=None):
     return returns
 
 
-def stats_summary(returns):
+# 승률을 숫자로 말해도 되는 최소 표본.
+#
+# 픽 수로 재지 않는다. 같은 종목이 며칠씩 계속 걸려 있어서 픽 수는
+# 얼마든지 부풀려지기 때문이다. 실제로 서로 다른 베팅이 몇 번이었는지를
+# 재려면 종목 수와 매수일 수를 봐야 한다.
+#
+# pre_breakout이 이 가드를 만든 이유다. 종목 9개 · 20건으로 승률 75%가
+# 찍혔는데, 이 숫자는 인용하기 딱 좋게 생겼고 근거는 거의 없다.
+MIN_SAMPLE_CODES = 30   # 서로 다른 종목 수
+MIN_SAMPLE_DAYS = 10    # 서로 다른 매수일 수
+
+
+def stats_summary(returns, index_closes=None, days_forward=None):
     if not returns:
         return None
     rs = [r["return_pct"] for r in returns]
@@ -272,6 +348,48 @@ def stats_summary(returns):
         "worst_picks": sorted(returns, key=lambda x: x["return_pct"])[:5],
     }
 
+    # 언제 산 것들인가. 이 줄이 없으면 숫자만 남아서, 표본이 어떤 장이었는지
+    # 모른 채 "이 기법은 승률 20%"로 인용된다.
+    dates = sorted({r["date"] for r in returns})
+    out["period"] = {
+        "first_entry": dates[0],
+        "last_entry": dates[-1],
+        "entry_days": len(dates),
+    }
+    if index_closes and days_forward:
+        w = index_window(index_closes, dates[0], dates[-1], days_forward)
+        if w:
+            out["period"]["index"] = w
+
+    # 하루를 관측 하나로 센 값.
+    #
+    # 조건에 걸린 종목은 며칠씩 계속 걸려 있어서, 픽 단위로 세면 같은 베팅이
+    # 걸려 있던 날수만큼 반복 계산된다. 게다가 빠지는 구간일수록 오래 걸려
+    # 있으므로 표본이 그쪽으로 기운다. 날짜별로 묶어 평균을 내면 그 치우침이
+    # 사라진다. 두 승률이 크게 어긋나면 픽 단위 쪽을 믿으면 안 된다는 뜻이다.
+    by_day = {}
+    for r in returns:
+        by_day.setdefault(r["date"], []).append(r["return_pct"])
+    daily = [sum(v) / len(v) for v in by_day.values()]
+    dn = len(daily)
+    out["by_date"] = {
+        "days": dn,
+        "win_rate": round(sum(1 for x in daily if x > 0) / dn * 100, 1),
+        "avg_return": round(sum(daily) / dn, 2),
+        "median_return": round(sorted(daily)[dn // 2], 2),
+    }
+
+    # 이 표본으로 승률을 말해도 되는지. 화면과 대본 스크립트가 이 플래그
+    # 하나만 보게 해서, 기준이 두 군데로 갈라지지 않게 한다.
+    # 통계 자체는 그대로 남겨둔다 — 숨기는 건 보여주는 쪽이지 계산이 아니다.
+    out["sample"] = {
+        "codes": out["unique_codes"],
+        "days": dn,
+        "min_codes": MIN_SAMPLE_CODES,
+        "min_days": MIN_SAMPLE_DAYS,
+        "enough": out["unique_codes"] >= MIN_SAMPLE_CODES and dn >= MIN_SAMPLE_DAYS,
+    }
+
     # 도구 안내대로 -7% 손절과 트레일링을 적용했을 때
     ruled = [r["ruled_pct"] for r in returns if r.get("ruled_pct") is not None]
     if ruled:
@@ -280,6 +398,7 @@ def stats_summary(returns):
         for r in returns:
             if r.get("ruled_reason"):
                 reasons[r["ruled_reason"]] = reasons.get(r["ruled_reason"], 0) + 1
+        held = [r["ruled_days"] for r in returns if r.get("ruled_days") is not None]
         out["rules"] = {
             "count": rn,
             "win_rate": round(sum(1 for x in ruled if x > 0) / rn * 100, 1),
@@ -287,8 +406,23 @@ def stats_summary(returns):
             "median_return": round(sorted(ruled)[rn // 2], 2),
             "max_return": round(max(ruled), 2),
             "min_return": round(min(ruled), 2),
+            # 실제로 들고 있던 날수. 대부분 손절로 일찍 빠져나오기 때문에
+            # 보유 기간(days_forward)과 한참 다르다. 이 값을 빼고 위
+            # avg_return을 지수와 견주면 비교가 성립하지 않는다.
+            "avg_days": round(sum(held) / len(held), 1) if held else None,
             "exit_reasons": reasons,
         }
+        # 들고 있던 날수만큼의 지수. 위 avg_return과 같은 조건이라
+        # 이 둘의 차이만이 '종목을 잘 골랐나'에 해당한다.
+        bmm = [r["bench_matched_pct"] for r in returns
+               if r.get("bench_matched_pct") is not None]
+        if bmm:
+            bmn = len(bmm)
+            out["rules"]["benchmark_matched"] = {
+                "count": bmn,
+                "win_rate": round(sum(1 for x in bmm if x > 0) / bmn * 100, 1),
+                "avg_return": round(sum(bmm) / bmn, 2),
+            }
 
     # 같은 날 사서 같은 기간 코스피를 들고 있었을 때
     bench = [r["bench_pct"] for r in returns if r.get("bench_pct") is not None]
@@ -486,7 +620,8 @@ def main():
             picks = by_horizon.get(h) or []
             rets = compute_returns(picks, histories, days_forward=h,
                                    index_closes=index_closes) if picks else []
-            stats[f"{h}d"] = stats_summary(rets)
+            stats[f"{h}d"] = stats_summary(rets, index_closes=index_closes,
+                                           days_forward=h)
         cat_results[cat] = stats
         for h in HORIZONS:
             st = stats[f"{h}d"]
