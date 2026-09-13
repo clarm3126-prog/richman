@@ -1,0 +1,266 @@
+#!/usr/bin/env python3
+"""탭 설명서를 블로그용으로 길게 만든다.
+
+쓰레드용(make_tab_guides.py)과 짝이다. 쓰레드는 500자 안에서 한 가지만
+말하고, 블로그는 조건을 하나도 빼지 않고 다 적는다. 같은 탭을 두 길이로
+쓰는 셈이다.
+
+**조건 이름을 지어내지 않는다.** index.html 의 칩 라벨을 그대로 읽어
+온다. 화면에 '고점서 25% 안쪽'이라고 떠 있으면 글에도 그렇게 적힌다.
+라벨을 고치면 다음에 돌릴 때 글도 같이 바뀐다. 손으로 옮겨 적으면
+화면과 글이 갈라지고, 그 어긋남은 읽는 사람이 먼저 발견한다.
+
+설명 문장은 사람이 쓴 것이다. 조건이 무슨 뜻인지는 데이터에 없다.
+EXPLAIN 에 모아 두었고, 새 조건이 생기면 여기에 한 줄 추가하면 된다.
+설명이 없는 조건은 이름만 적고 넘어간다. 틀린 설명을 붙이는 것보다 낫다.
+
+출력: docs/블로그_탭설명서.md
+
+사용:
+  python scripts/make_blog_guides.py
+  python scripts/make_blog_guides.py --tab minervini
+"""
+import argparse
+import io
+import json
+import re
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+DATA = ROOT / "data"
+
+
+def load(name):
+    try:
+        return json.loads((DATA / f"{name}.json").read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def chip_labels():
+    """index.html 의 칩 라벨을 함수별로 읽어 온다.
+
+    ${...} 자리는 종목마다 값이 달라지는 부분이라 설명용으로 치환한다.
+    예: '거래량 ${r.vol_ratio}배' -> '거래량 N배'
+    """
+    src = (ROOT / "index.html").read_text(encoding="utf-8")
+    out = {}
+    for fn in re.finditer(r"function (mv\w*Chips|mom\w*Chips)\((.*?)\)\s*\{(.*?)\n\}", src, re.S):
+        labels = re.findall(r"\[\s*[`'\"]([^`'\"]+)[`'\"]\s*,", fn.group(3))
+        if labels:
+            out[fn.group(1)] = [re.sub(r"\$\{[^}]+\}", "N", l).strip() for l in labels]
+    return out
+
+
+# 조건이 무슨 뜻이고 왜 보는지. 데이터에 없는 것이라 사람이 쓴다.
+EXPLAIN = {
+    "50일선 위": "최근 50거래일 평균값 위에 있다는 뜻입니다. 두 달 남짓 사이에 산 사람들이 대체로 이익 구간이라는 말이기도 합니다.",
+    "150일선 위": "일곱 달쯤 되는 평균입니다. 중기 흐름이 살아 있는지를 봅니다.",
+    "200일선 위": "열 달 평균입니다. 이 선 위냐 아래냐로 큰 방향을 가릅니다.",
+    "정배열 50·150": "짧은 평균이 긴 평균보다 위에 있다는 뜻입니다. 최근에 산 사람이 예전에 산 사람보다 비싸게 샀다는 말이고, 오름세에서 나타나는 모양입니다.",
+    "정배열 150·200": "위와 같은 이야기를 더 긴 구간으로 봅니다. 둘 다 걸리면 세 선이 순서대로 놓인 상태입니다.",
+    "200일선 상승중": "선 위에 있는 것만으로는 부족합니다. 그 선 자체가 올라가고 있어야 합니다. 선이 내려가는데 주가만 위에 있으면 잠깐 튄 것일 수 있습니다.",
+    "고점서 25% 안쪽": "1년 최고가에서 25% 넘게 빠지지 않았다는 뜻입니다. 숫자에 마이너스가 없어서 헷갈리기 쉬운데, **고점 근처에 있다는 좋은 신호**입니다.",
+    "저점서 25% 위": "1년 최저가보다 25% 이상 올라와 있다는 뜻입니다. 바닥에 붙어 있는 종목을 걸러 냅니다.",
+    "시장보다 강함": "같은 기간 시장 전체보다 더 오른 축에 든다는 뜻입니다. 시장이 빠질 때 덜 빠진 것도 여기 들어갑니다.",
+    "순이익 증가 N": "작년 같은 분기와 견준 순이익 증가율입니다. 계절을 타는 업종이 있어서 직전 분기가 아니라 작년 같은 분기와 견줍니다.",
+    "순이익 가속": "증가율 자체가 빨라지고 있다는 뜻입니다. 100억에서 120억이 된 것보다, 증가 폭이 매 분기 커지는 쪽을 봅니다.",
+    "매출 증가 N": "매출이 늘고 있는지 봅니다. 순이익만 늘고 매출이 제자리면 비용을 줄인 것일 수 있습니다.",
+    "분기 영업이익률 N%": "최근 분기에 100원어치 팔아 얼마가 남았는지입니다.",
+    "연 영업이익률 N%": "한 해 기준입니다. 분기 하나가 특별히 좋았던 것인지 가려 줍니다.",
+    "3년 영업이익률 N%": "3년 평균입니다. 꾸준한지를 봅니다.",
+    "5일 좁게 움직임": "최근 닷새 동안 위아래 폭이 좁았다는 뜻입니다. 크게 오르기 전에 조용해지는 구간이 자주 나옵니다.",
+    "5일 등락 5% 이내": "위와 같은 이야기를 다른 방식으로 셉니다. 둘 다 걸리면 더 조용한 상태입니다.",
+    "거래대금 70억": "하루에 오가는 돈이 일정 수준은 되어야 한다는 뜻입니다. 너무 적으면 사고팔 때 값이 크게 밀립니다.",
+    "하루 +25% 급등": "하루에 25% 넘게 뛴 적이 있으면 표시합니다. **이건 통과가 아니라 주의 표시에 가깝습니다.**",
+    "변동폭 줄어듦": "출렁임이 점점 작아지는 모양입니다. 팔 사람이 줄어들 때 나타납니다.",
+    "10일 눌림": "10거래일 평균선 근처까지 눌렸다는 뜻입니다. 쉬어 가는 자리입니다.",
+    "거래량 N배": "평소보다 거래량이 몇 배로 늘었는지입니다. 값이 오를 때 거래량이 함께 늘어야 힘이 실린 것으로 봅니다.",
+    "매수 자리 돌파": "최근 며칠 눌려 있던 자리의 윗선을 넘었다는 뜻입니다.",
+    "저점 높아짐": "바닥이 계단처럼 올라오고 있다는 뜻입니다. 빠질 때마다 덜 빠지면 이 표시가 붙습니다.",
+    "테마 강세 (강도 N)": "이 종목이 속한 테마가 최근 순위를 끌어올렸는지 봅니다. 혼자 오르는 것보다 무리가 같이 오를 때가 더 이어집니다.",
+    "조용하다 거래량 터짐 🤫": "조용하던 종목에 갑자기 거래량이 들어온 날입니다.",
+    "순이익 N 가속": "실적이 빨라지고 있는지 봅니다.",
+}
+
+GROUPS = {
+    "minervini": [
+        ("추세 조건", "mvTtChips",
+         "주가가 어디쯤 있는지를 봅니다. 이 묶음이 이 탭의 뼈대입니다."),
+        ("실적 조건", "mvFundChips",
+         "회사가 실제로 돈을 벌고 있는지 봅니다. 차트만 좋고 실적이 없으면 오래가지 못합니다."),
+        ("살 자리 조건", "mvSetupChips",
+         "지금 사기 좋은 자리인지 봅니다. 조건을 다 갖췄어도 자리가 아닐 수 있습니다."),
+    ],
+    "momentum": [
+        ("기술 신호", "momTechChips", "방금 방향을 틀었는지 봅니다."),
+        ("자금흐름", "momFlowChips", "돈이 들어오고 있는지 봅니다."),
+        ("실적", "momFundChips", "실적이 받쳐 주는지 봅니다."),
+    ],
+}
+
+
+def bt_block(cat, label):
+    """백테스트 결과. 나쁘면 나쁜 대로 적는다."""
+    v = (load("backtest_stats").get("categories", {}).get(cat, {}) or {}).get("30d") or {}
+    if not v:
+        return []
+    r = v.get("rules") or {}
+    idx = (v.get("period") or {}).get("index") or {}
+    out = [
+        "", "## 이 조건이 맞기는 하나요", "",
+        "조건에 걸린 종목을 전부 모아 과거로 돌려 봤습니다.", "",
+        f"- 표본: {v.get('count'):,}건 (종목 {v.get('unique_codes')}개)",
+        f"- 방식: 걸린 날 종가에 사서 30거래일 보유",
+        f"- 같은 기간 코스피: {idx.get('change_pct')}% (최대 {idx.get('max_drawdown_pct')}%까지 하락)",
+        "",
+        "| | 그냥 들고 있었을 때 | 규칙대로 했을 때 |",
+        "|---|---:|---:|",
+        f"| 승률 | {v.get('win_rate')}% | {r.get('win_rate')}% |",
+        f"| 평균 수익률 | {v.get('avg_return')}% | {r.get('avg_return')}% |",
+        f"| 가장 크게 깨진 건 | {v.get('min_return')}% | {r.get('min_return')}% |",
+        "",
+        f"**{label} 조건만 보고 사서 버티면 지수보다 못했습니다.** 숨기지 않고 그대로 적습니다.",
+        "",
+        "규칙을 걸면 승률은 오히려 떨어집니다. 자주 잘리기 때문입니다. "
+        "대신 크게 깨지는 일이 줄어듭니다. 한 번에 반토막이 나면 그다음이 없습니다.",
+    ]
+    if r.get("exit_reasons"):
+        tot = sum(r["exit_reasons"].values())
+        out += ["", "청산 이유는 이렇게 갈렸습니다.", ""]
+        for k, c in sorted(r["exit_reasons"].items(), key=lambda x: -x[1]):
+            out.append(f"- {k}: {c:,}건 ({c/tot*100:.1f}%)")
+        out += ["", f"평균 {r.get('avg_days')}일 만에 빠져나왔습니다. 생각보다 훨씬 자주 잘립니다."]
+    return out
+
+
+def build_minervini(chips):
+    sc = load("screener_results")
+    lines = [
+        "# 미너비니 탭 보는 법", "",
+        "> 이 글은 화면에 실제로 떠 있는 조건을 그대로 옮긴 설명서입니다.",
+        f"> 숫자는 {sc.get('updated', '')} 기준입니다.", "",
+        "## 한 줄로 말하면", "",
+        "**추세가 이미 만들어진 종목만 모으는 탭입니다.**", "",
+        "막 오르기 시작한 종목을 찾는 곳이 아닙니다. 이미 오름세에 올라탄 종목 중에서 "
+        "실적까지 받쳐 주는 것을 고릅니다.", "",
+        f"오늘은 {sc.get('total_evaluated'):,}개를 계산해서 "
+        f"{sc.get('minervini_strong_count')}개가 걸렸습니다.", "",
+        "## 화면 보는 순서", "",
+        "종목 카드 하나에 뱃지가 줄줄이 붙습니다.", "",
+        "**초록은 통과한 조건, 회색은 못 넘은 조건입니다.**", "",
+        "숫자로 '8개 중 6개'를 읽는 것보다 회색 칸을 눈으로 훑는 게 빠릅니다. "
+        "어디가 모자란지 바로 보이기 때문입니다.", "",
+    ]
+    for title, key, intro in GROUPS["minervini"]:
+        labels = chips.get(key) or []
+        if not labels:
+            continue
+        lines += [f"## {title}", "", intro, ""]
+        for l in labels:
+            e = EXPLAIN.get(l)
+            lines.append(f"**{l}**")
+            lines.append("")
+            lines.append(e if e else "(설명 준비 중)")
+            lines.append("")
+    lines += bt_block("minervini_strong", "미너비니")
+    lines += [
+        "", "## 주의할 점", "",
+        "- 통과 개수가 적다고 나쁜 종목이라는 뜻이 아닙니다. 지금 오름세 구간에 있느냐만 봅니다.",
+        "- 검증 구간이 하락장이었습니다. 상승장 표본이 쌓이면 결과가 달라질 수 있습니다.",
+        "- 사람이 고르지 않고 매일 같은 기준으로 계산합니다.",
+        "",
+        "**종목 추천이 아닙니다. 조건에 걸렸는지만 계산합니다.**",
+    ]
+    return "미너비니 탭", lines
+
+
+def build_momentum(chips):
+    mo = load("momentum_results")
+    themes = mo.get("rising_themes") or []
+    lines = [
+        "# 모멘텀 탭 보는 법", "",
+        "> 화면에 떠 있는 조건을 그대로 옮긴 설명서입니다.",
+        f"> 숫자는 {mo.get('updated', '')} 기준입니다.", "",
+        "## 한 줄로 말하면", "",
+        "**200일선을 막 뚫은 종목만 모으는 탭입니다.**", "",
+        "미너비니 탭이 이미 가고 있는 종목이라면, 이쪽은 이제 막 방향을 튼 종목입니다. "
+        "그래서 두 탭은 잘 겹치지 않습니다.", "",
+        f"오늘은 {mo.get('total_evaluated'):,}개 중 "
+        f"{mo.get('momentum_strong_count')}개가 걸렸습니다.", "",
+    ]
+    if themes:
+        lines += [
+            "## 종목보다 테마를 먼저 봅니다", "",
+            f"화면 맨 위에 강세로 돌아선 테마가 깔립니다. 오늘은 {len(themes)}개입니다.", "",
+            "중요한 건 오늘 몇 % 올랐느냐가 아니라 **순위가 최근에 몇 계단 뛰었느냐**입니다. "
+            "이미 오른 테마를 쫓으면 늦습니다.", "",
+            "돈이 어디로 도는지 먼저 보고, 그 안에서 종목을 보면 순서가 맞습니다.", "",
+        ]
+    for title, key, intro in GROUPS["momentum"]:
+        labels = chips.get(key) or []
+        if not labels:
+            continue
+        lines += [f"## {title}", "", intro, ""]
+        for l in labels:
+            e = EXPLAIN.get(l)
+            lines.append(f"**{l}**")
+            lines.append("")
+            lines.append(e if e else "(설명 준비 중)")
+            lines.append("")
+    lines += bt_block("momentum_strong", "모멘텀")
+    lines += [
+        "", "## 주의할 점", "",
+        "- 막 방향을 튼 자리라 되밀리는 일도 잦습니다. 손절선이 더 중요한 탭입니다.",
+        "- 두 탭에 동시에 걸리면 '합류'로 따로 표시됩니다. 드뭅니다.",
+        "",
+        "**종목 추천이 아닙니다. 조건에 걸렸는지만 계산합니다.**",
+    ]
+    return "모멘텀 탭", lines
+
+
+BUILDERS = {"minervini": build_minervini, "momentum": build_momentum}
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--tab")
+    args = ap.parse_args()
+
+    chips = chip_labels()
+    names = [args.tab] if args.tab else list(BUILDERS)
+    docs = []
+    missing = set()
+    for name in names:
+        fn = BUILDERS.get(name)
+        if not fn:
+            print(f"모르는 탭: {name}")
+            continue
+        title, lines = fn(chips)
+        body = "\n".join(lines)
+        docs.append((title, body))
+        for l in re.findall(r"^\*\*(.+?)\*\*$", body, re.M):
+            if l in chips.get("mvTtChips", []) + chips.get("mvFundChips", []) \
+                    + chips.get("mvSetupChips", []) + chips.get("momTechChips", []) \
+                    + chips.get("momFlowChips", []) + chips.get("momFundChips", []):
+                if l not in EXPLAIN:
+                    missing.add(l)
+        print(f"[{title}] {len(body):,}자 / {len(lines)}줄")
+
+    path = ROOT / "docs" / "블로그_탭설명서.md"
+    with io.open(path, "w", encoding="utf-8", newline="\n") as f:
+        f.write("<!-- python scripts/make_blog_guides.py 로 다시 만듭니다 -->\n\n")
+        for i, (title, body) in enumerate(docs):
+            if i:
+                f.write("\n\n" + "=" * 60 + "\n\n")
+            f.write(body + "\n")
+    print(f"\n저장: {path}")
+    if missing:
+        print("설명이 없는 조건 (EXPLAIN 에 추가하세요):")
+        for m in sorted(missing):
+            print(f"   {m}")
+
+
+if __name__ == "__main__":
+    main()
