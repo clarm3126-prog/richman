@@ -91,7 +91,7 @@ CARDS = {
             {"label": "52주 고점 대비", "value": "25% 이내"},
             {"label": "시장 대비 강도", "value": "전 종목 상위 30%"},
         ],
-        "highlight": "8개를 다 통과하면 strict, 6개 이상에 실적까지 붙으면 strong으로 나옵니다.",
+        "highlight": "8개를 다 통과하면 '엄격', 6개 이상에 실적까지 붙으면 '우량'으로 나옵니다.",
         "handle": HANDLE,
         "tagline": TAGLINE,
     },

@@ -4043,8 +4043,8 @@ function mvTtChips(tt) {
     ['정배열 50·150', tt.ma50_above_ma150],
     ['정배열 150·200', tt.ma150_above_ma200],
     ['200일선 상승중', tt.ma200_uptrend],
-    ['1년 최고가 -25%', tt.within_25pct_of_52w_high],
-    ['1년 최저가 +25%', tt.above_25pct_from_52w_low],
+    ['고점서 25% 안쪽', tt.within_25pct_of_52w_high],
+    ['저점서 25% 위', tt.above_25pct_from_52w_low],
     ['시장보다 강함', tt.rs_rating_70plus],
   ];
 }
@@ -4082,7 +4082,7 @@ function momTechChips(r) {
     [r.ma200_cross_days_ago ? `200일선 ${r.ma200_cross_days_ago}일전 돌파` : '200일선 돌파', r.ma200_cross_recent],
     ['변동폭 줄어듦', r.vcp_contracting],
     ['10일 눌림', r.tight_action],
-    [`거래량 ${r.vol_ratio}x`, r.volume_surge_2x],
+    [`거래량 ${r.vol_ratio}배`, r.volume_surge_2x],
     ['매수 자리 돌파', r.pivot_breakout],
     ['저점 높아짐', r.higher_lows],
   ];
@@ -4091,7 +4091,7 @@ function momTechChips(r) {
 function momFlowChips(r) {
   r = r || {};
   return [
-    [`거래량 ${r.vol_ratio}x`, r.volume_surge_15x],
+    [`거래량 ${r.vol_ratio}배`, r.volume_surge_15x],
     // W는 테마 가중치의 약자였다. 보는 사람에게는 뜻이 없는 글자다.
     [`테마 강세 (강도 ${r.theme_weight})`, r.theme_rising],
     [`조용하다 거래량 터짐 🤫`, r.pocket_pivot],
