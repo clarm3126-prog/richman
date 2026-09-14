@@ -300,6 +300,67 @@ US_INDICES = [
 ]
 
 
+# 미장 브리핑에 붙일 종목 줄.
+US_PICK_MAX = 5
+US_NAME_MAX = 22
+# 쓰레드 본문 상한(480)에서 제목·꼬리말이 붙을 자리를 뺀 값.
+# 종목 줄은 남는 만큼만 넣는다.
+US_TEXT_ROOM = 450
+
+
+def _shorten(name, limit):
+    """긴 회사 이름을 줄인다. 되도록 단어 사이에서 끊는다.
+
+    글자 수로만 자르면 'Keysight Technologi…' 처럼 단어 한가운데가
+    갈려서 읽다가 걸린다.
+    """
+    name = (name or "").strip()
+    if len(name) <= limit:
+        return name
+    cut = name.rfind(" ", 0, limit - 1)
+    if cut < limit // 2:          # 앞쪽에서만 끊기면 차라리 그냥 자른다
+        cut = limit - 1
+    return name[:cut].rstrip() + "…"
+
+
+def _us_picks(results, room):
+    """추세와 실적을 둘 다 통과한 종목 몇 개를 줄로 만든다.
+
+    **둘 다 통과한 것만 고른다.** 한쪽만 통과한 종목을 섞으면 바로 위에
+    적은 두 숫자 중 어느 쪽에서 뽑았는지 알 수 없다. 겹치는 자리에서
+    뽑으면 두 줄 모두에 들어가는 종목이라 따로 설명할 것이 없다.
+
+    점수가 같은 종목이 많아 점수만으로 줄 세우면 늘 알파벳 앞자리가
+    올라온다. 날마다 같은 이름이 뜨면 그날 계산한 것처럼 안 보인다.
+    등락률을 두 번째 기준으로 둔다.
+
+    room 은 남은 글자 수다. 회사 이름 길이도, 간밤 기사 줄 수도 날마다
+    달라서 개수로만 막으면 어떤 날은 쓰레드 상한을 넘어 잘린다.
+    """
+    picks = [r for r in results
+             if r.get("minervini_strict") and r.get("minervini_strong")]
+    if not picks:
+        return []
+    picks.sort(key=lambda r: (r.get("total_score") or 0, r.get("change") or 0),
+               reverse=True)
+
+    head = ["", f"둘 다 통과한 {len(picks)}개 중 점수가 높은 쪽입니다.", ""]
+    used = sum(len(l) + 1 for l in head)
+    rows = []
+    for r in picks[:US_PICK_MAX]:
+        price, change = r.get("price"), r.get("change")
+        if price is None or change is None:
+            continue
+        row = f"{_shorten(r.get('name') or r.get('code'), US_NAME_MAX)} " \
+              f"{price:,.2f}달러 ({change:+.2f}%)"
+        if used + len(row) + 1 > room:
+            break
+        rows.append(row)
+        used += len(row) + 1
+    # 한 줄도 못 넣을 자리면 머리말만 남기지 않는다.
+    return head + rows if rows else []
+
+
 def compose_us_brief(with_news=True):
     """아침 8시 미장 브리핑. 국장 개장(9시) 전에 나간다.
 
@@ -320,6 +381,7 @@ def compose_us_brief(with_news=True):
     if hist:
         lines.append(f"원달러 {_fmt_idx(cur)}원 ({change:+.2f}%)")
 
+    picks_from = []
     u = _load("us_results")
     if u and not _stale(u, 4):
         mv = u.get("minervini") or {}
@@ -340,13 +402,21 @@ def compose_us_brief(with_news=True):
                 f"추세 조건 8개를 다 통과한 종목 {strict}개",
                 f"추세 6개 이상에 실적까지 받쳐주는 종목 {strong}개",
             ]
+            picks_from = mv.get("results") or []
 
+    tail = []
     if with_news:
         # 미국 장은 한국 새벽에 끝나므로 18시간까지 본다.
-        lines += _news_lines("world", 18, _load("market"), "간밤 나온 기사")
+        tail += _news_lines("world", 18, _load("market"), "간밤 나온 기사")
+    tail += ["", "종목 추천이 아니라 조건에 걸린 개수입니다."]
+    tail += ["", "오늘 국장은 어떻게 보세요?"]
 
-    lines += ["", "종목 추천이 아니라 조건에 걸린 개수입니다."]
-    lines += ["", "오늘 국장은 어떻게 보세요?"]
+    # 종목 줄은 맨 마지막에 넣는다. 자리를 재려면 기사가 몇 줄인지 먼저
+    # 알아야 하기 때문이다. 기사가 많은 날 종목까지 욱여넣으면 쓰레드가
+    # 뒤를 잘라서, 하필 맨 끝의 면책 문구가 날아간다.
+    room = US_TEXT_ROOM - sum(len(l) + 1 for l in lines + tail)
+    lines += _us_picks(picks_from, room)
+    lines += tail
 
     return {
         "kind": "us_brief",
