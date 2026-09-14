@@ -18,6 +18,9 @@
 """
 import re
 
+# 주소만 있는 줄. 길이 규칙에서 뺀다.
+_URL_ONLY = re.compile(r"^(https?://)?[\w.-]+\.[a-z]{2,}(/\S*)?$", re.I)
+
 # 한 줄 길이. 평균은 권고, 최장은 상한이다.
 LINE_AVG_TARGET = 15
 LINE_MAX = 25
@@ -117,11 +120,14 @@ def check(text, prose=True):
     if len(lines) > LINES_MAX:
         problems.append(f"줄이 너무 많습니다 ({len(lines)}줄, 최대 {LINES_MAX})")
 
-    over = [l for l in lines if len(l) > LINE_MAX]
+    # 주소 한 줄은 길이에서 뺀다. 자를 수 없는 줄이라 경고해도 고칠
+    # 방법이 없다. 고칠 수 없는 경고는 결국 안 읽히게 만든다.
+    measured = [l for l in lines if not _URL_ONLY.match(l.strip())]
+    over = [l for l in measured if len(l) > LINE_MAX]
     if over:
         problems.append(f"{LINE_MAX}자 넘는 줄 {len(over)}개 (가장 긴 줄 {max(len(l) for l in over)}자)")
 
-    avg = sum(len(l) for l in lines) / len(lines)
+    avg = sum(len(l) for l in measured) / max(1, len(measured))
     if avg > LINE_AVG_TARGET + 5:
         problems.append(f"한 줄 평균이 깁니다 ({avg:.0f}자, 목표 {LINE_AVG_TARGET}자)")
 
