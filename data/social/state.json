@@ -103,6 +103,16 @@
    "date": "2026-09-14",
    "kind": "kr_close",
    "threads_id": "18127041169853582"
+  },
+  {
+   "date": "2026-09-15",
+   "ig_id": "17945887875336630",
+   "images": [
+    "assets/cards/2026-09-15-screener.jpg",
+    "assets/cards/about.jpg"
+   ],
+   "kind": "screener",
+   "threads_id": "17958159849212317"
   }
  ],
  "queue_done": [
