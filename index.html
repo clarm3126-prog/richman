@@ -3498,7 +3498,7 @@ function renderVolumeView() {
       html += `<tr class="strength-row" data-code="${s.code}">
         <td>${i + 1}</td>
         <td>${s.name}<div class="company-code" style="display:block;font-size:11px;margin-top:2px">${s.code} · ${s.market}</div></td>
-        <td class="num up">${s.ratio}x</td>
+        <td class="num up">${s.ratio}배</td>
         <td class="num ${cls}">${fmtPct(s.change)}</td>
         <td class="num">${tradeValue ? fmtMoney(tradeValue) : '—'}</td>
       </tr>`;
@@ -3626,7 +3626,7 @@ function renderVolumeHeatmap(history) {
       const top5 = list.slice(0, 5);
       const top1 = top5[0];
       const sign = top1.change > 0 ? '+' : '';
-      const tooltip = `${dateStr} · 1위 ${top1.name} ${top1.ratio}x ${sign}${top1.change.toFixed(2)}%`;
+      const tooltip = `${dateStr} · 1위 ${top1.name} ${top1.ratio}배 ${sign}${top1.change.toFixed(2)}%`;
       let inner = `<div class="day-num">${d.getDate()}</div>`;
       inner += `<div class="day-themes">`;
       top5.forEach(t => {
@@ -3634,9 +3634,9 @@ function renderVolumeHeatmap(history) {
         const color = t.change > 2 ? '#dc2626' : t.change > 0 ? '#fca5a5' : t.change < -2 ? '#2563eb' : t.change < 0 ? '#93c5fd' : '#6b7280';
         const tSign = t.change > 0 ? '+' : '';
         const shortName = t.name.length > 7 ? t.name.slice(0, 6) + '…' : t.name;
-        inner += `<div class="day-theme" style="background:${color}" title="${t.name} ${t.ratio}x ${tSign}${t.change.toFixed(2)}%">
+        inner += `<div class="day-theme" style="background:${color}" title="${t.name} ${t.ratio}배 ${tSign}${t.change.toFixed(2)}%">
           <span class="day-theme-name">${shortName}</span>
-          <span class="day-theme-pct">${t.ratio}x</span>
+          <span class="day-theme-pct">${t.ratio}배</span>
         </div>`;
       });
       inner += `</div>`;
@@ -3671,7 +3671,7 @@ function showVolumeDayModal(date, list) {
       html += `<div class="legend-item" data-stock-code="${s.code}" data-modal-row="1">
         <span class="legend-rank">${i + 1}</span>
         <span class="legend-name">${s.name}<span style="font-size:11px;color:var(--fg-faint);margin-left:4px">${s.code}·${s.market || ''}</span></span>
-        <span class="legend-val up" style="font-weight:700">${s.ratio}x</span>
+        <span class="legend-val up" style="font-weight:700">${s.ratio}배</span>
         <span class="legend-val ${cls}">${sign}${s.change.toFixed(2)}%</span>
       </div>`;
     });
@@ -6032,7 +6032,7 @@ function renderOneilView() {
   el.innerHTML = `<div class="strength-section" style="border-left:4px solid #d97706;background:var(--bg-card-tint-amber)">
       <div class="strength-title">🏆 윌리엄 오닐 — 신고가 돌파 매매</div>
       <div class="strength-meta" style="margin-top:4px;line-height:1.6">
-        CAN SLIM의 <b>N</b> = New highs. 거래량 동반 <b>역사적 신고가 돌파</b> 종목 포착.<br>
+        오닐이 꼽은 조건 가운데 하나가 <b>신고가</b>입니다. 거래량이 함께 늘면서 <b>역대 최고가</b>를 뚫은 종목을 찾습니다.<br>
         <span style="font-size:11px">오닐: "역대 최고가 돌파 + 평균 대비 40~50%↑ 거래량 = 가장 강력한 매수 신호"</span>
       </div>
     </div>
@@ -6104,10 +6104,10 @@ function renderAthBreakoutData(el, d, archiveDate) {
           <div class="ath-name">#${i + 1} ${b.name} <span class="ath-code">${b.code} · ${b.market}</span></div>
           <div class="ath-sub">${b.price.toLocaleString('ko-KR')}원 <span class="${cls}">${sign}${b.change.toFixed(2)}%</span></div>
         </div>
-        <div class="ath-volratio">🔥 ${b.vol_ratio}x</div>
+        <div class="ath-volratio">🔥 ${b.vol_ratio}배</div>
       </div>
       <div class="ath-tags">
-        <span class="ath-tag ath">📈 ${b.base_days ? (b.base_days >= 30 ? Math.floor(b.base_days/30)+'개월' : b.base_days+'일') + '만의 ' : ''}ATH 돌파</span>
+        <span class="ath-tag ath">📈 ${b.base_days ? (b.base_days >= 30 ? Math.floor(b.base_days/30)+'개월' : b.base_days+'일') + '만의 ' : ''}역대 최고가 돌파</span>
         ${sd}
       </div>
     </div>`;
@@ -6224,9 +6224,9 @@ function renderUsOneil(oneil) {
           <div class="ath-name">#${i + 1} ${b.name} <span class="ath-code">${b.code} · US</span></div>
           <div class="ath-sub">$${b.price.toLocaleString('en-US')} <span class="${cls}">${sign}${b.change.toFixed(2)}%</span></div>
         </div>
-        <div class="ath-volratio">🔥 ${b.vol_ratio}x</div>
+        <div class="ath-volratio">🔥 ${b.vol_ratio}배</div>
       </div>
-      <div class="ath-tags"><span class="ath-tag ath">📈 ${baseTxt}ATH 돌파</span></div>
+      <div class="ath-tags"><span class="ath-tag ath">📈 ${baseTxt}역대 최고가 돌파</span></div>
     </div>`;
   });
   return h + `</div>`;
@@ -6301,7 +6301,7 @@ function renderConfluenceBanner() {
     let c = '';
     if (e.mv) c += `<span class="mv-chip pass">🎯 미너비니 ${e.mv.cat} ${e.mv.score}점</span>`;
     if (e.mm) c += `<span class="mv-chip pass">🚀 모멘텀 ${e.mm.cat} ${e.mm.score}점</span>`;
-    if (e.oneil) c += `<span class="mv-chip pass">🏆 오닐 돌파 ${e.oneil.vol_ratio}x</span>`;
+    if (e.oneil) c += `<span class="mv-chip pass">🏆 오닐 돌파 ${e.oneil.vol_ratio}배</span>`;
     return c;
   };
   const card = (e, isTriple) => {
