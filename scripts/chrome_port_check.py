@@ -26,6 +26,13 @@ from pathlib import Path
 import requests
 
 ROOT = Path(__file__).resolve().parents[1]
+
+# 윈도 콘솔은 cp949 라 —, ※ 같은 글자에서 터진다. 한글은 멀쩡히
+# 나오는데 대시 하나 때문에 정상 동작이 예외로 끝난다. 못 그리는
+# 글자만 물음표로 바꾸고 넘어간다.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(errors="replace")
+
 PORTS = [12315, 12316, 12317, 12318, 12319]
 H = {"Content-Type": "application/json",
      "Accept": "application/json, text/event-stream"}
