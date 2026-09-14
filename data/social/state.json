@@ -113,10 +113,21 @@
    ],
    "kind": "screener",
    "threads_id": "17958159849212317"
+  },
+  {
+   "date": "2026-09-15",
+   "ig_id": "17919845808222084",
+   "images": [
+    "assets/cards/blog-taesung.jpg",
+    "assets/cards/about.jpg"
+   ],
+   "kind": "trade_log",
+   "threads_id": "18175469593441199"
   }
  ],
  "queue_done": [
   "c6323a1e1df7",
-  "30fae72c67de"
+  "30fae72c67de",
+  "e14b525289da"
  ]
 }
