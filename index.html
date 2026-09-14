@@ -1387,7 +1387,7 @@
       <button class="modal-btn modal-btn-cancel" onclick="closeAlertModal()">취소</button>
       <button class="modal-btn modal-btn-save" onclick="saveAlertModal()">저장</button>
     </div>
-    <div class="modal-note">앱 알림은 앱이 열려있을 때만. Telegram 알림은 항상 동작 (동기화 필요).</div>
+    <div class="modal-note">앱 알림은 앱이 열려 있을 때만 옵니다. 텔레그램 알림은 늘 옵니다 (연결 필요).</div>
   </div>
 </div>
 
@@ -1516,7 +1516,7 @@
 <div id="alertHistoryModal" class="modal-overlay" onclick="if(event.target===this) closeAlertHistoryModal()">
   <div class="modal" style="max-width:480px">
     <div class="modal-title">🔔 알림 기록</div>
-    <div class="modal-current">최근 Telegram 알림 history</div>
+    <div class="modal-current">최근 텔레그램 알림 기록</div>
     <div id="alertHistoryBody" style="max-height:60vh;overflow-y:auto"></div>
     <div class="modal-actions">
       <button class="modal-btn modal-btn-cancel" onclick="closeAlertHistoryModal()">닫기</button>
@@ -3698,6 +3698,16 @@ async function loadBacktestData() {
   return BACKTEST_LOADING;
 }
 
+// 화면에 내보낼 이름. category 는 데이터 파일의 열쇠라 영어지만
+// 그대로 띄우면 읽는 사람에게는 뜻 없는 글자다. 탭의 버튼에 적힌 말과
+// 같게 맞춘다.
+const BACKTEST_NAMES = {
+  minervini_strict: '미너비니 · 엄격',
+  minervini_strong: '미너비니 · 우량',
+  momentum_strong: '모멘텀 · 강세',
+  pre_breakout: '모멘텀 · 사전',
+};
+
 function renderBacktestBanner(category) {
   if (!BACKTEST_DATA || BACKTEST_DATA.__empty) return '';
   if (BACKTEST_DATA.status !== 'ok') {
@@ -3782,7 +3792,7 @@ function renderBacktestBanner(category) {
       + (enough(r.s) ? sub(r.s, r.h) : '');
   }).join('');
   return `<div class="strength-section" style="background:var(--bg-card-tint-blue);border-color:var(--border-blue)">
-    <div style="font-size:11px;font-weight:700;color:var(--accent-blue-text);margin-bottom:4px">📊 과거 검증 (${category})</div>
+    <div style="font-size:11px;font-weight:700;color:var(--accent-blue-text);margin-bottom:4px">📊 과거 검증 (${BACKTEST_NAMES[category] || category})</div>
     ${periodHtml}
     ${lines}
     <div style="font-size:10px;color:var(--fg-faint);margin-top:4px">첫 줄은 조건에 걸린 날 사서 그냥 들고 있었을 때입니다. 손절을 지키면 평균 며칠 만에 빠져나오므로, 지수와 견줄 때는 <b>같은 날수의 지수</b>를 봐야 합니다. 표본이 짧고 한쪽 장에 몰려 있어 앞으로도 이렇다는 뜻은 아닙니다.</div>
@@ -4647,7 +4657,7 @@ function renderExitSignalsBanner(watchlistCodes) {
   if (hasWl) {
     html += `<div class="strength-section" style="border-left:4px solid var(--border-amber);background:var(--bg-card-tint-yellow)">
       <div class="strength-title">⚠️ 관심 종목 매도 시그널 <span style="font-size:11px;background:#9ca3af;color:#fff;padding:2px 6px;border-radius:4px;margin-left:6px">알림 X · 참고만</span></div>
-      <div class="strength-meta">위험 ${wlCrit.length}건 · 주의 ${wlWarn.length}건 (보유 등록 시 Telegram 알림)</div>
+      <div class="strength-meta">위험 ${wlCrit.length}건 · 주의 ${wlWarn.length}건 (보유 등록 시 텔레그램 알림)</div>
       <div style="margin-top:8px">`;
     for (const r of [...wlCrit, ...wlWarn]) {
       const sigs = (r.signals || []).map(s =>

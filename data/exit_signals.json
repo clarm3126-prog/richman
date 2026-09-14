@@ -1,1 +1,1357 @@
-{"updated":"2026-09-11 21:20:44 KST","trading_day":"20260911","critical_count":3,"warning_count":23,"results":[{"code":"000990","name":"DB하이텍","source":["momentum"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"critical","signals":[{"severity":"critical","type":"big_red_distribution","label":"큰 음봉 (-8.2%) + 거래량 1.5x","detail":"기관 분배 의심"},{"severity":"warning","type":"failed_breakout","label":"Failed Breakout (가짜 돌파)","detail":"박스 상단 109,800 돌파 후 안으로 복귀"}],"current_price":105800.0,"today_change":-8.16,"ma21":96867,"ma50":98912,"ma150":null,"ma200":null,"distribution_days_20d":2},{"code":"248170","name":"샘표식품","source":["momentum"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"critical","signals":[{"severity":"critical","type":"big_red_distribution","label":"큰 음봉 (-14.8%) + 거래량 11.2x","detail":"기관 분배 의심"}],"current_price":25700.0,"today_change":-14.76,"ma21":23740,"ma50":23173,"ma150":null,"ma200":null,"distribution_days_20d":1},{"code":"042700","name":"한미반도체","source":["momentum"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"critical","signals":[{"severity":"critical","type":"big_red_distribution","label":"큰 음봉 (-8.7%) + 거래량 1.7x","detail":"기관 분배 의심"},{"severity":"warning","type":"failed_breakout","label":"Failed Breakout (가짜 돌파)","detail":"박스 상단 255,000 돌파 후 안으로 복귀"}],"current_price":231000.0,"today_change":-8.7,"ma21":225738,"ma50":216904,"ma150":null,"ma200":null,"distribution_days_20d":1},{"code":"048770","name":"TPC로보틱스","source":["momentum"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"warning","signals":[{"severity":"warning","type":"failed_breakout","label":"Failed Breakout (가짜 돌파)","detail":"박스 상단 5,000 돌파 후 안으로 복귀"}],"current_price":4180.0,"today_change":-6.9,"ma21":3387,"ma50":3126,"ma150":null,"ma200":null,"distribution_days_20d":1},{"code":"007690","name":"국도화학","source":["minervini"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"warning","signals":[{"severity":"warning","type":"ma21_break","label":"MA21 이탈 (단기 약화)","detail":"종가 38,300.0 < MA21 38,519"},{"severity":"warning","type":"distribution_days","label":"20일 분배일 5개","detail":"기관 매도 누적"}],"current_price":38300.0,"today_change":-2.54,"ma21":38519,"ma50":37936,"ma150":null,"ma200":null,"distribution_days_20d":5},{"code":"144960","name":"뉴파워프라즈마","source":["minervini"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"warning","signals":[{"severity":"warning","type":"distribution_days","label":"20일 분배일 6개","detail":"기관 매도 누적"}],"current_price":8810.0,"today_change":-2.65,"ma21":9663,"ma50":9630,"ma150":null,"ma200":null,"distribution_days_20d":6},{"code":"117580","name":"대성에너지","source":["momentum"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"warning","signals":[{"severity":"warning","type":"failed_breakout","label":"Failed Breakout (가짜 돌파)","detail":"박스 상단 7,400 돌파 후 안으로 복귀"}],"current_price":7330.0,"today_change":-2.4,"ma21":6944,"ma50":6919,"ma150":null,"ma200":null,"distribution_days_20d":1},{"code":"131970","name":"두산테스나","source":["momentum"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"warning","signals":[{"severity":"warning","type":"failed_breakout","label":"Failed Breakout (가짜 돌파)","detail":"박스 상단 87,400 돌파 후 안으로 복귀"}],"current_price":83800.0,"today_change":-5.95,"ma21":80371,"ma50":80660,"ma150":null,"ma200":null,"distribution_days_20d":3},{"code":"058470","name":"리노공업","source":["minervini","momentum"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"warning","signals":[{"severity":"warning","type":"ma21_break","label":"MA21 이탈 (단기 약화)","detail":"종가 66,400.0 < MA21 67,400"}],"current_price":66400.0,"today_change":-4.18,"ma21":67400,"ma50":68514,"ma150":null,"ma200":null,"distribution_days_20d":4},{"code":"014970","name":"삼륭물산","source":["momentum"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"warning","signals":[{"severity":"warning","type":"failed_breakout","label":"Failed Breakout (가짜 돌파)","detail":"박스 상단 4,905 돌파 후 안으로 복귀"}],"current_price":4670.0,"today_change":1.74,"ma21":4443,"ma50":4379,"ma150":null,"ma200":null,"distribution_days_20d":1},{"code":"028260","name":"삼성물산","source":["minervini"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"warning","signals":[{"severity":"warning","type":"ma21_break","label":"MA21 이탈 (단기 약화)","detail":"종가 367,000.0 < MA21 374,119"},{"severity":"warning","type":"distribution_days","label":"20일 분배일 5개","detail":"기관 매도 누적"}],"current_price":367000.0,"today_change":-3.29,"ma21":374119,"ma50":363270,"ma150":null,"ma200":null,"distribution_days_20d":5},{"code":"005930","name":"삼성전자","source":["minervini"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"warning","signals":[{"severity":"warning","type":"ma21_break","label":"MA21 이탈 (단기 약화)","detail":"종가 259,500.0 < MA21 263,048"}],"current_price":259500.0,"today_change":-3.53,"ma21":263048,"ma50":259460,"ma150":null,"ma200":null,"distribution_days_20d":3},{"code":"189860","name":"서전기전","source":["momentum"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"warning","signals":[{"severity":"warning","type":"failed_breakout","label":"Failed Breakout (가짜 돌파)","detail":"박스 상단 5,750 돌파 후 안으로 복귀"}],"current_price":5220.0,"today_change":-3.51,"ma21":4581,"ma50":4269,"ma150":null,"ma200":null,"distribution_days_20d":2},{"code":"068270","name":"셀트리온","source":["minervini"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"warning","signals":[{"severity":"warning","type":"distribution_days","label":"20일 분배일 5개","detail":"기관 매도 누적"}],"current_price":178200.0,"today_change":-1.44,"ma21":189900,"ma50":185394,"ma150":null,"ma200":null,"distribution_days_20d":5},{"code":"160980","name":"싸이맥스","source":["minervini"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"warning","signals":[{"severity":"warning","type":"distribution_days","label":"20일 분배일 7개","detail":"기관 매도 누적"}],"current_price":22050.0,"today_change":-5.36,"ma21":25707,"ma50":29618,"ma150":null,"ma200":null,"distribution_days_20d":7},{"code":"101490","name":"에스앤에스텍","source":["momentum"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"warning","signals":[{"severity":"warning","type":"ma21_break","label":"MA21 이탈 (단기 약화)","detail":"종가 41,400.0 < MA21 41,890"}],"current_price":41400.0,"today_change":-4.83,"ma21":41890,"ma50":42486,"ma150":null,"ma200":null,"distribution_days_20d":3},{"code":"001800","name":"오리온홀딩스","source":["minervini"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"warning","signals":[{"severity":"warning","type":"distribution_days","label":"20일 분배일 5개","detail":"기관 매도 누적"}],"current_price":25450.0,"today_change":0.59,"ma21":25669,"ma50":25856,"ma150":null,"ma200":null,"distribution_days_20d":5},{"code":"032940","name":"원익","source":["momentum"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"warning","signals":[{"severity":"warning","type":"failed_breakout","label":"Failed Breakout (가짜 돌파)","detail":"박스 상단 11,060 돌파 후 안으로 복귀"}],"current_price":9600.0,"today_change":-8.57,"ma21":7532,"ma50":6405,"ma150":null,"ma200":null,"distribution_days_20d":1},{"code":"302430","name":"이노메트리","source":["momentum"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"warning","signals":[{"severity":"warning","type":"failed_breakout","label":"Failed Breakout (가짜 돌파)","detail":"박스 상단 8,880 돌파 후 안으로 복귀"}],"current_price":8110.0,"today_change":-5.04,"ma21":7018,"ma50":6142,"ma150":null,"ma200":null,"distribution_days_20d":1},{"code":"053050","name":"지에스이","source":["momentum"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"warning","signals":[{"severity":"warning","type":"failed_breakout","label":"Failed Breakout (가짜 돌파)","detail":"박스 상단 2,010 돌파 후 안으로 복귀"}],"current_price":1988.0,"today_change":-3.73,"ma21":1856,"ma50":1824,"ma150":null,"ma200":null,"distribution_days_20d":2},{"code":"183300","name":"코미코","source":["momentum"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"warning","signals":[{"severity":"warning","type":"failed_breakout","label":"Failed Breakout (가짜 돌파)","detail":"박스 상단 29,550 돌파 후 안으로 복귀"}],"current_price":27300.0,"today_change":-5.7,"ma21":25233,"ma50":25704,"ma150":null,"ma200":null,"distribution_days_20d":1},{"code":"064760","name":"티씨케이","source":["minervini"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"warning","signals":[{"severity":"warning","type":"failed_breakout","label":"Failed Breakout (가짜 돌파)","detail":"박스 상단 279,500 돌파 후 안으로 복귀"}],"current_price":258000.0,"today_change":-4.97,"ma21":244119,"ma50":219948,"ma150":null,"ma200":null,"distribution_days_20d":1},{"code":"131290","name":"티에스이","source":["minervini"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"warning","signals":[{"severity":"warning","type":"failed_breakout","label":"Failed Breakout (가짜 돌파)","detail":"박스 상단 288,500 돌파 후 안으로 복귀"}],"current_price":260500.0,"today_change":-15.01,"ma21":250143,"ma50":236654,"ma150":null,"ma200":null,"distribution_days_20d":3},{"code":"128940","name":"한미약품","source":["minervini"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"warning","signals":[{"severity":"warning","type":"ma21_break","label":"MA21 이탈 (단기 약화)","detail":"종가 464,000.0 < MA21 464,524"}],"current_price":464000.0,"today_change":-3.63,"ma21":464524,"ma50":418860,"ma150":null,"ma200":null,"distribution_days_20d":3},{"code":"005860","name":"한일사료","source":["momentum"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"warning","signals":[{"severity":"warning","type":"failed_breakout","label":"Failed Breakout (가짜 돌파)","detail":"박스 상단 2,630 돌파 후 안으로 복귀"}],"current_price":2470.0,"today_change":-0.8,"ma21":2425,"ma50":2419,"ma150":null,"ma200":null,"distribution_days_20d":1},{"code":"000720","name":"현대건설","source":["momentum"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"warning","signals":[{"severity":"warning","type":"failed_breakout","label":"Failed Breakout (가짜 돌파)","detail":"박스 상단 137,100 돌파 후 안으로 복귀"}],"current_price":134900.0,"today_change":2.82,"ma21":121181,"ma50":110604,"ma150":null,"ma200":null,"distribution_days_20d":1},{"code":"007340","name":"DN오토모티브","source":["minervini"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"ok","signals":[],"current_price":46800.0,"today_change":1.3,"ma21":48067,"ma50":43467,"ma150":null,"ma200":null,"distribution_days_20d":3},{"code":"443060","name":"HD현대마린솔루션","source":["minervini","momentum"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"ok","signals":[],"current_price":247000.0,"today_change":7.63,"ma21":210738,"ma50":203022,"ma150":null,"ma200":null,"distribution_days_20d":3},{"code":"108320","name":"LX세미콘","source":["momentum"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"ok","signals":[],"current_price":35950.0,"today_change":-3.62,"ma21":37319,"ma50":37300,"ma150":null,"ma200":null,"distribution_days_20d":2},{"code":"036540","name":"SFA반도체","source":["momentum"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"ok","signals":[],"current_price":7040.0,"today_change":-0.98,"ma21":5966,"ma50":5530,"ma150":null,"ma200":null,"distribution_days_20d":2},{"code":"000660","name":"SK하이닉스","source":["minervini"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"ok","signals":[],"current_price":1812000.0,"today_change":-2.21,"ma21":1693381,"ma50":1756680,"ma150":null,"ma200":null,"distribution_days_20d":2},{"code":"092790","name":"넥스틸","source":["momentum"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"ok","signals":[],"current_price":14380.0,"today_change":0.07,"ma21":12699,"ma50":11912,"ma150":null,"ma200":null,"distribution_days_20d":0},{"code":"100590","name":"머큐리","source":["momentum"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"ok","signals":[],"current_price":4750.0,"today_change":-4.43,"ma21":3767,"ma50":3492,"ma150":null,"ma200":null,"distribution_days_20d":1},{"code":"452430","name":"사피엔반도체","source":["momentum"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"ok","signals":[],"current_price":37200.0,"today_change":0.27,"ma21":29781,"ma50":28292,"ma150":null,"ma200":null,"distribution_days_20d":1},{"code":"062040","name":"산일전기","source":["minervini"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"ok","signals":[],"current_price":198600.0,"today_change":1.22,"ma21":187790,"ma50":178590,"ma150":null,"ma200":null,"distribution_days_20d":3},{"code":"028050","name":"삼성E&A","source":["minervini"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"ok","signals":[],"current_price":51000.0,"today_change":1.19,"ma21":47812,"ma50":46191,"ma150":null,"ma200":null,"distribution_days_20d":2},{"code":"009150","name":"삼성전기","source":["minervini"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"ok","signals":[],"current_price":1400000.0,"today_change":0.0,"ma21":1403857,"ma50":1379200,"ma150":null,"ma200":null,"distribution_days_20d":4},{"code":"003230","name":"삼양식품","source":["minervini"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"ok","signals":[],"current_price":1278000.0,"today_change":1.11,"ma21":1382143,"ma50":1255640,"ma150":null,"ma200":null,"distribution_days_20d":2},{"code":"011560","name":"세보엠이씨","source":["minervini"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"ok","signals":[],"current_price":24050.0,"today_change":0.42,"ma21":23890,"ma50":22842,"ma150":null,"ma200":null,"distribution_days_20d":3},{"code":"257720","name":"실리콘투","source":["minervini"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"ok","signals":[],"current_price":43500.0,"today_change":-0.11,"ma21":47676,"ma50":41383,"ma150":null,"ma200":null,"distribution_days_20d":1},{"code":"096530","name":"씨젠","source":["minervini"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"ok","signals":[],"current_price":31550.0,"today_change":0.16,"ma21":31802,"ma50":29720,"ma150":null,"ma200":null,"distribution_days_20d":2},{"code":"090430","name":"아모레퍼시픽","source":["minervini"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"ok","signals":[],"current_price":140500.0,"today_change":1.44,"ma21":140452,"ma50":131780,"ma150":null,"ma200":null,"distribution_days_20d":3},{"code":"278470","name":"에이피알","source":["minervini"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"ok","signals":[],"current_price":372000.0,"today_change":3.05,"ma21":405119,"ma50":383790,"ma150":null,"ma200":null,"distribution_days_20d":3},{"code":"032820","name":"우리기술","source":["momentum"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"ok","signals":[],"current_price":14050.0,"today_change":-3.77,"ma21":11992,"ma50":11063,"ma150":null,"ma200":null,"distribution_days_20d":1},{"code":"041830","name":"인바디","source":["minervini"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"ok","signals":[],"current_price":57600.0,"today_change":-1.2,"ma21":60690,"ma50":57661,"ma150":null,"ma200":null,"distribution_days_20d":4},{"code":"204270","name":"제이앤티씨","source":["momentum"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"ok","signals":[],"current_price":22950.0,"today_change":2.23,"ma21":19812,"ma50":17025,"ma150":null,"ma200":null,"distribution_days_20d":2},{"code":"119850","name":"지엔씨에너지","source":["minervini"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"ok","signals":[],"current_price":50600.0,"today_change":-1.17,"ma21":49014,"ma50":42084,"ma150":null,"ma200":null,"distribution_days_20d":4},{"code":"388050","name":"지투파워","source":["momentum"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"ok","signals":[],"current_price":11110.0,"today_change":-0.63,"ma21":9995,"ma50":8318,"ma150":null,"ma200":null,"distribution_days_20d":0},{"code":"073010","name":"케이에스피","source":["momentum"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"ok","signals":[],"current_price":3570.0,"today_change":6.57,"ma21":2940,"ma50":2799,"ma150":null,"ma200":null,"distribution_days_20d":0},{"code":"241710","name":"코스메카코리아","source":["minervini"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"ok","signals":[],"current_price":125700.0,"today_change":3.97,"ma21":133729,"ma50":106198,"ma150":null,"ma200":null,"distribution_days_20d":3},{"code":"021240","name":"코웨이","source":["minervini"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"ok","signals":[],"current_price":95200.0,"today_change":-1.04,"ma21":97490,"ma50":95036,"ma150":null,"ma200":null,"distribution_days_20d":4},{"code":"095610","name":"테스","source":["minervini","momentum"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"ok","signals":[],"current_price":143500.0,"today_change":-7.36,"ma21":142952,"ma50":148192,"ma150":null,"ma200":null,"distribution_days_20d":3},{"code":"031980","name":"피에스케이홀딩스","source":["minervini"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"ok","signals":[],"current_price":157000.0,"today_change":1.29,"ma21":127181,"ma50":121118,"ma150":null,"ma200":null,"distribution_days_20d":1},{"code":"017890","name":"한국알콜","source":["minervini"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"ok","signals":[],"current_price":14690.0,"today_change":-0.41,"ma21":14145,"ma50":13753,"ma150":null,"ma200":null,"distribution_days_20d":2},{"code":"452190","name":"한빛레이저","source":["momentum"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"ok","signals":[],"current_price":5080.0,"today_change":2.83,"ma21":3981,"ma50":3701,"ma150":null,"ma200":null,"distribution_days_20d":1},{"code":"052690","name":"한전기술","source":["momentum"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"ok","signals":[],"current_price":152000.0,"today_change":4.83,"ma21":114295,"ma50":103780,"ma150":null,"ma200":null,"distribution_days_20d":0},{"code":"024060","name":"흥구석유","source":["momentum"],"owned":false,"entry_price":null,"entry_date":null,"eligible":true,"overall":"ok","signals":[],"current_price":14610.0,"today_change":0.69,"ma21":11035,"ma50":11082,"ma150":null,"ma200":null,"distribution_days_20d":1}]}
+{
+  "updated": "2026-09-11 21:20:44 KST",
+  "trading_day": "20260911",
+  "critical_count": 3,
+  "warning_count": 23,
+  "results": [
+    {
+      "code": "000990",
+      "name": "DB하이텍",
+      "source": [
+        "momentum"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "critical",
+      "signals": [
+        {
+          "severity": "critical",
+          "type": "big_red_distribution",
+          "label": "큰 음봉 (-8.2%) + 거래량 1.5배",
+          "detail": "기관 분배 의심"
+        },
+        {
+          "severity": "warning",
+          "type": "failed_breakout",
+          "label": "가짜 돌파",
+          "detail": "박스 상단 109,800 돌파 후 안으로 복귀"
+        }
+      ],
+      "current_price": 105800.0,
+      "today_change": -8.16,
+      "ma21": 96867,
+      "ma50": 98912,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 2
+    },
+    {
+      "code": "248170",
+      "name": "샘표식품",
+      "source": [
+        "momentum"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "critical",
+      "signals": [
+        {
+          "severity": "critical",
+          "type": "big_red_distribution",
+          "label": "큰 음봉 (-14.8%) + 거래량 11.2배",
+          "detail": "기관 분배 의심"
+        }
+      ],
+      "current_price": 25700.0,
+      "today_change": -14.76,
+      "ma21": 23740,
+      "ma50": 23173,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 1
+    },
+    {
+      "code": "042700",
+      "name": "한미반도체",
+      "source": [
+        "momentum"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "critical",
+      "signals": [
+        {
+          "severity": "critical",
+          "type": "big_red_distribution",
+          "label": "큰 음봉 (-8.7%) + 거래량 1.7배",
+          "detail": "기관 분배 의심"
+        },
+        {
+          "severity": "warning",
+          "type": "failed_breakout",
+          "label": "가짜 돌파",
+          "detail": "박스 상단 255,000 돌파 후 안으로 복귀"
+        }
+      ],
+      "current_price": 231000.0,
+      "today_change": -8.7,
+      "ma21": 225738,
+      "ma50": 216904,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 1
+    },
+    {
+      "code": "048770",
+      "name": "TPC로보틱스",
+      "source": [
+        "momentum"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "warning",
+      "signals": [
+        {
+          "severity": "warning",
+          "type": "failed_breakout",
+          "label": "가짜 돌파",
+          "detail": "박스 상단 5,000 돌파 후 안으로 복귀"
+        }
+      ],
+      "current_price": 4180.0,
+      "today_change": -6.9,
+      "ma21": 3387,
+      "ma50": 3126,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 1
+    },
+    {
+      "code": "007690",
+      "name": "국도화학",
+      "source": [
+        "minervini"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "warning",
+      "signals": [
+        {
+          "severity": "warning",
+          "type": "ma21_break",
+          "label": "21일선 이탈 (단기 약화)",
+          "detail": "종가 38,300.0 < 21일선 38,519"
+        },
+        {
+          "severity": "warning",
+          "type": "distribution_days",
+          "label": "20일 분배일 5개",
+          "detail": "기관 매도 누적"
+        }
+      ],
+      "current_price": 38300.0,
+      "today_change": -2.54,
+      "ma21": 38519,
+      "ma50": 37936,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 5
+    },
+    {
+      "code": "144960",
+      "name": "뉴파워프라즈마",
+      "source": [
+        "minervini"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "warning",
+      "signals": [
+        {
+          "severity": "warning",
+          "type": "distribution_days",
+          "label": "20일 분배일 6개",
+          "detail": "기관 매도 누적"
+        }
+      ],
+      "current_price": 8810.0,
+      "today_change": -2.65,
+      "ma21": 9663,
+      "ma50": 9630,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 6
+    },
+    {
+      "code": "117580",
+      "name": "대성에너지",
+      "source": [
+        "momentum"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "warning",
+      "signals": [
+        {
+          "severity": "warning",
+          "type": "failed_breakout",
+          "label": "가짜 돌파",
+          "detail": "박스 상단 7,400 돌파 후 안으로 복귀"
+        }
+      ],
+      "current_price": 7330.0,
+      "today_change": -2.4,
+      "ma21": 6944,
+      "ma50": 6919,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 1
+    },
+    {
+      "code": "131970",
+      "name": "두산테스나",
+      "source": [
+        "momentum"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "warning",
+      "signals": [
+        {
+          "severity": "warning",
+          "type": "failed_breakout",
+          "label": "가짜 돌파",
+          "detail": "박스 상단 87,400 돌파 후 안으로 복귀"
+        }
+      ],
+      "current_price": 83800.0,
+      "today_change": -5.95,
+      "ma21": 80371,
+      "ma50": 80660,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 3
+    },
+    {
+      "code": "058470",
+      "name": "리노공업",
+      "source": [
+        "minervini",
+        "momentum"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "warning",
+      "signals": [
+        {
+          "severity": "warning",
+          "type": "ma21_break",
+          "label": "21일선 이탈 (단기 약화)",
+          "detail": "종가 66,400.0 < 21일선 67,400"
+        }
+      ],
+      "current_price": 66400.0,
+      "today_change": -4.18,
+      "ma21": 67400,
+      "ma50": 68514,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 4
+    },
+    {
+      "code": "014970",
+      "name": "삼륭물산",
+      "source": [
+        "momentum"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "warning",
+      "signals": [
+        {
+          "severity": "warning",
+          "type": "failed_breakout",
+          "label": "가짜 돌파",
+          "detail": "박스 상단 4,905 돌파 후 안으로 복귀"
+        }
+      ],
+      "current_price": 4670.0,
+      "today_change": 1.74,
+      "ma21": 4443,
+      "ma50": 4379,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 1
+    },
+    {
+      "code": "028260",
+      "name": "삼성물산",
+      "source": [
+        "minervini"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "warning",
+      "signals": [
+        {
+          "severity": "warning",
+          "type": "ma21_break",
+          "label": "21일선 이탈 (단기 약화)",
+          "detail": "종가 367,000.0 < 21일선 374,119"
+        },
+        {
+          "severity": "warning",
+          "type": "distribution_days",
+          "label": "20일 분배일 5개",
+          "detail": "기관 매도 누적"
+        }
+      ],
+      "current_price": 367000.0,
+      "today_change": -3.29,
+      "ma21": 374119,
+      "ma50": 363270,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 5
+    },
+    {
+      "code": "005930",
+      "name": "삼성전자",
+      "source": [
+        "minervini"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "warning",
+      "signals": [
+        {
+          "severity": "warning",
+          "type": "ma21_break",
+          "label": "21일선 이탈 (단기 약화)",
+          "detail": "종가 259,500.0 < 21일선 263,048"
+        }
+      ],
+      "current_price": 259500.0,
+      "today_change": -3.53,
+      "ma21": 263048,
+      "ma50": 259460,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 3
+    },
+    {
+      "code": "189860",
+      "name": "서전기전",
+      "source": [
+        "momentum"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "warning",
+      "signals": [
+        {
+          "severity": "warning",
+          "type": "failed_breakout",
+          "label": "가짜 돌파",
+          "detail": "박스 상단 5,750 돌파 후 안으로 복귀"
+        }
+      ],
+      "current_price": 5220.0,
+      "today_change": -3.51,
+      "ma21": 4581,
+      "ma50": 4269,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 2
+    },
+    {
+      "code": "068270",
+      "name": "셀트리온",
+      "source": [
+        "minervini"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "warning",
+      "signals": [
+        {
+          "severity": "warning",
+          "type": "distribution_days",
+          "label": "20일 분배일 5개",
+          "detail": "기관 매도 누적"
+        }
+      ],
+      "current_price": 178200.0,
+      "today_change": -1.44,
+      "ma21": 189900,
+      "ma50": 185394,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 5
+    },
+    {
+      "code": "160980",
+      "name": "싸이맥스",
+      "source": [
+        "minervini"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "warning",
+      "signals": [
+        {
+          "severity": "warning",
+          "type": "distribution_days",
+          "label": "20일 분배일 7개",
+          "detail": "기관 매도 누적"
+        }
+      ],
+      "current_price": 22050.0,
+      "today_change": -5.36,
+      "ma21": 25707,
+      "ma50": 29618,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 7
+    },
+    {
+      "code": "101490",
+      "name": "에스앤에스텍",
+      "source": [
+        "momentum"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "warning",
+      "signals": [
+        {
+          "severity": "warning",
+          "type": "ma21_break",
+          "label": "21일선 이탈 (단기 약화)",
+          "detail": "종가 41,400.0 < 21일선 41,890"
+        }
+      ],
+      "current_price": 41400.0,
+      "today_change": -4.83,
+      "ma21": 41890,
+      "ma50": 42486,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 3
+    },
+    {
+      "code": "001800",
+      "name": "오리온홀딩스",
+      "source": [
+        "minervini"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "warning",
+      "signals": [
+        {
+          "severity": "warning",
+          "type": "distribution_days",
+          "label": "20일 분배일 5개",
+          "detail": "기관 매도 누적"
+        }
+      ],
+      "current_price": 25450.0,
+      "today_change": 0.59,
+      "ma21": 25669,
+      "ma50": 25856,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 5
+    },
+    {
+      "code": "032940",
+      "name": "원익",
+      "source": [
+        "momentum"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "warning",
+      "signals": [
+        {
+          "severity": "warning",
+          "type": "failed_breakout",
+          "label": "가짜 돌파",
+          "detail": "박스 상단 11,060 돌파 후 안으로 복귀"
+        }
+      ],
+      "current_price": 9600.0,
+      "today_change": -8.57,
+      "ma21": 7532,
+      "ma50": 6405,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 1
+    },
+    {
+      "code": "302430",
+      "name": "이노메트리",
+      "source": [
+        "momentum"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "warning",
+      "signals": [
+        {
+          "severity": "warning",
+          "type": "failed_breakout",
+          "label": "가짜 돌파",
+          "detail": "박스 상단 8,880 돌파 후 안으로 복귀"
+        }
+      ],
+      "current_price": 8110.0,
+      "today_change": -5.04,
+      "ma21": 7018,
+      "ma50": 6142,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 1
+    },
+    {
+      "code": "053050",
+      "name": "지에스이",
+      "source": [
+        "momentum"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "warning",
+      "signals": [
+        {
+          "severity": "warning",
+          "type": "failed_breakout",
+          "label": "가짜 돌파",
+          "detail": "박스 상단 2,010 돌파 후 안으로 복귀"
+        }
+      ],
+      "current_price": 1988.0,
+      "today_change": -3.73,
+      "ma21": 1856,
+      "ma50": 1824,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 2
+    },
+    {
+      "code": "183300",
+      "name": "코미코",
+      "source": [
+        "momentum"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "warning",
+      "signals": [
+        {
+          "severity": "warning",
+          "type": "failed_breakout",
+          "label": "가짜 돌파",
+          "detail": "박스 상단 29,550 돌파 후 안으로 복귀"
+        }
+      ],
+      "current_price": 27300.0,
+      "today_change": -5.7,
+      "ma21": 25233,
+      "ma50": 25704,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 1
+    },
+    {
+      "code": "064760",
+      "name": "티씨케이",
+      "source": [
+        "minervini"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "warning",
+      "signals": [
+        {
+          "severity": "warning",
+          "type": "failed_breakout",
+          "label": "가짜 돌파",
+          "detail": "박스 상단 279,500 돌파 후 안으로 복귀"
+        }
+      ],
+      "current_price": 258000.0,
+      "today_change": -4.97,
+      "ma21": 244119,
+      "ma50": 219948,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 1
+    },
+    {
+      "code": "131290",
+      "name": "티에스이",
+      "source": [
+        "minervini"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "warning",
+      "signals": [
+        {
+          "severity": "warning",
+          "type": "failed_breakout",
+          "label": "가짜 돌파",
+          "detail": "박스 상단 288,500 돌파 후 안으로 복귀"
+        }
+      ],
+      "current_price": 260500.0,
+      "today_change": -15.01,
+      "ma21": 250143,
+      "ma50": 236654,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 3
+    },
+    {
+      "code": "128940",
+      "name": "한미약품",
+      "source": [
+        "minervini"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "warning",
+      "signals": [
+        {
+          "severity": "warning",
+          "type": "ma21_break",
+          "label": "21일선 이탈 (단기 약화)",
+          "detail": "종가 464,000.0 < 21일선 464,524"
+        }
+      ],
+      "current_price": 464000.0,
+      "today_change": -3.63,
+      "ma21": 464524,
+      "ma50": 418860,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 3
+    },
+    {
+      "code": "005860",
+      "name": "한일사료",
+      "source": [
+        "momentum"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "warning",
+      "signals": [
+        {
+          "severity": "warning",
+          "type": "failed_breakout",
+          "label": "가짜 돌파",
+          "detail": "박스 상단 2,630 돌파 후 안으로 복귀"
+        }
+      ],
+      "current_price": 2470.0,
+      "today_change": -0.8,
+      "ma21": 2425,
+      "ma50": 2419,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 1
+    },
+    {
+      "code": "000720",
+      "name": "현대건설",
+      "source": [
+        "momentum"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "warning",
+      "signals": [
+        {
+          "severity": "warning",
+          "type": "failed_breakout",
+          "label": "가짜 돌파",
+          "detail": "박스 상단 137,100 돌파 후 안으로 복귀"
+        }
+      ],
+      "current_price": 134900.0,
+      "today_change": 2.82,
+      "ma21": 121181,
+      "ma50": 110604,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 1
+    },
+    {
+      "code": "007340",
+      "name": "DN오토모티브",
+      "source": [
+        "minervini"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "ok",
+      "signals": [],
+      "current_price": 46800.0,
+      "today_change": 1.3,
+      "ma21": 48067,
+      "ma50": 43467,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 3
+    },
+    {
+      "code": "443060",
+      "name": "HD현대마린솔루션",
+      "source": [
+        "minervini",
+        "momentum"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "ok",
+      "signals": [],
+      "current_price": 247000.0,
+      "today_change": 7.63,
+      "ma21": 210738,
+      "ma50": 203022,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 3
+    },
+    {
+      "code": "108320",
+      "name": "LX세미콘",
+      "source": [
+        "momentum"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "ok",
+      "signals": [],
+      "current_price": 35950.0,
+      "today_change": -3.62,
+      "ma21": 37319,
+      "ma50": 37300,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 2
+    },
+    {
+      "code": "036540",
+      "name": "SFA반도체",
+      "source": [
+        "momentum"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "ok",
+      "signals": [],
+      "current_price": 7040.0,
+      "today_change": -0.98,
+      "ma21": 5966,
+      "ma50": 5530,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 2
+    },
+    {
+      "code": "000660",
+      "name": "SK하이닉스",
+      "source": [
+        "minervini"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "ok",
+      "signals": [],
+      "current_price": 1812000.0,
+      "today_change": -2.21,
+      "ma21": 1693381,
+      "ma50": 1756680,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 2
+    },
+    {
+      "code": "092790",
+      "name": "넥스틸",
+      "source": [
+        "momentum"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "ok",
+      "signals": [],
+      "current_price": 14380.0,
+      "today_change": 0.07,
+      "ma21": 12699,
+      "ma50": 11912,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 0
+    },
+    {
+      "code": "100590",
+      "name": "머큐리",
+      "source": [
+        "momentum"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "ok",
+      "signals": [],
+      "current_price": 4750.0,
+      "today_change": -4.43,
+      "ma21": 3767,
+      "ma50": 3492,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 1
+    },
+    {
+      "code": "452430",
+      "name": "사피엔반도체",
+      "source": [
+        "momentum"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "ok",
+      "signals": [],
+      "current_price": 37200.0,
+      "today_change": 0.27,
+      "ma21": 29781,
+      "ma50": 28292,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 1
+    },
+    {
+      "code": "062040",
+      "name": "산일전기",
+      "source": [
+        "minervini"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "ok",
+      "signals": [],
+      "current_price": 198600.0,
+      "today_change": 1.22,
+      "ma21": 187790,
+      "ma50": 178590,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 3
+    },
+    {
+      "code": "028050",
+      "name": "삼성E&A",
+      "source": [
+        "minervini"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "ok",
+      "signals": [],
+      "current_price": 51000.0,
+      "today_change": 1.19,
+      "ma21": 47812,
+      "ma50": 46191,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 2
+    },
+    {
+      "code": "009150",
+      "name": "삼성전기",
+      "source": [
+        "minervini"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "ok",
+      "signals": [],
+      "current_price": 1400000.0,
+      "today_change": 0.0,
+      "ma21": 1403857,
+      "ma50": 1379200,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 4
+    },
+    {
+      "code": "003230",
+      "name": "삼양식품",
+      "source": [
+        "minervini"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "ok",
+      "signals": [],
+      "current_price": 1278000.0,
+      "today_change": 1.11,
+      "ma21": 1382143,
+      "ma50": 1255640,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 2
+    },
+    {
+      "code": "011560",
+      "name": "세보엠이씨",
+      "source": [
+        "minervini"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "ok",
+      "signals": [],
+      "current_price": 24050.0,
+      "today_change": 0.42,
+      "ma21": 23890,
+      "ma50": 22842,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 3
+    },
+    {
+      "code": "257720",
+      "name": "실리콘투",
+      "source": [
+        "minervini"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "ok",
+      "signals": [],
+      "current_price": 43500.0,
+      "today_change": -0.11,
+      "ma21": 47676,
+      "ma50": 41383,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 1
+    },
+    {
+      "code": "096530",
+      "name": "씨젠",
+      "source": [
+        "minervini"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "ok",
+      "signals": [],
+      "current_price": 31550.0,
+      "today_change": 0.16,
+      "ma21": 31802,
+      "ma50": 29720,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 2
+    },
+    {
+      "code": "090430",
+      "name": "아모레퍼시픽",
+      "source": [
+        "minervini"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "ok",
+      "signals": [],
+      "current_price": 140500.0,
+      "today_change": 1.44,
+      "ma21": 140452,
+      "ma50": 131780,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 3
+    },
+    {
+      "code": "278470",
+      "name": "에이피알",
+      "source": [
+        "minervini"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "ok",
+      "signals": [],
+      "current_price": 372000.0,
+      "today_change": 3.05,
+      "ma21": 405119,
+      "ma50": 383790,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 3
+    },
+    {
+      "code": "032820",
+      "name": "우리기술",
+      "source": [
+        "momentum"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "ok",
+      "signals": [],
+      "current_price": 14050.0,
+      "today_change": -3.77,
+      "ma21": 11992,
+      "ma50": 11063,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 1
+    },
+    {
+      "code": "041830",
+      "name": "인바디",
+      "source": [
+        "minervini"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "ok",
+      "signals": [],
+      "current_price": 57600.0,
+      "today_change": -1.2,
+      "ma21": 60690,
+      "ma50": 57661,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 4
+    },
+    {
+      "code": "204270",
+      "name": "제이앤티씨",
+      "source": [
+        "momentum"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "ok",
+      "signals": [],
+      "current_price": 22950.0,
+      "today_change": 2.23,
+      "ma21": 19812,
+      "ma50": 17025,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 2
+    },
+    {
+      "code": "119850",
+      "name": "지엔씨에너지",
+      "source": [
+        "minervini"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "ok",
+      "signals": [],
+      "current_price": 50600.0,
+      "today_change": -1.17,
+      "ma21": 49014,
+      "ma50": 42084,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 4
+    },
+    {
+      "code": "388050",
+      "name": "지투파워",
+      "source": [
+        "momentum"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "ok",
+      "signals": [],
+      "current_price": 11110.0,
+      "today_change": -0.63,
+      "ma21": 9995,
+      "ma50": 8318,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 0
+    },
+    {
+      "code": "073010",
+      "name": "케이에스피",
+      "source": [
+        "momentum"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "ok",
+      "signals": [],
+      "current_price": 3570.0,
+      "today_change": 6.57,
+      "ma21": 2940,
+      "ma50": 2799,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 0
+    },
+    {
+      "code": "241710",
+      "name": "코스메카코리아",
+      "source": [
+        "minervini"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "ok",
+      "signals": [],
+      "current_price": 125700.0,
+      "today_change": 3.97,
+      "ma21": 133729,
+      "ma50": 106198,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 3
+    },
+    {
+      "code": "021240",
+      "name": "코웨이",
+      "source": [
+        "minervini"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "ok",
+      "signals": [],
+      "current_price": 95200.0,
+      "today_change": -1.04,
+      "ma21": 97490,
+      "ma50": 95036,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 4
+    },
+    {
+      "code": "095610",
+      "name": "테스",
+      "source": [
+        "minervini",
+        "momentum"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "ok",
+      "signals": [],
+      "current_price": 143500.0,
+      "today_change": -7.36,
+      "ma21": 142952,
+      "ma50": 148192,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 3
+    },
+    {
+      "code": "031980",
+      "name": "피에스케이홀딩스",
+      "source": [
+        "minervini"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "ok",
+      "signals": [],
+      "current_price": 157000.0,
+      "today_change": 1.29,
+      "ma21": 127181,
+      "ma50": 121118,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 1
+    },
+    {
+      "code": "017890",
+      "name": "한국알콜",
+      "source": [
+        "minervini"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "ok",
+      "signals": [],
+      "current_price": 14690.0,
+      "today_change": -0.41,
+      "ma21": 14145,
+      "ma50": 13753,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 2
+    },
+    {
+      "code": "452190",
+      "name": "한빛레이저",
+      "source": [
+        "momentum"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "ok",
+      "signals": [],
+      "current_price": 5080.0,
+      "today_change": 2.83,
+      "ma21": 3981,
+      "ma50": 3701,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 1
+    },
+    {
+      "code": "052690",
+      "name": "한전기술",
+      "source": [
+        "momentum"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "ok",
+      "signals": [],
+      "current_price": 152000.0,
+      "today_change": 4.83,
+      "ma21": 114295,
+      "ma50": 103780,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 0
+    },
+    {
+      "code": "024060",
+      "name": "흥구석유",
+      "source": [
+        "momentum"
+      ],
+      "owned": false,
+      "entry_price": null,
+      "entry_date": null,
+      "eligible": true,
+      "overall": "ok",
+      "signals": [],
+      "current_price": 14610.0,
+      "today_change": 0.69,
+      "ma21": 11035,
+      "ma50": 11082,
+      "ma150": null,
+      "ma200": null,
+      "distribution_days_20d": 1
+    }
+  ]
+}
