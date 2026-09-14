@@ -34,6 +34,9 @@ OUT = ROOT / "data" / "us_names_ko.json"
 AC = "https://ac.stock.naver.com/ac"
 HEADERS = {"Referer": "https://m.stock.naver.com/", "User-Agent": "Mozilla/5.0"}
 
+# 물어보지 못했다는 표시. "한글 이름이 없다"(None)와 구분한다.
+FAILED = object()
+
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(errors="replace")
 
@@ -68,7 +71,10 @@ def korean_name(ticker):
                          headers=HEADERS, timeout=10)
         items = r.json().get("items") or []
     except Exception:
-        return None
+        # **못 물어본 것과 물어봤는데 없는 것은 다르다.** 둘 다 None 을
+        # 돌려주면 네트워크가 한 번 끊긴 종목이 영영 영문 이름으로 남는다.
+        # 다음에 다시 묻도록 따로 표시한다.
+        return FAILED
     for it in items:
         if not isinstance(it, dict) or it.get("code") != ticker:
             continue
@@ -87,14 +93,17 @@ def main():
     todo = [t for t in tickers() if args.all or t not in have]
     print(f"전체 {len(tickers())}개 · 받을 것 {len(todo)}개")
 
-    got = 0
+    got = failed = 0
     for i, t in enumerate(todo, 1):
         name = korean_name(t)
-        if name:
+        if name is FAILED:
+            failed += 1          # 적지 않는다. 다음 실행에서 다시 묻는다.
+        elif name:
             have[t] = name
             got += 1
         else:
-            # 못 찾은 것도 적어 둔다. 안 그러면 매번 다시 물어본다.
+            # 물어봤는데 한글 이름이 없는 종목이다. 이건 적어 둬야
+            # 매번 다시 묻지 않는다. 영문 이름으로 나간다.
             have.setdefault(t, None)
         if i % 50 == 0:
             print(f"  {i}/{len(todo)} ...")
@@ -105,6 +114,8 @@ def main():
                    encoding="utf-8")
     named = sum(1 for v in have.values() if v)
     print(f"저장: data/us_names_ko.json · 한글 이름 {named}개 / 전체 {len(have)}개")
+    if failed:
+        print(f"못 물어본 종목 {failed}개 — 다음 실행에서 다시 시도합니다")
     for t in list(todo)[:5]:
         print(f"  {t} -> {have.get(t)}")
     return 0

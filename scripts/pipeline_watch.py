@@ -28,7 +28,7 @@ import argparse
 import json
 import os
 import sys
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -54,6 +54,19 @@ DOWNSTREAM = [
 
 # 평일에 나가야 하는 쓰레드 글. social-post.yml 의 크론과 맞춰 둔다.
 EXPECTED_POSTS = 4
+
+# 시세가 이만큼 넘게 멈춰 있으면 휴장이 아니라 고장으로 본다.
+# 설·추석 연휴가 닷새까지 가므로 그보다 길게 잡는다.
+STALE_DAYS = 6
+
+
+def _days_since(day):
+    """YYYY-MM-DD 에서 오늘까지 며칠. 못 읽으면 크게 돌려 알림이 가게 한다."""
+    try:
+        y, m, d = (int(x) for x in day.split("-"))
+        return (datetime.now(KST).date() - date(y, m, d)).days
+    except Exception:
+        return 999
 
 
 def load(name):
@@ -84,9 +97,19 @@ def check():
         return today, ["시세 파일이 없습니다 (Fetch Prices)"], today
 
     ref = day_of(market)
+    if not ref:
+        # 파일은 있는데 거래일이 없다. 이걸 휴장일로 넘기면 시세가 깨진
+        # 날에 오히려 아무 말도 안 하게 된다. 가장 알아야 할 때 조용해진다.
+        return today, ["시세 파일에 거래일이 없습니다 (Fetch Prices)"], today
+
     if ref != today:
         # 장이 안 선 날이다. 주말·공휴일이므로 아무것도 안 나온 게 맞다.
-        # 다만 시세 자체가 며칠째 멈춰 있으면 그건 따로 봐야 한다.
+        #
+        # 다만 언제까지고 넘어가면 안 된다. Fetch Prices 가 며칠째 죽어
+        # 있어도 "장이 안 섰나 보다" 하고 조용히 지나가기 때문이다.
+        # 설·추석 연휴가 닷새까지 가므로 그보다 길어질 때만 알린다.
+        if _days_since(ref) > STALE_DAYS:
+            return today, [f"시세가 {ref} 에 멈춰 있습니다 (Fetch Prices)"], ref
         return today, [], ref
 
     for fname, label in DOWNSTREAM:
