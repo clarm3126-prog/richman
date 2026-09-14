@@ -6845,12 +6845,12 @@ function renderForecastBox(data) {
   for (let i = 0; i < top.length; i++) {
     const t = top[i];
     const why = [];
-    if (t.rank_delta_5d >= 5 && t.avg_rank_5d != null) why.push(`📈 ranking ${(t.avg_rank_5d + t.rank_delta_5d).toFixed(0)}위→${t.avg_rank_5d.toFixed(0)}위`);
+    if (t.rank_delta_5d >= 5 && t.avg_rank_5d != null) why.push(`📈 순위 ${(t.avg_rank_5d + t.rank_delta_5d).toFixed(0)}위→${t.avg_rank_5d.toFixed(0)}위`);
     if (t.avg_change_5d != null && t.avg_change_5d > 1) why.push(`💵 5일 평균 +${t.avg_change_5d}%`);
-    if (t.net_buy_amount > 0) why.push(`🌐 외인+기관 매수`);
-    if (t.accelerating_pct >= 30) why.push(`📊 EPS가속 ${t.accelerating_pct}%`);
-    if (t.top20_freq_30d >= 0.5) why.push(`🔥 30일 강세지속`);
-    const whyStr = why.length > 0 ? why.join(' · ') : '신호 약함';
+    if (t.net_buy_amount > 0) why.push(`🌐 외국인·기관 매수`);
+    if (t.accelerating_pct >= 30) why.push(`📊 순이익 증가폭 커진 종목 ${t.accelerating_pct}%`);
+    if (t.top20_freq_30d >= 0.5) why.push(`🔥 30일 중 절반 이상 20위 안`);
+    const whyStr = why.length > 0 ? why.join(' · ') : '뚜렷한 신호 없음';
     const hasStocks = t.stocks && t.stocks.length > 0;
     const cursorStyle = hasStocks ? 'cursor:pointer' : 'cursor:default';
     const clickAttr = hasStocks ? `onclick="showForecastThemeStocks(${i})"` : '';
