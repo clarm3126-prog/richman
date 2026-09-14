@@ -122,11 +122,11 @@ def compose_momentum():
         vol = r.get("vol_ratio")
         bits = []
         if r.get("pivot_breakout"):
-            bits.append("피벗돌파")
+            bits.append("매수 자리 돌파")
         if isinstance(vol, (int, float)) and vol >= 1.5:
             bits.append(f"거래량 {vol:.1f}배")
         if r.get("ma200_cross_recent"):
-            bits.append("200일선 회복")
+            bits.append("200일선 돌파")
         items.append(
             {
                 "name": r.get("name") or r.get("code"),
