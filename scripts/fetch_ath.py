@@ -35,15 +35,15 @@ HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; ATHFetcher/1.0)"}
 
 
 def fetch_long_history(code):
-    """종목의 최근 1년 일봉. 52주 최고가 산출용.
+    """종목의 장기 일봉. 52주 최고가와 역대 최고가를 함께 산출한다.
     front-api/external/chart/domestic/info — Python literal 응답.
     Returns (code, {ath, ath_date, avg_vol_20d}) or (code, None).
     """
     today = datetime.now(KST)
-    # 10년치 역대 최고가를 쓰면 하락장에서 뚫는 종목이 거의 안 나온다.
-    # 오닐이 보는 것은 "오래 눌려 있다가 다시 고점을 뚫는" 자리이므로
-    # 1년으로 좁힌다. 베이스 60일+ 조건과 함께 걸려야 의미가 산다.
-    start = (today - timedelta(days=365)).strftime("%Y%m%d")
+    # 10년치를 받아 52주 고점과 역대 고점을 한 번에 낸다. 요청이 한 번이라
+    # 비용은 같다. 돌파 판정은 52주 고점으로 하고, 역대 고점은 "이게 역대
+    # 신고가이기도 한가" 를 표시하는 데만 쓴다.
+    start = "20150101"
     end = today.strftime("%Y%m%d")
     url = "https://m.stock.naver.com/front-api/external/chart/domestic/info"
     params = {
@@ -66,29 +66,35 @@ def fetch_long_history(code):
             return code, None
         # data[0] = header, data[1:] = [날짜, 시가, 고가, 저가, 종가, 거래량, 외국인소진율]
         rows = data[1:]
-        ath = 0
-        ath_date = ""
+        cutoff = (today - timedelta(days=365)).strftime("%Y%m%d")
+        high_52w = 0        # 돌파 판정 기준선
+        high_52w_date = ""
+        all_time_high = 0   # 역대 신고가인지 표시하는 데만 쓴다
         volumes = []
         for row in rows:
             if len(row) < 6:
                 continue
             try:
+                day = str(row[0])
                 high = float(row[2])
                 vol = int(row[5]) if row[5] else 0
             except (ValueError, TypeError):
                 continue
-            if high > ath:
-                ath = high
-                ath_date = str(row[0])
+            if high > all_time_high:
+                all_time_high = high
+            if day >= cutoff and high > high_52w:
+                high_52w = high
+                high_52w_date = day
             volumes.append(vol)
-        if ath <= 0:
+        if high_52w <= 0:
             return code, None
         # 최근 20일 평균 거래량
         recent_vols = [v for v in volumes[-20:] if v > 0]
         avg_vol_20d = int(sum(recent_vols) / len(recent_vols)) if recent_vols else 0
         return code, {
-            "ath": ath,
-            "ath_date": ath_date,
+            "ath": high_52w,
+            "ath_date": high_52w_date,
+            "all_time_high": all_time_high,
             "avg_vol_20d": avg_vol_20d,
         }
     except Exception:

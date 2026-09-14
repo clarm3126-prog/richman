@@ -6107,7 +6107,7 @@ function renderAthBreakoutData(el, d, archiveDate) {
         <div class="ath-volratio">🔥 ${b.vol_ratio}배</div>
       </div>
       <div class="ath-tags">
-        <span class="ath-tag ath">📈 ${b.base_days ? (b.base_days >= 30 ? Math.floor(b.base_days/30)+'개월' : b.base_days+'일') + '만의 ' : ''}52주 신고가 돌파</span>
+        <span class="ath-tag ath">📈 ${b.base_days ? (b.base_days >= 30 ? Math.floor(b.base_days/30)+'개월' : b.base_days+'일') + '만의 ' : ''}${b.is_all_time ? '역대' : '52주'} 신고가 돌파</span>
         ${sd}
       </div>
     </div>`;
@@ -6226,7 +6226,7 @@ function renderUsOneil(oneil) {
         </div>
         <div class="ath-volratio">🔥 ${b.vol_ratio}배</div>
       </div>
-      <div class="ath-tags"><span class="ath-tag ath">📈 ${baseTxt}52주 신고가 돌파</span></div>
+      <div class="ath-tags"><span class="ath-tag ath">📈 ${baseTxt}${b.is_all_time ? '역대' : '52주'} 신고가 돌파</span></div>
     </div>`;
   });
   return h + `</div>`;

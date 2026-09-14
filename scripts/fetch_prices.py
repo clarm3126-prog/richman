@@ -830,6 +830,7 @@ def detect_ath_breakouts(stocks, investor_top, bot_token, chat_id):
             continue
         ath = info.get("ath", 0)
         avg_vol = info.get("avg_vol_20d", 0)
+        all_time = info.get("all_time_high", 0)
         price = s.get("price", 0)
         vol = s.get("volume", 0)
         if ath <= 0 or price <= 0:
@@ -861,6 +862,8 @@ def detect_ath_breakouts(stocks, investor_top, bot_token, chat_id):
             "change": s.get("change", 0),
             "ath": ath,
             "ath_date": ath_date_str,
+            # 52주 고점을 뚫었는데 역대 고점까지 넘었으면 그렇게 적는다.
+            "is_all_time": bool(all_time and price >= all_time),
             "base_days": base_days,
             "volume": vol,
             "vol_ratio": round(vol_ratio, 2),
@@ -925,7 +928,7 @@ def detect_ath_breakouts(stocks, investor_top, bot_token, chat_id):
         lines.append(
             f"• *{b['name']}* (`{b['code']}` {b['market']})\n"
             f"  {b['price']:,}원 ({sign}{b['change']:.2f}%) · 거래량 {b['vol_ratio']}배{sd}\n"
-            f"  📈 {base_txt}만의 52주 신고가 돌파 (이전 고점 {b['ath']:,.0f}원)"
+            f"  📈 {base_txt}만의 {'역대' if b.get('is_all_time') else '52주'} 신고가 돌파 (이전 고점 {b['ath']:,.0f}원)"
         )
     if len(new_alerts) > 12:
         lines.append(f"... 외 {len(new_alerts) - 12}개")
