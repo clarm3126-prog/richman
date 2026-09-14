@@ -1060,7 +1060,12 @@
   .theme-dark .mv-cat-rank.cat-pre { background: #78350f; color: #fde68a; }
 
   /* === 💵 매매 탭 — 순매수/순매도 2열 === */
-  .inv-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  /* minmax(0, 1fr) 이어야 한다. 그냥 1fr 은 minmax(auto, 1fr) 이라서
+     칸이 내용보다 좁아지지 못한다. 종목 이름 하나가 길면
+     ('SOL SK하이닉스선물단일종목인버스2X' 같은 ETF) 그 길이만큼 칸이
+     벌어져 휴대폰에서 화면 밖으로 141px 밀려났다. 0 을 최소로 주면
+     칸이 줄고 이름은 .inv-name 의 말줄임표로 처리된다. */
+  .inv-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
   .inv-col { background: var(--bg-inset); border-radius: 8px; padding: 6px; }
   .inv-col-head {
     font-size: 11px; font-weight: 700; text-align: center;
