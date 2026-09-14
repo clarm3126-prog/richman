@@ -109,7 +109,12 @@
   header {
     position: sticky; top: 0; z-index: 10;
     background: #fff;
-    padding: 16px 16px 8px;
+    /* 위쪽 46px 는 동그란 버튼(테마·검색·알림·로그인)과 시세 시각 배지
+       자리다. 그 버튼들은 position:absolute 라 자기 자리를 차지하지
+       않으므로 여기서 비워 주지 않으면 첫 줄 탭 위에 그대로 얹힌다.
+       예전에는 제목 h1 이 그 줄을 채우고 있었는데 제목을 빼면서
+       '강도' 버튼이 버튼들에 가려 눌리지 않게 됐다. */
+    padding: 46px 16px 8px;
     border-bottom: 1px solid #e5e7eb;
   }
   h1 { font-size: 18px; font-weight: 700; margin-bottom: 12px; }
