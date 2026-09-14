@@ -3826,7 +3826,7 @@ function renderBacktestBanner(category) {
     const idx = p.index
       ? ` · 이 기간 코스피 ${pct(p.index.change_pct)}<span style="color:var(--fg-faint)">, 최대낙폭 ${p.index.max_drawdown_pct}%</span>`
       : '';
-    periodHtml = `<div style="font-size:10px;color:var(--fg-mid);margin-bottom:4px">측정 구간: ${d(first)} ~ ${d(last)} 매수분${idx}</div>`;
+    periodHtml = `<div style="font-size:12px;color:var(--fg-mid);margin-bottom:4px">측정 구간: ${d(first)} ~ ${d(last)} 매수분${idx}</div>`;
   }
   // 값이 없는 기간은 고장이 아니라 기록을 더 모아야 하는 것이다. 그렇게 적어준다.
   const pending = (r) => {
@@ -3847,7 +3847,7 @@ function renderBacktestBanner(category) {
     <div style="font-size:11px;font-weight:700;color:var(--accent-blue-text);margin-bottom:4px">📊 과거 검증 (${BACKTEST_NAMES[category] || category})</div>
     ${periodHtml}
     ${lines}
-    <div style="font-size:10px;color:var(--fg-faint);margin-top:4px">첫 줄은 조건에 걸린 날 사서 그냥 들고 있었을 때입니다. 손절을 지키면 평균 며칠 만에 빠져나오므로, 지수와 견줄 때는 <b>같은 날수의 지수</b>를 봐야 합니다. 표본이 짧고 한쪽 장에 몰려 있어 앞으로도 이렇다는 뜻은 아닙니다.</div>
+    <div style="font-size:12px;color:var(--fg-mid);margin-top:6px">첫 줄은 조건에 걸린 날 사서 그냥 들고 있었을 때입니다. 손절을 지키면 평균 며칠 만에 빠져나오므로, 지수와 견줄 때는 <b>같은 날수의 지수</b>를 봐야 합니다. 표본이 짧고 한쪽 장에 몰려 있어 앞으로도 이렇다는 뜻은 아닙니다.</div>
   </div>`;
 }
 
