@@ -501,11 +501,23 @@
   /* 탭 이름만 보고는 무슨 화면인지 모르겠다는 말을 받았다. 미너비니·오닐은
      사람 이름이라 처음 온 사람에게 짐작할 단서가 없고, 강도는 강盜와 헷갈린다.
      이름은 브랜드라 그대로 두고, 고른 탭이 무엇을 모으는지 한 줄로 적는다. */
+  /* 이 한 줄이 탭 이름보다 중요하다. '미너비니'나 '오닐'은 처음 온 사람에게
+     아무 뜻이 없고, 여기만 읽어도 그 탭이 무엇을 모으는지 알 수 있다.
+     그런데 12px 회색이라 각주처럼 보여서 그냥 지나쳤다.
+
+     키우는 것만으로는 부족해 바탕을 깔고 왼쪽에 줄을 세운다. 글씨만 키우면
+     여전히 탭 아래 딸린 설명으로 읽히는데, 색이 다른 띠가 되면 눈이 먼저
+     거기에 닿는다. 40~70대가 보는 화면이라 이 차이가 크다. */
   .view-hint {
-    margin: 6px 2px 0;
-    font-size: 12px;
-    line-height: 1.45;
-    color: #6b7280;
+    margin: 10px 0 2px;
+    padding: 10px 12px;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.5;
+    color: var(--fg-strong);
+    background: var(--bg-card-tint-amber);
+    border-left: 3px solid var(--accent-amber-text);
+    border-radius: 0 8px 8px 0;
   }
   .view-hint:empty { display: none; }
   .tabs {
@@ -930,7 +942,6 @@
   .theme-dark .search-box { background: #2a2f3a; border-color: #3a414f; color: #e5e7eb; }
   .theme-dark .search-box::placeholder { color: #6b7280; }
   .theme-dark .search-box:focus { background: #2a2f3a; border-color: #93c5fd; }
-  .theme-dark .view-hint { color: #9ca3af; }
   .theme-dark .tab { background: #2a2f3a; color: #d1d5db; }
   .theme-dark .tab.active { background: #e5e7eb; color: #0f1115; }
   .theme-dark .card { background: #1a1d23; border-color: #2a2f3a; }
