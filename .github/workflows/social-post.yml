@@ -76,7 +76,11 @@ jobs:
 
       - name: Install dependencies
         # beautifulsoup4는 시황 글의 기사 제목 수집에 쓴다
-        run: pip install requests pyyaml pillow beautifulsoup4
+        # requirements.txt 를 같이 깐다. 여기에 목록을 따로 적어 두었더니
+        # screener 가 pytz 를 쓰기 시작했을 때 이 워크플로만 빠졌다.
+        # 미장 브리핑은 us_screener → screener 를 불러오므로 매일 아침
+        # ModuleNotFoundError 로 죽었다. 다른 모드는 멀쩡해서 오래 몰랐다.
+        run: pip install -r requirements.txt pyyaml pillow
 
       - name: Install Korean fonts
         run: sudo apt-get update -qq && sudo apt-get install -y -qq fonts-nanum
