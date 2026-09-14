@@ -120,7 +120,7 @@ def main():
         num = ORDER.index(key) + 1
         heading = text.split("\n", 1)[0].strip()
         path = OUT_DIR / f"{num:02d}_{heading.replace(' ', '_')}.txt"
-        with io.open(path, "w", encoding="utf-8", newline="\r\n") as f:
+        with io.open(path, "w", encoding="utf-8-sig", newline="\r\n") as f:
             f.write(text.rstrip() + "\n")
 
         shot = ROOT / SHOT_DIR / SHOTS[key]
