@@ -6186,7 +6186,7 @@ function renderUsMinervini(mv) {
   const strictRankMap = {}; allStrict.forEach((r, i) => { strictRankMap[r.code] = i + 1; });
   const strongRankMap = {}; allStrong.forEach((r, i) => { strongRankMap[r.code] = i + 1; });
   let h = `<div class="strength-section" style="padding-bottom:4px">
-    <div style="font-size:11px;color:var(--fg-dim)">엄격 ${allStrict.length}개 · 우량 ${allStrong.length}개 (평가 ${mv.total_evaluated || all.length})</div>
+    <div style="font-size:11px;color:var(--fg-dim)">엄격 ${mv.minervini_strict_count ?? allStrict.length}개 · 우량 ${mv.minervini_strong_count ?? allStrong.length}개 (평가 ${mv.total_evaluated || all.length})</div>
     <div class="market-filter" style="margin-top:8px">
       <button class="${filter==='strict'?'active':''}" onclick="setUsMvFilter('strict')">엄격(8/8)</button>
       <button class="${filter==='strong'?'active':''}" onclick="setUsMvFilter('strong')">우량(6+/8 + 실적)</button>
@@ -6210,7 +6210,7 @@ function renderUsMomentum(mom) {
   const momStrongRankMap = {}; allMomStrong.forEach((r, i) => { momStrongRankMap[r.code] = i + 1; });
   const preRankMap = {}; allPre.forEach((r, i) => { preRankMap[r.code] = i + 1; });
   let h = `<div class="strength-section" style="padding-bottom:4px">
-    <div style="font-size:11px;color:var(--fg-dim)">강세 ${allMomStrong.length}개 · 사전 ${allPre.length}개 (평가 ${mom.total_evaluated || all.length})</div>
+    <div style="font-size:11px;color:var(--fg-dim)">강세 ${mom.momentum_strong_count ?? allMomStrong.length}개 · 사전 ${mom.pre_breakout_count ?? allPre.length}개 (평가 ${mom.total_evaluated || all.length})</div>
     <div class="market-filter" style="margin-top:8px">
       <button class="${filter==='strong'?'active':''}" onclick="setUsMomFilter('strong')">🔥 강세</button>
       <button class="${filter==='pre'?'active':''}" onclick="setUsMomFilter('pre')">⏳ 사전</button>
