@@ -344,6 +344,11 @@ def _us_picks(results, room):
     picks.sort(key=lambda r: (r.get("total_score") or 0, r.get("change") or 0),
                reverse=True)
 
+    # 한글 이름은 미리 받아 둔 것을 쓴다 (fetch_us_names.py).
+    # 'Occidental Petroleum' 보다 '옥시덴탈 페트롤리움' 이 읽힌다.
+    # 없는 종목은 영문 이름 그대로 둔다. 빈칸으로 두면 더 못 읽는다.
+    ko = _load("us_names_ko") or {}
+
     head = ["", f"둘 다 통과한 {len(picks)}개 중 점수가 높은 쪽입니다.", ""]
     used = sum(len(l) + 1 for l in head)
     rows = []
@@ -351,7 +356,9 @@ def _us_picks(results, room):
         price, change = r.get("price"), r.get("change")
         if price is None or change is None:
             continue
-        row = f"{_shorten(r.get('name') or r.get('code'), US_NAME_MAX)} " \
+        code = r.get("code")
+        name = ko.get(code) or r.get("name") or code
+        row = f"{_shorten(name, US_NAME_MAX)} " \
               f"{price:,.2f}달러 ({change:+.2f}%)"
         if used + len(row) + 1 > room:
             break

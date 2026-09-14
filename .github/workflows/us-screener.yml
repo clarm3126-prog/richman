@@ -37,11 +37,17 @@ jobs:
       - name: Run US screener
         run: python scripts/us_screener.py
 
+      # 새로 들어온 종목의 한글 이름만 받는다. 이미 받은 것은 안 묻는다.
+      # 이름을 못 받아도 스크리닝 결과는 살려야 하므로 실패를 삼킨다.
+      - name: Fetch Korean names
+        continue-on-error: true
+        run: python scripts/fetch_us_names.py
+
       - name: Commit and push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          for f in data/us_results.json data/us_universe.json; do
+          for f in data/us_results.json data/us_universe.json data/us_names_ko.json; do
             git add "$f" 2>/dev/null || true
           done
           if git diff --cached --quiet; then
