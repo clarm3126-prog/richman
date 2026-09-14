@@ -88,9 +88,20 @@
    ],
    "kind": "guide",
    "threads_id": "18078029951401231"
+  },
+  {
+   "date": "2026-09-14",
+   "ig_id": "18113957492281205",
+   "images": [
+    "assets/cards/alert-rules.jpg",
+    "assets/cards/about.jpg"
+   ],
+   "kind": "guide",
+   "threads_id": "17981359313897707"
   }
  ],
  "queue_done": [
-  "c6323a1e1df7"
+  "c6323a1e1df7",
+  "30fae72c67de"
  ]
 }
