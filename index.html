@@ -1369,7 +1369,7 @@
       <div class="ico">📱</div>
       <div>
         <div class="ttl">목표가 도달 시 텔레그램 알림</div>
-        <div class="txt">⭐ 관심 탭에서 종목을 담고 목표가를 걸어두면, 도달했을 때 알려드립니다. 보유 종목은 손절선·트레일링 시그널도 함께 보내드려요.</div>
+        <div class="txt">⭐ 관심 탭에서 종목을 담고 목표가를 걸어두면, 도달했을 때 알려드립니다. 보유 종목은 손절선과, 오른 뒤 따라 올리는 기준도 함께 보내드려요.</div>
       </div>
     </div>
 
@@ -3808,7 +3808,7 @@ function renderBacktestBanner(category) {
     if (s.rules) {
       const r = s.rules;
       const held = r.avg_days ? ` (평균 <b>${r.avg_days}일</b> 만에 청산)` : '';
-      out.push(line(`-7% 손절·트레일링을 지켰다면: 승률 <b>${r.win_rate}%</b> · 평균 ${pct(r.avg_return)}${held}`));
+      out.push(line(`-7% 손절과 따라 올리기를 지켰다면: 승률 <b>${r.win_rate}%</b> · 평균 ${pct(r.avg_return)}${held}`));
       if (r.benchmark_matched) out.push(line(`그 ${r.avg_days}일 동안의 코스피: 평균 ${pct(r.benchmark_matched.avg_return)} <span style="color:var(--fg-faint)">← 위와 같은 조건</span>`));
     }
     if (s.benchmark) out.push(line(`코스피를 ${h}일 내내 들고 있었다면: 플러스 <b>${s.benchmark.win_rate}%</b> · 평균 ${pct(s.benchmark.avg_return)}`));
@@ -4680,12 +4680,12 @@ function renderExitSignalsBanner(watchlistCodes) {
   const hasWl = wlCrit.length + wlWarn.length > 0;
   if (!hasOwned && !hasWl && hiddenCount === 0) return '';
   const dismissBtn = (r) =>
-    `<button onclick="hideExitSignal('${day}_${r.code}')" title="이 시그널 숨기기" style="flex:none;background:none;border:none;color:var(--fg-dim);font-size:18px;line-height:1;cursor:pointer;padding:0 4px">×</button>`;
+    `<button onclick="hideExitSignal('${day}_${r.code}')" title="이 신호 숨기기" style="flex:none;background:none;border:none;color:var(--fg-dim);font-size:18px;line-height:1;cursor:pointer;padding:0 4px">×</button>`;
   let html = '';
   // 보유 종목 (빨강 강조 — Telegram 알림 보내짐)
   if (hasOwned) {
     html += `<div class="strength-section" style="border-left:4px solid #dc2626;background:var(--bg-card-tint-red)">
-      <div class="strength-title">🛑 보유 종목 매도 시그널 <span style="font-size:11px;background:#dc2626;color:#fff;padding:2px 6px;border-radius:4px;margin-left:6px">📱 알림 발송</span></div>
+      <div class="strength-title">🛑 보유 종목 매도 신호 <span style="font-size:11px;background:#dc2626;color:#fff;padding:2px 6px;border-radius:4px;margin-left:6px">📱 알림 발송</span></div>
       <div class="strength-meta">${EXIT_SIGNALS_DATA.trading_day || ''} 분석 · 위험 ${ownedCrit.length}건 · 주의 ${ownedWarn.length}건</div>
       <div style="margin-top:8px">`;
     for (const r of [...ownedCrit, ...ownedWarn]) {
@@ -4713,7 +4713,7 @@ function renderExitSignalsBanner(watchlistCodes) {
   // 관심만 (노랑 — 알림 없음, 모니터링용)
   if (hasWl) {
     html += `<div class="strength-section" style="border-left:4px solid var(--border-amber);background:var(--bg-card-tint-yellow)">
-      <div class="strength-title">⚠️ 관심 종목 매도 시그널 <span style="font-size:11px;background:#9ca3af;color:#fff;padding:2px 6px;border-radius:4px;margin-left:6px">알림 X · 참고만</span></div>
+      <div class="strength-title">⚠️ 관심 종목 매도 신호 <span style="font-size:11px;background:#9ca3af;color:#fff;padding:2px 6px;border-radius:4px;margin-left:6px">알림 X · 참고만</span></div>
       <div class="strength-meta">위험 ${wlCrit.length}건 · 주의 ${wlWarn.length}건 (보유 등록 시 텔레그램 알림)</div>
       <div style="margin-top:8px">`;
     for (const r of [...wlCrit, ...wlWarn]) {
@@ -4734,7 +4734,7 @@ function renderExitSignalsBanner(watchlistCodes) {
   // 숨긴 시그널 복원
   if (hiddenCount > 0) {
     html += `<div class="strength-section" style="padding:8px 14px;text-align:center">
-      <button class="refresh-btn" onclick="restoreExitSignals()">숨긴 매도 시그널 ${hiddenCount}개 다시 보기</button>
+      <button class="refresh-btn" onclick="restoreExitSignals()">숨긴 매도 신호 ${hiddenCount}개 다시 보기</button>
     </div>`;
   }
   return html;
@@ -4825,7 +4825,7 @@ function renderPortfolioSummary(codes) {
   // 매도 시그널 경고
   if (signalCount > 0) {
     html += `<div style="margin-top:8px;font-size:11px;background:var(--bg-card-tint-rose);color:var(--accent-rose-text);padding:6px 8px;border-radius:6px;font-weight:700">
-      🛑 매도 시그널 ${signalCount}건 (위 banner 참고)
+      🛑 매도 신호 ${signalCount}건 (위쪽 상자 참고)
     </div>`;
   }
 
@@ -5149,11 +5149,11 @@ function openStockModal(code) {
   renderSignalTimeline(code);
 }
 
-// === 🕐 시그널 Timeline ===
+// === 🕐 지난 신호 ===
 async function renderSignalTimeline(code) {
   const container = document.getElementById(`modalTimelineSection-${code}`);
   if (!container) return;
-  container.innerHTML = `<div class="detail-section"><div style="font-size:11px;color:var(--fg-faint)">🕐 시그널 history 로드 중...</div></div>`;
+  container.innerHTML = `<div class="detail-section"><div style="font-size:11px;color:var(--fg-faint)">🕐 지난 신호 불러오는 중...</div></div>`;
   // 최근 60일 history 시도
   const today = new Date();
   const dates = [];
@@ -5208,8 +5208,8 @@ async function renderSignalTimeline(code) {
   }
   if (events.length === 0) {
     container.innerHTML = `<div class="detail-section">
-      <div class="label" style="font-size:11px;color:var(--fg-dim)">🕐 시그널 Timeline</div>
-      <div style="font-size:12px;color:var(--fg-faint);margin-top:4px">최근 60일간 평가 history 없음</div>
+      <div class="label" style="font-size:11px;color:var(--fg-dim)">🕐 지난 신호</div>
+      <div style="font-size:12px;color:var(--fg-faint);margin-top:4px">최근 60일간 기록이 없습니다</div>
     </div>`;
     return;
   }
@@ -5240,7 +5240,7 @@ async function renderSignalTimeline(code) {
   }
 
   let html = `<div class="detail-section">
-    <div class="label" style="font-size:11px;color:var(--fg-dim);margin-bottom:6px">🕐 시그널 Timeline (최근 60일, ${events.length}건)</div>`;
+    <div class="label" style="font-size:11px;color:var(--fg-dim);margin-bottom:6px">🕐 지난 신호 (최근 60일, ${events.length}건)</div>`;
   if (pattern) {
     html += `<div style="font-size:11px;background:#f0f9ff;color:#0369a1;padding:6px 8px;border-radius:6px;margin-bottom:6px;font-weight:600">${pattern}</div>`;
   }
@@ -5461,7 +5461,7 @@ async function renderModalScores(code) {
     const sevEmoji = exitHit.overall === 'critical' ? '🛑' : (exitHit.overall === 'warning' ? '⚠️' : 'ℹ️');
     const sigList = (exitHit.signals || []).map(s => s.label).join(', ');
     html += `<div style="font-size:12px;margin:4px 0;color:${sevColor}">
-      <b>${sevEmoji} 매도 시그널</b>: ${sigList}
+      <b>${sevEmoji} 매도 신호</b>: ${sigList}
     </div>`;
   }
   html += `</div>`;
@@ -6336,7 +6336,7 @@ function renderConfluenceBanner() {
   };
 
   let html = `<div class="strength-section" style="border-left:4px solid #d97706;background:var(--bg-card-tint-amber)">
-    <div class="strength-title">🏆 전략 합류 시그널</div>
+    <div class="strength-title">🏆 전략 합류 신호</div>
     <div class="strength-meta">미너비니 · 모멘텀 · 오닐 중 2개+ 동시 만족 · ${CONFLUENCE_DATA.trading_day || ''}</div>`;
   if (triple.length > 0) {
     html += `<div style="font-size:11px;font-weight:700;color:var(--accent-amber-text);margin-top:8px">🏆🏆🏆 트리플 — 3대 전략 모두 (${triple.length})</div>`;

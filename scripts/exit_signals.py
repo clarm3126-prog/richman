@@ -89,7 +89,7 @@ def evaluate_exit_signals(code, history, entry_price=None):
             "severity": "critical",
             "type": "big_red_distribution",
             "label": f"큰 음봉 ({today_change:.1f}%) + 거래량 {vol_ratio:.1f}배",
-            "detail": "기관 분배 의심",
+            "detail": "기관이 판 것으로 보입니다",
         })
 
     # 3. MA200 이탈 (가장 강한 추세 지지선 깨짐)
@@ -128,8 +128,8 @@ def evaluate_exit_signals(code, history, entry_price=None):
             signals.append({
                 "severity": "warning",
                 "type": "distribution_days",
-                "label": f"20일 분배일 {distribution_days}개",
-                "detail": "기관 매도 누적",
+                "label": f"최근 20일 중 기관이 판 날 {distribution_days}일",
+                "detail": "파는 쪽이 쌓이고 있습니다",
             })
 
     # 6. 신고가 후 거래량 감소 (드라이업)

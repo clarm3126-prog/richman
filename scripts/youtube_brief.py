@@ -71,11 +71,11 @@ EXIT_LABELS = {
 
 
 def exit_label(raw):
-    """'20일 분배일 5개'처럼 숫자가 섞인 이름도 앞부분으로 맞춘다."""
+    """'최근 20일 중 기관이 판 날 5일'처럼 숫자가 섞인 이름도 앞부분으로 맞춘다."""
     name = raw.split("(")[0].strip()
     if name in EXIT_LABELS:
         return EXIT_LABELS[name]
-    if name.startswith("20일 분배일"):
+    if name.startswith("최근 20일 중 기관이 판 날"):
         return "기관이 파는 날이 한 달에 다섯 번 넘게 나왔다"
     return name
 
