@@ -41,7 +41,12 @@ def send_message(
     설명 문자열은 호출한 쪽이 로그에 그대로 찍으므로 chat_id 같은 식별자를
     담지 않는다.
     """
-    payload = {"chat_id": chat_id, "text": text, "parse_mode": parse_mode}
+    payload = {"chat_id": chat_id, "text": text}
+    # parse_mode 는 값이 있을 때만 넣는다. None 을 그대로 실어 보내면
+    # 텔레그램이 "unsupported parse_mode" 로 400 을 준다. 서식 없이 보내려는
+    # 호출이 조용히 실패했다.
+    if parse_mode:
+        payload["parse_mode"] = parse_mode
     if disable_preview:
         payload["disable_web_page_preview"] = True
     try:

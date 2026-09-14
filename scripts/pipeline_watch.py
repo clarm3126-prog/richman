@@ -17,15 +17,14 @@ GitHub 은 예약 실행을 자주 버린다. 2026-09-14 에는 Social Post 네 
   헛알림이 온다.
 
 **이 감시 자체도 예약 실행이라 같이 빠질 수 있다.** 그래서 크론을 저녁에
-여러 번 걸어 두고, 같은 내용을 하루에 한 번만 보낸다. 네 번 중 한 번만
-떠도 알림은 간다.
+세 번 걸어 두었다. 셋 중 하나만 떠도 알림은 간다. 대신 같은 문제를 세 번
+알리지 않도록, 오늘 아직 안 알린 문제가 있을 때만 보낸다.
 
 사용:
   python scripts/pipeline_watch.py
   python scripts/pipeline_watch.py --dry-run   보내지 않고 본문만
 """
 import argparse
-import hashlib
 import json
 import os
 import sys
@@ -108,23 +107,37 @@ def check():
     return today, problems, ref
 
 
-def already_sent(today, problems):
-    """같은 내용을 오늘 이미 보냈으면 True.
+def unreported(today, problems):
+    """오늘 아직 안 알린 문제만 추린다.
 
-    크론을 여러 번 걸어 두었으므로, 안 그러면 저녁마다 같은 알림이
-    네 번 온다. 알림이 시끄러우면 결국 안 보게 된다.
+    크론을 세 번 걸어 두었으므로 그냥 두면 저녁마다 같은 알림이 세 번 온다.
+    그렇다고 "내용이 달라지면 보낸다"로 하면, 문제 하나를 고쳤을 때 남은
+    것만 적힌 알림이 또 온다. 고쳤는데 알림이 오면 오히려 헷갈린다.
+    매도 신호를 고치자마자 실제로 그럴 뻔했다.
+
+    그래서 **새로 생긴 문제가 있을 때만** 보낸다. 줄어든 건 알리지 않는다.
     """
-    sig = hashlib.sha1("|".join(problems).encode("utf-8")).hexdigest()[:12]
     old = load("watchdog_state.json") or {}
-    if old.get("date") == today and old.get("sig") == sig:
-        return True
+    done = set(old.get("reported") or []) if old.get("date") == today else set()
+    return [p for p in problems if p not in done]
+
+
+def remember(today, problems):
+    """보낸 것을 적어 둔다. **보내기에 성공한 뒤에만 부른다.**
+
+    보내기 전에 적으면 실패했을 때 다음 크론이 "이미 알렸다"고 넘어가서
+    알림이 영영 안 간다. 첫 실행에서 parse_mode 버그로 발송이 400 을
+    받았는데 상태는 이미 적힌 뒤였다.
+    """
+    old = load("watchdog_state.json") or {}
+    done = set(old.get("reported") or []) if old.get("date") == today else set()
+    done |= set(problems)
     STATE.parent.mkdir(parents=True, exist_ok=True)
     STATE.write_text(
-        json.dumps({"date": today, "sig": sig, "problems": problems},
+        json.dumps({"date": today, "reported": sorted(done)},
                    ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
-    return False
 
 
 def main():
@@ -150,8 +163,8 @@ def main():
         print("\n(--dry-run 이라 보내지 않음)")
         return 0
 
-    if already_sent(today, problems):
-        print("\n같은 내용을 오늘 이미 보냈습니다 - 넘어감")
+    if not unreported(today, problems):
+        print("\n오늘 이미 알린 것뿐입니다 - 넘어감")
         return 0
 
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
@@ -162,6 +175,8 @@ def main():
 
     ok, msg = send_message(token, chat_id, text, parse_mode=None)
     print(f"\n알림 발송: {'성공' if ok else msg}")
+    if ok:
+        remember(today, problems)
     return 0
 
 
