@@ -890,6 +890,7 @@
   }
   .mv-chip.pass { background: #d1fae5; color: #065f46; border-color: #6ee7b7; }
   .mv-chip.fail { background: #f3f4f6; color: #4b5563; border-color: #d1d5db; }
+  .mv-chip.warn { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
   .mv-ribbon {
     display: inline-block;
     margin-left: 6px;
@@ -1029,6 +1030,7 @@
   .theme-dark .mv-score-total { color: #6ee7b7; }
   .theme-dark .mv-chip.pass { background: #064e3b; color: #6ee7b7; border-color: #065f46; }
   .theme-dark .mv-chip.fail { background: #2a2f3a; color: #9ca3af; border-color: #3a414f; }
+  .theme-dark .mv-chip.warn { background: #4a3413; color: #fcd34d; border-color: #78350f; }
   .theme-dark .mv-ribbon.strict { background: #78350f; color: #fde68a; }
   .theme-dark .mv-ribbon.strong { background: #1e3a8a; color: #bfdbfe; }
   .theme-dark .update-badge { background: #2a2f3a; border-color: #3a414f; color: #9ca3af; }
@@ -4081,7 +4083,12 @@ function findMomRecord(code) {
 // 미너비니 탭 카드와 종목 상세 모달이 같은 칩을 쓴다. 라벨을 양쪽에 적어두면
 // 조건 이름을 고칠 때 한쪽만 고치게 되고, 탭과 모달이 다른 말을 하게 된다.
 function chipsHtml(pairs) {
-  return pairs.map(([name, ok]) => `<span class="mv-chip ${ok ? 'pass' : 'fail'}">${name}</span>`).join('');
+  // 세 번째 값이 'warn' 이면 참이어도 초록으로 칠하지 않는다. 급등 여부처럼
+  // 점수에 안 들어가고 좋다고 볼 수도 없는 사실은 초록이면 오히려 오해를 준다.
+  return pairs.map(([name, ok, kind]) => {
+    const cls = ok ? (kind === 'warn' ? 'warn' : 'pass') : 'fail';
+    return `<span class="mv-chip ${cls}">${name}</span>`;
+  }).join('');
 }
 
 // 라벨에서 영어 약자를 걷어낸다.
@@ -4096,11 +4103,11 @@ function mvTtChips(tt) {
     ['50일선 위', tt.price_above_ma50],
     ['150일선 위', tt.price_above_ma150],
     ['200일선 위', tt.price_above_ma200],
-    ['정배열 50·150', tt.ma50_above_ma150],
-    ['정배열 150·200', tt.ma150_above_ma200],
+    ['50일선이 150일선 위', tt.ma50_above_ma150],
+    ['150일선이 200일선 위', tt.ma150_above_ma200],
     ['200일선 상승중', tt.ma200_uptrend],
-    ['고점서 25% 안쪽', tt.within_25pct_of_52w_high],
-    ['저점서 25% 위', tt.above_25pct_from_52w_low],
+    ['1년 고점에서 25% 이내', tt.within_25pct_of_52w_high],
+    ['1년 저점보다 25% 위', tt.above_25pct_from_52w_low],
     ['시장보다 강함', tt.rs_rating_70plus],
   ];
 }
@@ -4114,7 +4121,7 @@ function mvFundChips(fund) {
   fund = fund || {};
   return [
     [`순이익 증가 ${pctText(fund.eps_growth_q_yoy)}`, fund.eps_growth_25pct],
-    [`순이익 가속`, fund.eps_accelerating],
+    [`순이익 증가폭 커짐`, fund.eps_accelerating],
     [`매출 증가 ${pctText(fund.sales_growth_q_yoy)}`, fund.sales_growth_15pct],
     [`분기 영업이익률 ${fund.op_margin_q ?? 0}%`, fund.op_margin_q_10pct],
     [`연 영업이익률 ${fund.op_margin_annual ?? 0}%`, fund.op_margin_annual_10pct],
@@ -4127,8 +4134,8 @@ function mvSetupChips(setup) {
   return [
     ['5일 좁게 움직임', setup['5day_tightness_10pct']],
     ['5일 등락 5% 이내', setup['5day_open_close_5pct']],
-    ['거래대금 70억', setup.trade_value_7B_1x],
-    ['하루 +25% 급등', setup.impulse_25pct_20d],
+    ['20일 내 거래대금 70억', setup.trade_value_7B_1x],
+    ['20일 내 하루 +25% 급등', setup.impulse_25pct_20d, 'warn'],
   ];
 }
 
@@ -4137,7 +4144,7 @@ function momTechChips(r) {
   return [
     [r.ma200_cross_days_ago ? `200일선 ${r.ma200_cross_days_ago}일전 돌파` : '200일선 돌파', r.ma200_cross_recent],
     ['변동폭 줄어듦', r.vcp_contracting],
-    ['10일 눌림', r.tight_action],
+    ['10일 폭 8% 이내', r.tight_action],
     [`거래량 ${r.vol_ratio}배`, r.volume_surge_2x],
     ['매수 자리 돌파', r.pivot_breakout],
     ['저점 높아짐', r.higher_lows],
@@ -4149,8 +4156,8 @@ function momFlowChips(r) {
   return [
     [`거래량 ${r.vol_ratio}배`, r.volume_surge_15x],
     // W는 테마 가중치의 약자였다. 보는 사람에게는 뜻이 없는 글자다.
-    [`테마 강세 (강도 ${r.theme_weight})`, r.theme_rising],
-    [`조용하다 거래량 터짐 🤫`, r.pocket_pivot],
+    [`테마 강세 (강도 ${r.theme_weight}/1)`, r.theme_rising],
+    [`오른 날 거래량이 최근 최대 🤫`, r.pocket_pivot],
   ];
 }
 
