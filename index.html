@@ -4132,7 +4132,7 @@ function mvFundChips(fund) {
 function mvSetupChips(setup) {
   setup = setup || {};
   return [
-    ['5일 좁게 움직임', setup['5day_tightness_10pct']],
+    ['5일 폭 10% 이내', setup['5day_tightness_10pct']],
     ['5일 등락 5% 이내', setup['5day_open_close_5pct']],
     ['20일 내 거래대금 70억', setup.trade_value_7B_1x],
     ['20일 내 하루 +25% 급등', setup.impulse_25pct_20d, 'warn'],
