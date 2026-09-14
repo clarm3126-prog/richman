@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""역사적 신고가(ATH) + 20일 평균 거래량 캐시 — 주간 1회.
+"""52주 신고가 + 20일 평균 거래량 캐시 — 주간 1회.
 
-거래량 동반 역사적 신고가 돌파 감지(fetch_prices.py)에 사용.
+거래량 동반 52주 신고가 돌파 감지(fetch_prices.py)에 사용.
 
 방법:
 - 거래대금 상위 ~1800 종목의 장기 일봉(2015~) fetch
-- 각 종목: 역대 최고가(고가 기준) + 20일 평균 거래량 계산
+- 각 종목: 52주 최고가(고가 기준) + 20일 평균 거래량 계산
 - data/ath_cache.json 저장
 
 출력: data/ath_cache.json
@@ -35,12 +35,15 @@ HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; ATHFetcher/1.0)"}
 
 
 def fetch_long_history(code):
-    """종목의 장기 일봉 (2015~현재). 역대 최고가 산출용.
+    """종목의 최근 1년 일봉. 52주 최고가 산출용.
     front-api/external/chart/domestic/info — Python literal 응답.
     Returns (code, {ath, ath_date, avg_vol_20d}) or (code, None).
     """
     today = datetime.now(KST)
-    start = "20150101"  # ~10년 (실질적 역사적 신고가)
+    # 10년치 역대 최고가를 쓰면 하락장에서 뚫는 종목이 거의 안 나온다.
+    # 오닐이 보는 것은 "오래 눌려 있다가 다시 고점을 뚫는" 자리이므로
+    # 1년으로 좁힌다. 베이스 60일+ 조건과 함께 걸려야 의미가 산다.
+    start = (today - timedelta(days=365)).strftime("%Y%m%d")
     end = today.strftime("%Y%m%d")
     url = "https://m.stock.naver.com/front-api/external/chart/domestic/info"
     params = {

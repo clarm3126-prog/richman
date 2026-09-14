@@ -1076,7 +1076,7 @@
   .theme-dark .inv-amt.up, .theme-dark .inv-col-head.up { color: #fca5a5; }
   .theme-dark .inv-amt.down, .theme-dark .inv-col-head.down { color: #93c5fd; }
 
-  /* === 🚀 역사적 신고가 돌파 카드 === */
+  /* === 🚀 52주 신고가 돌파 카드 === */
   .ath-card {
     background: var(--bg-card); border: 1px solid var(--border-light);
     border-left: 3px solid #d97706;
@@ -6020,7 +6020,7 @@ function setMarketFilter(filter) {
 
 const colorClass = v => v > 0 ? 'up' : v < 0 ? 'down' : 'flat';
 const fmtPct = v => (v > 0 ? '+' : '') + v.toFixed(2) + '%';
-// === 🏆 윌리엄 오닐 — 역사적 신고가 돌파 (장중 A + 마감 B) ===
+// === 🏆 윌리엄 오닐 — 52주 신고가 돌파 (장중 A + 마감 B) ===
 let ATH_BREAKOUT_DATA = null;
 let ATH_BREAKOUT_LOADING = null;
 
@@ -6032,8 +6032,8 @@ function renderOneilView() {
   el.innerHTML = `<div class="strength-section" style="border-left:4px solid #d97706;background:var(--bg-card-tint-amber)">
       <div class="strength-title">🏆 윌리엄 오닐 — 신고가 돌파 매매</div>
       <div class="strength-meta" style="margin-top:4px;line-height:1.6">
-        오닐이 꼽은 조건 가운데 하나가 <b>신고가</b>입니다. 거래량이 함께 늘면서 <b>역대 최고가</b>를 뚫은 종목을 찾습니다.<br>
-        <span style="font-size:11px">오닐: "역대 최고가 돌파 + 평균 대비 40~50%↑ 거래량 = 가장 강력한 매수 신호"</span>
+        오닐이 꼽은 조건 가운데 하나가 <b>신고가</b>입니다. 거래량이 함께 늘면서 <b>52주 최고가</b>를 뚫은 종목을 찾습니다.<br>
+        <span style="font-size:11px">오닐은 신고가 돌파에 평소보다 크게 늘어난 거래량이 붙을 때를 가장 강한 신호로 봤습니다.</span>
       </div>
     </div>
     <div id="athBreakoutSection"></div>`;
@@ -6107,7 +6107,7 @@ function renderAthBreakoutData(el, d, archiveDate) {
         <div class="ath-volratio">🔥 ${b.vol_ratio}배</div>
       </div>
       <div class="ath-tags">
-        <span class="ath-tag ath">📈 ${b.base_days ? (b.base_days >= 30 ? Math.floor(b.base_days/30)+'개월' : b.base_days+'일') + '만의 ' : ''}역대 최고가 돌파</span>
+        <span class="ath-tag ath">📈 ${b.base_days ? (b.base_days >= 30 ? Math.floor(b.base_days/30)+'개월' : b.base_days+'일') + '만의 ' : ''}52주 신고가 돌파</span>
         ${sd}
       </div>
     </div>`;
@@ -6211,7 +6211,7 @@ function renderUsMomentum(mom) {
 function renderUsOneil(oneil) {
   const close = (oneil && oneil.close) || [];
   let h = `<div class="strength-section" style="padding-bottom:4px">
-    <div style="font-size:11px;color:var(--fg-dim)">역사적 신고가 돌파 · 거래량 1.5배+ · 베이스 60일+ · ${close.length}건</div></div>`;
+    <div style="font-size:11px;color:var(--fg-dim)">52주 신고가 돌파 · 거래량 1.5배+ · 베이스 60일+ · ${close.length}건</div></div>`;
   if (!close.length) return h + `<div class="strength-section"><div class="strength-loading">오늘 돌파 종목 없음</div></div>`;
   h += `<div class="strength-section">`;
   close.forEach((b, i) => {
@@ -6226,7 +6226,7 @@ function renderUsOneil(oneil) {
         </div>
         <div class="ath-volratio">🔥 ${b.vol_ratio}배</div>
       </div>
-      <div class="ath-tags"><span class="ath-tag ath">📈 ${baseTxt}역대 최고가 돌파</span></div>
+      <div class="ath-tags"><span class="ath-tag ath">📈 ${baseTxt}52주 신고가 돌파</span></div>
     </div>`;
   });
   return h + `</div>`;

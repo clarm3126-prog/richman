@@ -785,7 +785,7 @@ def fetch_52w_high_for_stock(code):
 
 
 def detect_ath_breakouts(stocks, investor_top, bot_token, chat_id):
-    """역사적 신고가 + 거래량 동반 돌파 감지 → Telegram (A 장중 / B 마감).
+    """52주 신고가 + 거래량 동반 돌파 감지 → Telegram (A 장중 / B 마감).
     data/ath_cache.json (주간 갱신)의 ATH/평균거래량 활용.
     A (장중): 9~16시 — 거래량 1.0배+ / B (마감): 16시+ — 거래량 1.5배+
     """
@@ -834,7 +834,7 @@ def detect_ath_breakouts(stocks, investor_top, bot_token, chat_id):
         vol = s.get("volume", 0)
         if ath <= 0 or price <= 0:
             continue
-        # 1. 역사적 신고가 돌파 (현재가 >= 캐시된 ATH)
+        # 1. 52주 신고가 돌파 (현재가 >= 캐시된 52주 고점)
         if price < ath:
             continue
         # 2. 베이스 신선도 — 역대 고점이 60일+ 오래된 것만 (이미 달리는 종목 제외)
@@ -915,7 +915,7 @@ def detect_ath_breakouts(stocks, investor_top, bot_token, chat_id):
     new_alerts = [b for b in breakouts if b["code"] not in cat_alerted]
     if not new_alerts:
         return
-    header = "🚀 *역사적 신고가 돌파* (마감 확정)" if is_close else "🚀 *역사적 신고가 돌파* (장중)"
+    header = "🚀 *52주 신고가 돌파* (마감 확정)" if is_close else "🚀 *52주 신고가 돌파* (장중)"
     lines = [f"{header} — {today_date}\n"]
     for b in new_alerts[:12]:
         sd = " · ⭐수급 동반" if b["supply_demand"] else ""
@@ -924,8 +924,8 @@ def detect_ath_breakouts(stocks, investor_top, bot_token, chat_id):
         base_txt = f"{base_d // 30}개월" if base_d >= 30 else f"{base_d}일"
         lines.append(
             f"• *{b['name']}* (`{b['code']}` {b['market']})\n"
-            f"  {b['price']:,}원 ({sign}{b['change']:.2f}%) · 거래량 {b['vol_ratio']}x{sd}\n"
-            f"  📈 {base_txt}만의 역사적 신고가 돌파 (이전 ATH {b['ath']:,.0f}원)"
+            f"  {b['price']:,}원 ({sign}{b['change']:.2f}%) · 거래량 {b['vol_ratio']}배{sd}\n"
+            f"  📈 {base_txt}만의 52주 신고가 돌파 (이전 고점 {b['ath']:,.0f}원)"
         )
     if len(new_alerts) > 12:
         lines.append(f"... 외 {len(new_alerts) - 12}개")
@@ -1069,7 +1069,7 @@ def main():
     print("Computing investor rankings (real net buy/sell amounts)...")
     investor_top = compute_investor_rankings(stocks, top_n_traded=80, top_n_per_list=15)
 
-    print("Detecting ATH breakouts (역사적 신고가 + 거래량)...")
+    print("Detecting 52w breakouts (52주 신고가 + 거래량)...")
     _ath_bot = os.environ.get("TELEGRAM_BOT_TOKEN")
     _ath_chat = os.environ.get("TELEGRAM_CHAT_ID")
     detect_ath_breakouts(stocks, investor_top, _ath_bot, _ath_chat)
