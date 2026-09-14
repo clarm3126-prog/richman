@@ -4172,7 +4172,7 @@ function momFlowChips(r) {
   return [
     [`거래량 ${r.vol_ratio}배`, r.volume_surge_15x],
     // W는 테마 가중치의 약자였다. 보는 사람에게는 뜻이 없는 글자다.
-    [`테마 강세 (강도 ${r.theme_weight}/1)`, r.theme_rising],
+    [`테마 강세 (순위 +${Math.round((r.theme_weight || 0) * 10)})`, r.theme_rising],
     [`오른 날 거래량이 최근 최대 🤫`, r.pocket_pivot],
   ];
 }
