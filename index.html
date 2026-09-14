@@ -5503,11 +5503,29 @@ function renderDonut(items, top = 5, dataAttr = 'theme-no') {
       const lr = (midA - 90) * Math.PI / 180;
       const lx = cx + labelR * Math.cos(lr);
       const ly = cy + labelR * Math.sin(lr);
-      let displayName = t.name;
-      const maxLen = angle >= 40 ? 7 : 5;
-      if (displayName.length > maxLen) displayName = displayName.slice(0, maxLen - 1) + '…';
       const fontSize = angle >= 60 ? 11 : 10;
-      labels.push(`<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="central" font-size="${fontSize}" font-weight="700" fill="#ffffff" stroke="rgba(0,0,0,0.3)" stroke-width="0.4" pointer-events="none">${displayName}</text>`);
+
+      // 글자는 늘 가로로 눕는다. 그래서 조각이 링의 위아래에 있으면 글자가
+      // 띠를 따라 흐르지만, 3시나 9시 쪽에 있으면 글자가 띠를 가로질러
+      // 안팎으로 삐져나간다. 나간 부분은 흰 바탕 위 흰 글자라 지워진 것처럼
+      // 보이고 링 밖은 잘린다. 실제로 '인터넷과카탈…'이 그렇게 나왔다.
+      //
+      // 그래서 길이를 고정하지 않고, 그 각도에서 실제로 남는 자리에 맞춰
+      // 줄인다. 두 글자도 안 들어가면 아예 그리지 않는다. 이름은 아래
+      // 범례에 크게 다시 나오므로 없어도 읽는 데 지장이 없다.
+      const radialRoom = (r - ir) / 2;                  // 띠를 가로지르는 여유
+      const arcRoom = Math.PI * labelR * angle / 360;   // 띠를 따라 도는 여유
+      const cosA = Math.abs(Math.cos(lr)), sinA = Math.abs(Math.sin(lr));
+      const fits = (n) => {
+        const half = n * fontSize * 0.95 / 2;
+        return half * cosA <= radialRoom && half * sinA <= arcRoom;
+      };
+      let n = t.name.length;
+      while (n >= 2 && !fits(n)) n--;
+      if (n >= 2) {
+        const displayName = n < t.name.length ? t.name.slice(0, n - 1) + '…' : t.name;
+        labels.push(`<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="central" font-size="${fontSize}" font-weight="700" fill="#ffffff" stroke="rgba(0,0,0,0.3)" stroke-width="0.4" pointer-events="none">${displayName}</text>`);
+      }
     }
   });
   const legend = positives.map((t, i) => `
