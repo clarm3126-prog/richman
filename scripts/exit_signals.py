@@ -79,8 +79,8 @@ def evaluate_exit_signals(code, history, entry_price=None):
             signals.append({
                 "severity": "critical",
                 "type": "ma50_break_volume",
-                "label": f"MA50 거래량 동반 하락 ({vol_ratio:.1f}x)",
-                "detail": f"종가 {cur_close:,} < MA50 {ma50:,.0f}",
+                "label": f"50일선 거래량 동반 하락 (거래량 {vol_ratio:.1f}배)",
+                "detail": f"종가 {cur_close:,} < 50일선 {ma50:,.0f}",
             })
 
     # 2. 큰 음봉 (-5% 이상 + 거래량 1.5x 이상) - 분배일
@@ -88,7 +88,7 @@ def evaluate_exit_signals(code, history, entry_price=None):
         signals.append({
             "severity": "critical",
             "type": "big_red_distribution",
-            "label": f"큰 음봉 ({today_change:.1f}%) + 거래량 {vol_ratio:.1f}x",
+            "label": f"큰 음봉 ({today_change:.1f}%) + 거래량 {vol_ratio:.1f}배",
             "detail": "기관 분배 의심",
         })
 
@@ -98,8 +98,8 @@ def evaluate_exit_signals(code, history, entry_price=None):
             signals.append({
                 "severity": "critical",
                 "type": "ma200_break",
-                "label": f"MA200 이탈",
-                "detail": f"종가 {cur_close:,} < MA200 {ma200:,.0f}",
+                "label": f"200일선 이탈",
+                "detail": f"종가 {cur_close:,} < 200일선 {ma200:,.0f}",
             })
 
     # === ⚠️ WARNING (주의) ===
@@ -109,8 +109,8 @@ def evaluate_exit_signals(code, history, entry_price=None):
         signals.append({
             "severity": "warning",
             "type": "ma21_break",
-            "label": f"MA21 이탈 (단기 약화)",
-            "detail": f"종가 {cur_close:,} < MA21 {ma21:,.0f}",
+            "label": f"21일선 이탈 (단기 약화)",
+            "detail": f"종가 {cur_close:,} < 21일선 {ma21:,.0f}",
         })
 
     # 5. 분배일 카운트 (최근 20일 중 음봉 + 평균 이상 거래량)
@@ -141,7 +141,7 @@ def evaluate_exit_signals(code, history, entry_price=None):
                 "severity": "warning",
                 "type": "post_breakout_dryup",
                 "label": "신고가 후 거래량 감소",
-                "detail": f"5일 평균 {recent_5d_avg_vol:,.0f} vs 15일 평균 {prev_15d_avg_vol:,.0f}",
+                "detail": f"5일 평균 {recent_5d_avg_vol:,.0f} · 15일 평균 {prev_15d_avg_vol:,.0f}",
             })
 
     # 7. Failed breakout (3일 내 신고가 후 다시 박스 안으로)
@@ -153,7 +153,7 @@ def evaluate_exit_signals(code, history, entry_price=None):
             signals.append({
                 "severity": "warning",
                 "type": "failed_breakout",
-                "label": "Failed Breakout (가짜 돌파)",
+                "label": "가짜 돌파",
                 "detail": f"박스 상단 {prev_box_high:,.0f} 돌파 후 안으로 복귀",
             })
 
@@ -166,7 +166,7 @@ def evaluate_exit_signals(code, history, entry_price=None):
             signals.append({
                 "severity": "info",
                 "type": "death_cross_imminent",
-                "label": f"MA50/150 데스크로스 임박 (gap {gap_pct:.2f}%)",
+                "label": f"50일선·150일선 교차 임박 (차이 {gap_pct:.2f}%)",
                 "detail": "추세 약화",
             })
 
@@ -180,7 +180,7 @@ def evaluate_exit_signals(code, history, entry_price=None):
                 "severity": "critical",
                 "type": "stop_loss_7pct",
                 "label": f"손절선 도달 ({return_pct:.1f}%)",
-                "detail": f"매입가 {entry_price:,}원 → 현재 {cur_close:,}원 (Minervini -7% 룰)",
+                "detail": f"매입가 {entry_price:,}원 → 현재 {cur_close:,}원 (미너비니 -7% 원칙)",
             })
 
         # 10. 수익 +20% 후 MA21 trail
@@ -189,7 +189,7 @@ def evaluate_exit_signals(code, history, entry_price=None):
                 signals.append({
                     "severity": "warning",
                     "type": "profit_trail_ma21",
-                    "label": f"수익 trail (MA21 이탈, +{return_pct:.0f}%)",
+                    "label": f"수익 지키기 (21일선 이탈, +{return_pct:.0f}%)",
                     "detail": f"매입 {entry_price:,} → 현재 {cur_close:,} · 이익 보존 검토",
                 })
 
@@ -199,7 +199,7 @@ def evaluate_exit_signals(code, history, entry_price=None):
                 signals.append({
                     "severity": "warning",
                     "type": "profit_trail_ma50",
-                    "label": f"큰 수익 trail (MA50 이탈, +{return_pct:.0f}%)",
+                    "label": f"큰 수익 지키기 (50일선 이탈, +{return_pct:.0f}%)",
                     "detail": f"매입 {entry_price:,} → 현재 {cur_close:,}",
                 })
 

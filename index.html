@@ -1401,7 +1401,7 @@
       <button class="modal-btn modal-btn-cancel" onclick="closeOwnedModal()">취소</button>
       <button class="modal-btn modal-btn-save" onclick="saveOwnedModal()">저장</button>
     </div>
-    <div class="modal-note">매입가를 등록하면 -7% 손절선, +20% MA21 trail, +50% MA50 trail 자동 알림.<br>📱 Telegram 매도 시그널은 <b>보유 종목에만</b> 발송됩니다.</div>
+    <div class="modal-note">매입가를 등록하면 -7% 손절선, +20% 21일선 추적, +50% 50일선 추적 자동 알림.<br>📱 텔레그램 매도 알림은 <b>보유 종목에만</b> 발송됩니다.</div>
   </div>
 </div>
 
@@ -1439,7 +1439,7 @@
       <label class="modal-label">매도가 (원)</label>
       <input type="text" id="tradeSellPrice" inputmode="numeric" placeholder="예: 26000" class="modal-input">
       <label class="modal-label">매도 이유</label>
-      <textarea id="tradeSellReason" class="modal-input" rows="3" placeholder="예: MA50 거래량 동반 이탈, 목표 수익 +18% 달성"></textarea>
+      <textarea id="tradeSellReason" class="modal-input" rows="3" placeholder="예: 50일선 거래량 동반 이탈, 목표 수익 +18% 달성"></textarea>
     </div>
     <div class="modal-actions">
       <button class="modal-btn modal-btn-cancel" onclick="closeTradeSellModal()">취소</button>
@@ -5306,9 +5306,9 @@ function drawCandlestickSVG(d) {
   // Legend
   const legendY = totalH - 6;
   svg += `<g font-size="10" font-family="sans-serif">`;
-  svg += `<text x="${padL}" y="${legendY}" fill="#f59e0b">━ MA50</text>`;
-  svg += `<text x="${padL + 60}" y="${legendY}" fill="#9333ea">━ MA150</text>`;
-  svg += `<text x="${padL + 130}" y="${legendY}" fill="#374151">━ MA200</text>`;
+  svg += `<text x="${padL}" y="${legendY}" fill="#f59e0b">━ 50일선</text>`;
+  svg += `<text x="${padL + 60}" y="${legendY}" fill="#9333ea">━ 150일선</text>`;
+  svg += `<text x="${padL + 130}" y="${legendY}" fill="#374151">━ 200일선</text>`;
   svg += `<text x="${W - padR}" y="${legendY}" text-anchor="end" fill="#6b7280">${dates[0]} ~ ${dates[dates.length - 1]} (${showDays}일)</text>`;
   svg += `</g>`;
 
@@ -6952,8 +6952,8 @@ function renderMarketRegime() {
     return `<div style="display:flex;justify-content:space-between;align-items:baseline;margin:3px 0;font-size:12px;color:var(--fg-mid)">
       <span style="font-weight:700;color:var(--fg-strong)">${name}</span>
       <span>${r.cur.toLocaleString('ko-KR', {maximumFractionDigits: 2})}
-        <span style="color:${cls};font-weight:700">${dir} MA50 ${pctStr}</span>
-        · 5d <span style="color:${cls}">${ch5d}</span>
+        <span style="color:${cls};font-weight:700">${dir} 50일선 ${pctStr}</span>
+        · 5일 <span style="color:${cls}">${ch5d}</span>
       </span>
     </div>`;
   }
