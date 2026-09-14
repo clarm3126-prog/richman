@@ -155,7 +155,7 @@ def main():
         print("  환경변수는 .mcp.json 기본값보다 우선하므로 파일이 또 바뀌어도 흔들리지 않습니다.")
         return 1
 
-    print(f"정상 — 설정과 브리지 모두 {want} 입니다.")
+    print(f"정상 - 설정과 브리지 모두 {want} 입니다.")
     return 0
 
 

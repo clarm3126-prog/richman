@@ -1661,11 +1661,18 @@ try {
 updateAuthBtn();
 window._authResolve(window.CURRENT_USER);
 
-// 로그인/로그아웃이 나중에 일어나면 화면을 새로 그린다
-let firstEvent = true;
-window.sb.auth.onAuthStateChange((event) => {
-  if (firstEvent) { firstEvent = false; return; }
-  if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') location.reload();
+// 로그인/로그아웃이 나중에 일어나면 화면을 새로 그린다.
+//
+// **이벤트 이름만 보면 안 된다.** SIGNED_IN 은 실제로 로그인할 때만
+// 오는 게 아니라 토큰이 갱신되거나 다른 탭을 보다 돌아올 때도 온다.
+// 그때마다 새로 고치면 보던 자리와 열어 둔 탭이 날아간다.
+// 누가 로그인했는지가 바뀐 경우에만 새로 그린다.
+let lastUserId = window.CURRENT_USER ? window.CURRENT_USER.id : null;
+window.sb.auth.onAuthStateChange((event, session) => {
+  const id = session ? session.user.id : null;
+  if (id === lastUserId) return;
+  lastUserId = id;
+  location.reload();
 });
 </script>
 
