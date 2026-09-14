@@ -66,6 +66,12 @@ queue:
   #
   # 둘 다 카드가 본문을 그대로 담고 있어서 threads_image를 켠다. 사진만
   # 봐도 내용이 끝나는 글이라 본문이 접혀도 손해가 없다.
+  # 2026-09-13 21:00 에 나갔다. queue_done 은 본문 해시로 발행 여부를 재는데,
+  # 그 뒤 본문을 글쓰기 규칙에 맞춰 다시 쓰면서 해시가 바뀌어 버렸다.
+  # 큐가 이 글을 다시 안 올린 글로 보고 집는다. published 로 못 박는다.
+  #
+  # 교훈: 이미 나간 큐 글의 본문은 고치지 않는다. 고쳐야 하면 여기서
+  # published: true 로 닫고 새 항목을 만든다.
   - after: "2026-09-12"
     kind: guide
     platforms: [threads, instagram]
@@ -73,7 +79,7 @@ queue:
     image:
       - assets/cards/telegram-guide.jpg
       - assets/cards/about.jpg
-    published: false
+    published: true
     text: |-
       텔레그램 알림이
       안 온다는 말씀을 받았습니다.
