@@ -3,7 +3,7 @@ name: US Screener
 on:
   schedule:
     # 미국 장 마감 후 (Mon-Fri 22:00 UTC = EST 17:00 / EDT 18:00, KST 익일 07:00)
-    - cron: "0 22 * * 1-5"
+    - cron: "7 22 * * 1-5"
   workflow_dispatch:
 
 permissions:

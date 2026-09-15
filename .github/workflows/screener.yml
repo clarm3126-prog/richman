@@ -2,8 +2,8 @@ name: Minervini Screener
 
 on:
   schedule:
-    # 장 마감 후 KST 17:00 (UTC 8:00) 평일
-    - cron: "0 8 * * 1-5"
+    # 장 마감 후 KST 17:07 (UTC 8:00) 평일
+    - cron: "7 8 * * 1-5"
   workflow_dispatch:
 
 permissions:

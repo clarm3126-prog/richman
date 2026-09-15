@@ -2,9 +2,9 @@ name: Social Token Refresh
 
 on:
   schedule:
-    # 매주 월요일 KST 09:00 (UTC 00:00).
+    # 매주 월요일 KST 09:23 (UTC 00:00).
     # Meta 장기 토큰은 60일이면 만료되므로 주 1회 갱신해 만료를 막는다.
-    - cron: "0 0 * * 1"
+    - cron: "23 0 * * 1"
   workflow_dispatch:
 
 permissions:

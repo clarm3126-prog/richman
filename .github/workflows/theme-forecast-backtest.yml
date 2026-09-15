@@ -2,8 +2,8 @@ name: Theme Forecast Backtest
 
 on:
   schedule:
-    # 매주 토요일 KST 10:00 (UTC 1:00)
-    - cron: "0 1 * * 6"
+    # 매주 토요일 KST 10:19 (UTC 1:00)
+    - cron: "19 1 * * 6"
   workflow_dispatch:
 
 permissions:

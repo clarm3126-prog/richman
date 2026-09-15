@@ -2,9 +2,9 @@ name: Exit Signals
 
 on:
   schedule:
-    # 장 마감 후 매일 KST 16:45 (UTC 7:45) 평일
+    # 장 마감 후 매일 KST 16:47 (UTC 7:45) 평일
     # fetch-prices 16:30 → exit-signals 16:45 → minervini 17:00 → momentum 17:30
-    - cron: "45 7 * * 1-5"
+    - cron: "47 7 * * 1-5"
   workflow_dispatch:
 
 permissions:
