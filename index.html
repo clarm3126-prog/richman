@@ -3810,7 +3810,11 @@ function renderBacktestBanner(category) {
   // 나머지 기간을 현금으로 비켜 있었기 때문이다. 이 줄이 없으면 화면이
   // 실제보다 좋은 쪽으로 읽힌다.
   let headline = '';
-  const lead = shown.find(r => r.s.rules && r.s.benchmark);
+  // 기준은 **가장 긴 보유 기간**으로 고정한다. 매번 성적이 좋은 쪽을 고르면
+  // 그날그날 유리한 칸을 집어 오는 셈이라 믿을 수 없는 화면이 된다. 규칙은
+  // 하나로 두고, 모든 기간을 바로 아래 표에 그대로 편다.
+  const cands = shown.filter(r => r.s.rules && r.s.benchmark);
+  const lead = cands.length ? cands[cands.length - 1] : null;
   if (lead) {
     const lr = lead.s.rules, bm = lead.s.benchmark;
     const gap = Math.round((lr.avg_return - bm.avg_return) * 100) / 100;
@@ -3823,6 +3827,19 @@ function renderBacktestBanner(category) {
       <div style="font-size:13px;color:var(--fg-mid);margin-bottom:3px">${lead.h}일 기준 · 규칙대로 사고 팔았다면</div>
       <div style="font-size:17px;font-weight:800;color:${won ? '#dc2626' : '#2563eb'};line-height:1.35">${what}</div>
       <div style="font-size:13px;color:var(--fg-mid);margin-top:4px">100만원이면 ${money.toLocaleString()}원 ${won ? '덜 깎였습니다' : '더 깎였습니다'}</div>
+    </div>`;
+    // 승률까지 같이 적는다. 손절은 승률을 낮추는 대신 손실 크기를 줄이는
+    // 장치다. 좋은 숫자만 위에 놓고 승률을 접어 두면, 펼쳐 본 사람이
+    // 화면이 자기한테 유리한 것만 보여줬다고 느낀다. 그 한 번으로 나머지
+    // 숫자까지 같이 못 믿게 된다.
+    const wr = lead.s.win_rate, wr2 = lr.win_rate;
+    const mn = lead.s.min_return, mn2 = lr.min_return;
+    const wrTxt = wr2 < wr
+      ? `이기는 횟수는 <b>${wr}% → ${wr2}%</b>로 오히려 줄었습니다.`
+      : `이기는 횟수는 <b>${wr}% → ${wr2}%</b>로 비슷합니다.`;
+    headline += `<div style="font-size:13px;color:var(--fg-mid);margin:-4px 0 10px;line-height:1.5">
+      ${wrTxt} 대신 한 번에 크게 깨지는 일이 없어집니다.
+      ${(mn !== undefined && mn2 !== undefined) ? `가장 크게 깨진 건이 <b>${mn}%</b>에서 <b>${mn2}%</b>로 줄었습니다.` : ''}
     </div>`;
   }
 
