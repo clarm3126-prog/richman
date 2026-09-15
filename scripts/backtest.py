@@ -35,6 +35,11 @@ from pathlib import Path
 
 import pytz
 
+# 윈도 콘솔은 cp949 라 em dash 같은 글자에서 터진다. 한글은 멀쩡히 나오는데
+# 대시 하나 때문에 정상 동작이 예외로 끝난다. 못 그리는 글자만 바꾼다.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(errors="replace")
+
 sys.path.insert(0, str(Path(__file__).parent))
 from screener import fetch_all_stock_history
 
@@ -114,6 +119,11 @@ def evaluate_picks(snapshots, category_filter, days_forward=30, max_picks_per_da
                 "code": r["code"],
                 "name": r.get("name", r["code"]),
                 "snapshot_price": snapshot_price,
+                # 그날 매긴 점수. 산 뒤에 안 값이 아니라 **사기 전에 화면에
+                # 떠 있던 값**이라, 이걸로 갈라 보면 "점수가 높은 쪽을 골랐다면"
+                # 을 실제로 잴 수 있다. 성적 좋은 종목을 나중에 고르는 것과는
+                # 다르다.
+                "score": r.get("total_score"),
             })
 
     if not all_picks:
@@ -282,6 +292,7 @@ def compute_returns(picks, histories, days_forward=30, index_closes=None):
                 "entry": entry_price,
                 "exit": exit_price,
                 "return_pct": round(ret, 2),
+                "score": pick.get("score"),
             }
             ruled = apply_rules(history, entry_idx, target_idx)
             if ruled:
@@ -423,6 +434,41 @@ def stats_summary(returns, index_closes=None, days_forward=None):
                 "win_rate": round(sum(1 for x in bmm if x > 0) / bmn * 100, 1),
                 "avg_return": round(sum(bmm) / bmn, 2),
             }
+
+    # 점수대별 성적.
+    #
+    # "잘 고른 종목은 지수를 이겼다"는 말은, 성적이 좋은 것을 나중에
+    # 골라내면 언제나 참이라 아무 뜻이 없다. 사기 전에 알 수 있는 값으로
+    # 갈라야 뜻이 생긴다. 점수는 그날 화면에 떠 있던 값이다.
+    #
+    # 같은 픽들을 점수 상위 4분의 1 / 가운데 절반 / 하위 4분의 1로 나누고,
+    # 각 묶음의 평균과 그 묶음이 산 날의 지수를 나란히 둔다. 점수가 높은
+    # 쪽이 더 나았는지 아닌지가 그대로 드러난다.
+    scored = sorted((r for r in returns if r.get("score") is not None),
+                    key=lambda r: r["score"])
+    if len(scored) >= 40:
+        q = len(scored) // 4
+        buckets = [("하위 25%", scored[:q]),
+                   ("가운데 50%", scored[q:len(scored) - q]),
+                   ("상위 25%", scored[len(scored) - q:])]
+        out["by_score"] = []
+        for label, rows in buckets:
+            if not rows:
+                continue
+            rr = [r["return_pct"] for r in rows]
+            bb = [r["bench_pct"] for r in rows if r.get("bench_pct") is not None]
+            item = {
+                "label": label,
+                "count": len(rows),
+                "score_from": round(rows[0]["score"], 1),
+                "score_to": round(rows[-1]["score"], 1),
+                "win_rate": round(sum(1 for x in rr if x > 0) / len(rr) * 100, 1),
+                "avg_return": round(sum(rr) / len(rr), 2),
+            }
+            if bb:
+                item["benchmark_avg"] = round(sum(bb) / len(bb), 2)
+                item["vs_benchmark"] = round(item["avg_return"] - item["benchmark_avg"], 2)
+            out["by_score"].append(item)
 
     # 같은 날 사서 같은 기간 코스피를 들고 있었을 때
     bench = [r["bench_pct"] for r in returns if r.get("bench_pct") is not None]
