@@ -869,18 +869,18 @@ def notify_new_minervini(results):
             score_txt = f"점수 *{score}*"
         return (
             f"• *{r['name']}* (`{r['code']}` {r.get('market','')})\n"
-            f"  {price:,}원 ({sign}{ch:.2f}%) · TT {tt_pass}/8 · F {fund_pass}/3{rs_txt} · {score_txt}"
+            f"  {price:,}원 ({sign}{ch:.2f}%) · 추세 {tt_pass}/8 · 실적 {fund_pass}/3{rs_txt} · {score_txt}"
         )
 
     if new_strict:
-        lines.append(f"*🏆 엄격 통과 (8/8 Trend Template) — {len(new_strict)}개*")
+        lines.append(f"*🏆 엄격 통과 (추세 8개 전부) — {len(new_strict)}개*")
         for r, prev in new_strict[:10]:
             lines.append(fmt_one(r, prev))
         if len(new_strict) > 10:
             lines.append(f"... 외 {len(new_strict) - 10}개")
         lines.append("")
     if new_strong:
-        lines.append(f"*⭐ 우량 (6+/8 + 펀더멘털) — {len(new_strong)}개*")
+        lines.append(f"*⭐ 우량 (추세 6개 이상 + 실적) — {len(new_strong)}개*")
         for r, prev in new_strong[:10]:
             lines.append(fmt_one(r, prev))
         if len(new_strong) > 10:

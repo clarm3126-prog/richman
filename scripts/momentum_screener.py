@@ -409,10 +409,10 @@ def notify_new_momentum(results):
     def fmt_one(r, prev_score):
         score = r.get("total_score", 0)
         days_ago = r.get("ma200_cross_days_ago")
-        cross_txt = f"MA200 {days_ago}일 전 돌파" if days_ago else ""
-        vol_txt = f"거래량 {r.get('vol_ratio', 0):.1f}x" if r.get('vol_ratio', 0) >= 1.5 else ""
+        cross_txt = f"200일선 {days_ago}일 전 돌파" if days_ago else ""
+        vol_txt = f"거래량 {r.get('vol_ratio', 0):.1f}배" if r.get('vol_ratio', 0) >= 1.5 else ""
         eps_g = r.get("eps_growth_recent")
-        eps_txt = f"EPS YoY {eps_g}%" if eps_g and r.get("eps_accelerating") else ""
+        eps_txt = f"순이익 {eps_g}% 가속" if eps_g and r.get("eps_accelerating") else ""
         signals = " · ".join(s for s in [cross_txt, vol_txt, eps_txt] if s)
         ch = r.get("change", 0)
         sign = "+" if ch > 0 else ""
@@ -436,7 +436,7 @@ def notify_new_momentum(results):
             lines.append(f"... 외 {len(new_strong) - 10}개")
         lines.append("")
     if new_pre:
-        lines.append(f"*⏳ 사전 진입 후보 (VCP 완성) — {len(new_pre)}개*")
+        lines.append(f"*⏳ 사전 진입 후보 (변동폭 줄어듦) — {len(new_pre)}개*")
         for r, prev in new_pre[:10]:
             lines.append(fmt_one(r, prev))
         if len(new_pre) > 10:
@@ -624,7 +624,7 @@ def notify_confluence(momentum_results):
         if e.get("mm"):
             parts.append(f"🚀 모멘텀 {e['mm']['cat']} {e['mm']['score']}점")
         if e.get("oneil"):
-            parts.append(f"🏆 오닐 돌파 거래량 {e['oneil']['vol_ratio']}x")
+            parts.append(f"🏆 오닐 돌파 거래량 {e['oneil']['vol_ratio']}배")
         return parts
 
     lines = [f"🏆 *전략 합류 시그널* — {today_date}\n"]
