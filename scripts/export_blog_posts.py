@@ -127,6 +127,20 @@ def main():
         mark = "" if shot.exists() else "  ※ 사진 없음"
         print(f"{path.name}  {len(text):,}자{mark}")
 
+    # 이 폴더에는 손으로 쓴 글도 같이 있다(16번부터). 그쪽에 마크다운이
+    # 남아 있으면 네이버에서 별표가 글자로 찍힌다. 생성기가 내보낸 글은
+    # 위에서 이미 걷어내므로, 남은 것은 손으로 쓴 글이다.
+    left = []
+    for f in sorted(OUT_DIR.glob("*.txt")):
+        s = f.read_text(encoding="utf-8-sig")
+        n = len(re.findall(r"\*\*", s)) + len(re.findall(r"^#{1,3} ", s, re.M))
+        if n:
+            left.append(f"{f.name} ({n}곳)")
+    if left:
+        print("\n※ 마크다운이 남은 글 — 네이버에서 기호가 그대로 찍힙니다")
+        for x in left:
+            print(f"   {x}")
+
 
 if __name__ == "__main__":
     main()
