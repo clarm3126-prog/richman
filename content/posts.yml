@@ -759,7 +759,7 @@ queue:
       링크 디엠으로 보내드릴게요.
 
   # docs/블로그글/18_조건검색식.txt 의 숫자를 그대로 옮긴 것.
-  - after: "2026-09-26"
+  - after: "2026-09-24"
     kind: lesson
     platforms: [threads, instagram]
     image:
@@ -795,7 +795,7 @@ queue:
       링크 디엠으로 보내드릴게요.
 
   # 자기 도구의 나쁜 성적을 먼저 내놓는 글. docs/블로그글/17_주식_백테스트.txt 기준.
-  - after: "2026-09-26"
+  - after: "2026-09-24"
     kind: lesson
     platforms: [threads, instagram]
     image:
@@ -831,7 +831,7 @@ queue:
       링크 디엠으로 보내드릴게요.
 
   # 남의 수익률 인증을 읽는 법에 대한 글이기도 하다. 맞는 카드가 없어 쓰레드만.
-  - after: "2026-09-26"
+  - after: "2026-09-24"
     kind: lesson
     platforms: [threads]
     published: false
@@ -863,7 +863,7 @@ queue:
 
   # docs/블로그글/19_주식_종목_고르는_법.txt 기준. 사기 전에 알 수 있는 값으로만
   # 갈랐다는 게 요지다.
-  - after: "2026-09-26"
+  - after: "2026-09-24"
     kind: lesson
     platforms: [threads]
     published: false
@@ -898,7 +898,7 @@ queue:
 
   # 09-15 오닐 탭 기준 변경을 공개하는 글. 코스피 1년 고점 9114.55(06-22),
   # 09-15 종가 6627.26 — data/market.json 에서 확인했다.
-  - after: "2026-09-26"
+  - after: "2026-09-24"
     kind: lesson
     platforms: [threads]
     published: false
@@ -929,7 +929,7 @@ queue:
       댓글에 '노트'라고 남겨주세요.
 
   # docs/블로그글/15_앱으로_까는_법.txt 요약.
-  - after: "2026-09-26"
+  - after: "2026-09-24"
     kind: guide
     platforms: [threads]
     published: false
@@ -961,7 +961,7 @@ queue:
       댓글에 '노트'라고 남겨주세요.
 
   # docs/블로그글/13_관심_탭_보는_법.txt 의 '매입가를 꼭 넣으세요' 대목이 핵심이다.
-  - after: "2026-09-26"
+  - after: "2026-09-24"
     kind: guide
     platforms: [threads, instagram]
     image:
@@ -997,7 +997,7 @@ queue:
 
   # docs/블로그글/16_주식_매도_시점.txt 기준. 날짜가 박힌 숫자는 '어느 날은'으로
   # 돌려 썼다. 큐에 오래 앉아 있어도 틀린 글이 되지 않게.
-  - after: "2026-09-26"
+  - after: "2026-09-24"
     kind: lesson
     platforms: [threads, instagram]
     image:
@@ -1032,7 +1032,7 @@ queue:
       댓글에 '노트'라고 남겨주세요.
 
   # docs/블로그글/14_일지_탭_보는_법.txt 기준. 09-11 원칙 글과 짝이다.
-  - after: "2026-09-26"
+  - after: "2026-09-24"
     kind: lesson
     platforms: [threads]
     published: false
@@ -1065,7 +1065,7 @@ queue:
       댓글에 '노트'라고 남겨주세요.
 
   # docs/블로그글/05_자금흐름_탭_보는_법.txt 기준.
-  - after: "2026-09-26"
+  - after: "2026-09-24"
     kind: lesson
     platforms: [threads]
     published: false
@@ -1099,7 +1099,7 @@ queue:
       댓글에 '노트'라고 남겨주세요.
 
   # docs/블로그글/06_테마별_탭_보는_법.txt 기준.
-  - after: "2026-09-26"
+  - after: "2026-09-24"
     kind: lesson
     platforms: [threads]
     published: false
@@ -1132,7 +1132,7 @@ queue:
       댓글에 '노트'라고 남겨주세요.
 
   # docs/블로그글/10_거래량_탭_보는_법.txt 기준.
-  - after: "2026-09-26"
+  - after: "2026-09-24"
     kind: lesson
     platforms: [threads]
     published: false
@@ -1166,7 +1166,7 @@ queue:
       댓글에 '노트'라고 남겨주세요.
 
   # docs/블로그글/12_미국주식_탭_보는_법.txt 기준.
-  - after: "2026-09-26"
+  - after: "2026-09-24"
     kind: lesson
     platforms: [threads]
     published: false
@@ -1198,7 +1198,7 @@ queue:
 
   # 계정의 자리를 한 편으로 말하는 글. '직장인은 매일 시장을 볼 수 없다'가
   # 이 계정의 전제다.
-  - after: "2026-09-26"
+  - after: "2026-09-24"
     kind: lesson
     platforms: [threads, instagram]
     image:
@@ -1234,7 +1234,7 @@ queue:
       링크 디엠으로 보내드릴게요.
 
   # 못 하는 것을 먼저 말하는 글. 무료 도구를 의심하는 사람에게 가장 잘 먹히는 형식이다.
-  - after: "2026-09-26"
+  - after: "2026-09-24"
     kind: lesson
     platforms: [threads]
     published: false
