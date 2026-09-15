@@ -3819,14 +3819,14 @@ function renderBacktestBanner(category) {
     const lr = lead.s.rules, bm = lead.s.benchmark;
     const gap = Math.round((lr.avg_return - bm.avg_return) * 100) / 100;
     const won = gap > 0;
-    const money = Math.round(10000 * Math.abs(gap));   // 100만원 기준 차액
+    const money = Math.round(100000 * Math.abs(gap));  // 1,000만원 기준 차액
     const what = lr.avg_return >= 0
       ? (won ? `지수보다 ${Math.abs(gap)}%p 더 벌었습니다` : `지수보다 ${Math.abs(gap)}%p 덜 벌었습니다`)
       : (won ? `지수보다 ${Math.abs(gap)}%p 덜 잃었습니다` : `지수보다 ${Math.abs(gap)}%p 더 잃었습니다`);
     headline = `<div style="background:var(--bg-card);border-radius:8px;padding:12px 14px;margin:8px 0 10px">
       <div style="font-size:13px;color:var(--fg-mid);margin-bottom:3px">${lead.h}일 기준 · 규칙대로 사고 팔았다면</div>
       <div style="font-size:17px;font-weight:800;color:${won ? '#dc2626' : '#2563eb'};line-height:1.35">${what}</div>
-      <div style="font-size:13px;color:var(--fg-mid);margin-top:4px">100만원이면 ${money.toLocaleString()}원 ${won ? '덜 깎였습니다' : '더 깎였습니다'}</div>
+      <div style="font-size:13px;color:var(--fg-mid);margin-top:4px">1,000만원이면 ${money.toLocaleString()}원 ${won ? '덜 깎였습니다' : '더 깎였습니다'}</div>
     </div>`;
     // 승률까지 같이 적는다. 손절은 승률을 낮추는 대신 손실 크기를 줄이는
     // 장치다. 좋은 숫자만 위에 놓고 승률을 접어 두면, 펼쳐 본 사람이
