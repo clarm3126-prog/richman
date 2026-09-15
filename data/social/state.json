@@ -133,11 +133,22 @@
    "date": "2026-09-15",
    "kind": "kr_close",
    "threads_id": "18011651258958200"
+  },
+  {
+   "date": "2026-09-16",
+   "ig_id": "17949620469276399",
+   "images": [
+    "assets/cards/promo-what.jpg",
+    "assets/cards/about.jpg"
+   ],
+   "kind": "lesson",
+   "threads_id": "18124155742658582"
   }
  ],
  "queue_done": [
   "c6323a1e1df7",
   "30fae72c67de",
-  "e14b525289da"
+  "e14b525289da",
+  "f9b4cca3efc2"
  ]
 }
