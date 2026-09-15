@@ -123,6 +123,11 @@
    ],
    "kind": "trade_log",
    "threads_id": "18175469593441199"
+  },
+  {
+   "date": "2026-09-15",
+   "kind": "us_brief",
+   "threads_id": "18109574273175302"
   }
  ],
  "queue_done": [
