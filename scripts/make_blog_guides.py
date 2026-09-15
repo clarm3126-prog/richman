@@ -189,7 +189,8 @@ def bt_block(cat, label):
         # 청산 이유는 backtest.py 가 영어 약자로 적어 둔다. 화면 라벨은
         # 한글로 바꿨으므로 글에서도 맞춘다. 안 그러면 사이트에 없는 말이
         # 글에만 나온다.
-        names = {"MA21 이탈": "21일선 이탈", "MA50 이탈": "50일선 이탈"}
+        names = {"MA20 이탈": "20일선 이탈", "MA21 이탈": "20일선 이탈",
+                 "MA50 이탈": "50일선 이탈"}
         for k, c in sorted(r["exit_reasons"].items(), key=lambda x: -x[1]):
             out.append(f"- {names.get(k, k)}: {c:,}건 ({c/tot*100:.1f}%)")
         out += ["", f"평균 {r.get('avg_days')}일 만에 빠져나왔습니다. 생각보다 훨씬 자주 잘립니다."]

@@ -40,7 +40,7 @@ LINES_MIN, LINES_MAX = 5, 20
 # 면책 문장에도 걸려서 고칠 것이 없는데 경고가 울린다. 약속하는 꼴만
 # 막는다.
 BANNED_TERMS = [
-    "MA50", "MA150", "MA200", "MA21", "RS70", "52w",
+    "MA50", "MA150", "MA200", "MA20", "MA21", "RS70", "52w",
     "EPS", "OPM", "VCP", "Pivot", "피벗", "Higher Lows",
     "strict", "strong",
     "추천드립니다", "매수하세요", "사세요", "지금이 기회",

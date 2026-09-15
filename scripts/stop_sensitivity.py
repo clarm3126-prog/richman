@@ -4,7 +4,7 @@
 "저는 -10%로 잡는데 -7%가 나을까요?"라는 질문을 받아서 만들었다. 의견으로
 답하는 것보다 같은 데이터에 숫자만 바꿔 넣어 보는 쪽이 낫다.
 
-backtest.py의 apply_rules()를 그대로 쓴다. 트레일링 규칙(+20% MA21,
+backtest.py의 apply_rules()를 그대로 쓴다. 트레일링 규칙(+20% MA20,
 +50% MA50)은 건드리지 않고 손절선만 바꾼다. 그래야 차이가 손절선 때문임이
 분명해진다.
 
@@ -120,7 +120,7 @@ def save(levels_out, picks, codes):
         "updated": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
         "category": CATEGORY[0],
         "days_forward": DAYS,
-        "trailing": "+20% MA21 · +50% MA50 (손절선만 바꾼다)",
+        "trailing": "+20% MA20 · +50% MA50 (손절선만 바꾼다)",
         "period": {
             "first_entry": dates[0] if dates else "",
             "last_entry": dates[-1] if dates else "",

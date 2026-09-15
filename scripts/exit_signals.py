@@ -3,7 +3,7 @@
 
 각 종목에 대해 매도 신호 평가:
 - 🛑 위험 (즉시 매도 검토): MA50 break with volume, 신고가 후 분배일 5+
-- ⚠️ 주의: MA21 break (단기 trail), 거래량 동반 큰 음봉
+- ⚠️ 주의: MA20 break (단기 trail), 거래량 동반 큰 음봉
 - ℹ️ 모니터: setup 약화, 신고가 후 거래량 감소
 
 출력: data/exit_signals.json + Telegram 알림 (신규 위험/주의 신호만)
@@ -48,14 +48,14 @@ def evaluate_exit_signals(code, history, entry_price=None):
     prev_close = closes[-2] if len(closes) >= 2 else cur_close
     today_change = (cur_close - prev_close) / prev_close * 100 if prev_close > 0 else 0
 
-    ma21 = sma(closes, 21)
+    ma20 = sma(closes, 20)
     ma50 = sma(closes, 50)
     ma150 = sma(closes, 150)
     ma200 = sma(closes, 200)
 
     # 어제까지의 평균 (cross 감지용)
     closes_yesterday = closes[:-1]
-    ma21_y = sma(closes_yesterday, 21) if len(closes_yesterday) >= 21 else None
+    ma20_y = sma(closes_yesterday, 20) if len(closes_yesterday) >= 20 else None
     ma50_y = sma(closes_yesterday, 50) if len(closes_yesterday) >= 50 else None
     ma150_y = sma(closes_yesterday, 150) if len(closes_yesterday) >= 150 else None
 
@@ -104,13 +104,13 @@ def evaluate_exit_signals(code, history, entry_price=None):
 
     # === ⚠️ WARNING (주의) ===
 
-    # 4. MA21 break (단기 trail. +20%+ 수익 종목용)
-    if ma21_y and ma21 and prev_close >= ma21_y and cur_close < ma21:
+    # 4. MA20 break (단기 trail. +20%+ 수익 종목용)
+    if ma20_y and ma20 and prev_close >= ma20_y and cur_close < ma20:
         signals.append({
             "severity": "warning",
-            "type": "ma21_break",
-            "label": f"21일선 이탈 (단기 약화)",
-            "detail": f"종가 {cur_close:,} < 21일선 {ma21:,.0f}",
+            "type": "ma20_break",
+            "label": f"20일선 이탈 (단기 약화)",
+            "detail": f"종가 {cur_close:,} < 20일선 {ma20:,.0f}",
         })
 
     # 5. 분배일 카운트 (최근 20일 중 음봉 + 평균 이상 거래량)
@@ -183,17 +183,17 @@ def evaluate_exit_signals(code, history, entry_price=None):
                 "detail": f"매입가 {entry_price:,}원 → 현재 {cur_close:,}원 (미너비니 -7% 원칙)",
             })
 
-        # 10. 수익 +20% 후 MA21 trail
-        if return_pct >= 20 and ma21 and ma21_y:
-            if prev_close >= ma21_y and cur_close < ma21:
+        # 10. 수익 +20% 후 MA20 trail
+        if return_pct >= 20 and ma20 and ma20_y:
+            if prev_close >= ma20_y and cur_close < ma20:
                 signals.append({
                     "severity": "warning",
-                    "type": "profit_trail_ma21",
-                    "label": f"수익 지키기 (21일선 이탈, +{return_pct:.0f}%)",
+                    "type": "profit_trail_ma20",
+                    "label": f"수익 지키기 (20일선 이탈, +{return_pct:.0f}%)",
                     "detail": f"매입 {entry_price:,} → 현재 {cur_close:,} · 이익 보존 검토",
                 })
 
-        # 11. 수익 +25% 후 MA50 trail (큰 수익은 더 긴 trail)
+        # 11. 수익 +50% 후 MA50 trail (큰 수익은 더 긴 trail)
         if return_pct >= 50 and ma50 and ma50_y:
             if prev_close >= ma50_y and cur_close < ma50:
                 signals.append({
@@ -219,7 +219,7 @@ def evaluate_exit_signals(code, history, entry_price=None):
         "signals": signals,
         "current_price": cur_close,
         "today_change": round(today_change, 2),
-        "ma21": round(ma21) if ma21 else None,
+        "ma20": round(ma20) if ma20 else None,
         "ma50": round(ma50) if ma50 else None,
         "ma150": round(ma150) if ma150 else None,
         "ma200": round(ma200) if ma200 else None,

@@ -137,7 +137,7 @@ def evaluate_picks(snapshots, category_filter, days_forward=30, max_picks_per_da
 # 도구가 안내하는 매도 규칙. index.html의 안내 문구, exit_signals.py의
 # 실제 알림과 같은 값이어야 한다. 한쪽만 바뀌면 "화면과 다르다"가 된다.
 STOP_PCT = -7.0
-TRAIL_STEPS = [(50.0, 50), (20.0, 21)]  # (이익률, 이탈을 볼 이동평균) — 높은 쪽 먼저
+TRAIL_STEPS = [(50.0, 50), (20.0, 20)]  # (이익률, 이탈을 볼 이동평균) — 높은 쪽 먼저
 
 
 def _sma_at(closes, i, period):
