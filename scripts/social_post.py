@@ -109,28 +109,26 @@ def prepare(dry_run=False, only=None, force=False, auto=False, queue_only=False,
 
     state = store.load(STATE, {"posts": [], "queue_done": []})
     today = store.today_kst()
-    # 시황 글은 하루 상한과 따로 센다. 세는 쪽에서 빼야 실제로 따로 세는 것이
-    # 된다. 예전에는 여기서 시황 글까지 세는 바람에, 08:00 미장과 16:00 국장이
-    # 다 나간 날은 누적이 이미 2가 돼서 19:00 종목글과 21:00 대기열이 조용히
-    # 건너뛰어졌다. 로그에만 "건너뜀"이 찍히고 알림도 안 갔다.
-    today_count = sum(
-        1 for p in state.get("posts", [])
-        if p.get("date") == today and p.get("kind") not in compose.BRIEFS
-    )
-    cap = int(post_cfg.get("max_per_day") or 1)
-    # 시황 글 자신은 정해진 시각에 한 번씩만 나가므로 상한을 보지 않는다.
-    # 대신 같은 종류가 하루에 두 번 나가지 않게 막는다 (워크플로 재실행 대비).
+
+    # **하루 몇 건이라는 상한은 두지 않는다.**
+    #
+    # 예전에는 시황 글을 뺀 하루 발행 수를 세어 상한(2건)과 견줬다. 그런데
+    # 사람이 손으로 올린 글도 같이 세어져서, 그날 자동 글이 통째로 막혔다.
+    # 2026-09-15 에는 밀린 예약이 새벽에 몰려 터지면서 그날 몫을 새벽에 다
+    # 써버렸고, 정작 저녁에 새 데이터로 나가야 할 글이 조용히 건너뛰어졌다.
+    # 수를 세는 방식으로는 "사람이 올린 것"과 "자동이 올린 것"을 가를 수 없다.
+    #
+    # 대신 같은 종류 글이 하루에 두 번 나가는 것만 막는다. 이게 원래 막고
+    # 싶었던 일이다. 워크플로가 늦게 두 번 떠도 같은 글이 겹쳐 올라가지
+    # 않고, 사람이 다른 글을 올린 것과는 무관해진다.
+    kind_today = {
+        p.get("kind") for p in state.get("posts", [])
+        if p.get("date") == today
+    }
     if brief:
-        done = any(
-            p.get("date") == today and p.get("kind") == brief
-            for p in state.get("posts", [])
-        )
-        if done and not dry_run and not force:
+        if brief in kind_today and not dry_run and not force:
             print(f"오늘 {brief} 글은 이미 나갔습니다 - 건너뜀")
             return
-    elif today_count >= cap and not dry_run and not force:
-        print(f"오늘 이미 {today_count}건 발행 (상한 {cap}) - 건너뜀")
-        return
 
     platforms = list(post_cfg.get("platforms") or ["threads"])
     # 수동 실행에서 한 플랫폼만 테스트하고 싶을 때 (--only=instagram)
@@ -224,6 +222,12 @@ def prepare(dry_run=False, only=None, force=False, auto=False, queue_only=False,
             post = compose.auto_compose(post_cfg.get("rotation"))
         if not post:
             print("올릴 만한 데이터가 없습니다 (스크리닝 결과가 비었거나 오래됨)")
+            return
+        # 같은 종류가 오늘 이미 나갔으면 건너뛴다. 크론이 늦게 두 번 떠도
+        # 같은 모양의 글이 겹쳐 올라가지 않는다. 사람이 손으로 올린 다른
+        # 종류 글은 여기 안 걸린다.
+        if post["kind"] in kind_today and not dry_run and not force:
+            print(f"오늘 {post['kind']} 글은 이미 나갔습니다 - 건너뜀")
             return
 
         plan = {
