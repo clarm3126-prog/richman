@@ -378,6 +378,8 @@ class Runner:
                 lines = [f"❓ <b>답을 기다리는 질문 {len(self.questions)}건</b>\n"]
                 for where, author, url in self.questions[:10]:
                     lines.append(f"[{where}] @{author}" + (f"\n{url}" if url else ""))
+                if len(self.questions) > 10:
+                    lines.append(f"... 외 {len(self.questions) - 10}건")
                 lines.append("\n질문에는 봇이 답하지 않습니다. 직접 답해주세요.")
                 tell_owner("\n".join(lines))
 
