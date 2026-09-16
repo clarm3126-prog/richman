@@ -1225,9 +1225,17 @@
     font-weight: 500;
     line-height: 1.4;
     z-index: 5;
-    pointer-events: none;
+    /* 누르면 갱신 일정이 뜬다. "시세 언제 올라오나요"를 제일 많이 물어보셔서
+       상대 시각만 보여주지 않고 주기까지 열어 준다. */
+    cursor: pointer;
   }
+  .update-badge:hover { border-color: #c7cbd1; }
   .update-badge:empty { display: none; }
+  .upd-row { display:flex; justify-content:space-between; gap:14px; padding:5px 0; border-bottom:1px solid var(--border, #eee); font-size:13px; }
+  .upd-row:last-child { border-bottom:0; }
+  .upd-row .w { color: var(--fg-mid, #6b7280); }
+  .upd-row .t { font-weight:600; white-space:nowrap; }
+  .upd-note { font-size:12px; color: var(--fg-mid, #6b7280); line-height:1.6; margin-top:10px; }
   /* 헤더 좌측 상단 버튼들 (테마/검색/알림) */
   .hdr-btn {
     position: absolute;
@@ -1328,7 +1336,7 @@
 <body>
 
 <header>
-  <div id="updateBadge" class="update-badge"></div>
+  <div id="updateBadge" class="update-badge" onclick="openUpdateInfo()" title="갱신 일정 보기"></div>
   <button id="themeToggle" class="hdr-btn theme-toggle" onclick="cycleTheme()" title="테마 전환 (자동/라이트/다크)">🌓</button>
   <button class="hdr-btn search-btn" onclick="openSearchModal()" title="종목 검색">🔍</button>
   <button class="hdr-btn alerthist-btn" onclick="openAlertHistoryModal()" title="알림 기록">🔔</button>
@@ -1435,6 +1443,30 @@
       <button class="modal-btn modal-btn-save" onclick="saveAlertModal()">저장</button>
     </div>
     <div class="modal-note">앱 알림은 앱이 열려 있을 때만 옵니다. 텔레그램 알림은 늘 옵니다 (연결 필요).</div>
+  </div>
+</div>
+
+<div id="updateInfoModal" class="modal-overlay" onclick="if(event.target===this) closeUpdateInfo()">
+  <div class="modal">
+    <div class="modal-title">🕒 언제 갱신되나요</div>
+    <div id="updInfoNow"></div>
+    <div style="margin-top:14px">
+      <div class="modal-label" style="margin-bottom:4px">갱신 주기 (한국 시간)</div>
+      <div class="upd-row"><span class="w">국내 시세</span><span class="t">평일 09:00~16:55 · 5분마다</span></div>
+      <div class="upd-row"><span class="w">마감 시세 확정</span><span class="t">평일 16:33</span></div>
+      <div class="upd-row"><span class="w">매도 신호</span><span class="t">평일 16:47</span></div>
+      <div class="upd-row"><span class="w">조건 통과 종목</span><span class="t">평일 17:07</span></div>
+      <div class="upd-row"><span class="w">테마·모멘텀·검증</span><span class="t">조건 계산 직후</span></div>
+      <div class="upd-row"><span class="w">미국 종목</span><span class="t">평일 다음날 07:07</span></div>
+    </div>
+    <div class="upd-note">
+      장중에는 5분마다 값이 바뀌고, <b>조건에 걸린 종목 목록은 장 마감 후 저녁에 하루 한 번</b> 새로 계산됩니다.<br><br>
+      계산은 깃허브 서버에 맡겨 두는데, 서버가 붐비면 한두 시간 늦게 도는 날이 있습니다.
+      그런 날도 <b>그날 안에는 반드시 올라옵니다.</b> 위에 적힌 시각이 예약 시각입니다.
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn modal-btn-cancel" onclick="closeUpdateInfo()">닫기</button>
+    </div>
   </div>
 </div>
 
@@ -2494,10 +2526,16 @@ function fmtRelativeTime(ts) {
       // YYYYMMDD
       d = new Date(`${ts.slice(0,4)}-${ts.slice(4,6)}-${ts.slice(6,8)}T16:30:00+09:00`);
     } else {
-      // "2026-05-12 17:30:45 KST" 같은 format
-      const m = ts.match(/(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/);
+      // "2026-05-12 17:30:45 KST" 또는 "2026-09-16 00:10 UTC"
+      //
+      // 초가 없는 파일이 있다(us_results.json). 초를 필수로 받으면 파싱이
+      // 통째로 실패해서 배지에 날짜 문자열이 그대로 찍힌다.
+      // 그리고 미국 자료만 UTC로 적힌다. 무조건 +09:00 을 붙이면 아홉 시간이
+      // 어긋나 "9시간 전"이 "방금"으로 보인다. 꼬리표를 보고 정한다.
+      const m = ts.match(/(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/);
       if (m) {
-        d = new Date(`${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]}+09:00`);
+        const zone = /UTC|GMT|Z\b/i.test(ts) ? '+00:00' : '+09:00';
+        d = new Date(`${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6] || '00'}${zone}`);
       } else {
         return ts;
       }
@@ -2555,12 +2593,71 @@ function updateBadgeForView(viewName) {
       timestamp = (MOMENTUM_DATA && !MOMENTUM_DATA.__empty) ? MOMENTUM_DATA.updated : null;
       label = '평가';
       break;
+    // 이 두 변수는 파일 아래쪽에서 선언된다. 아직 선언 전에 이 함수가
+    // 불릴 수 있으므로 typeof 로 막는다(그냥 쓰면 TDZ 오류로 배지가 통째로 죽는다).
+    case 'oneil':
+      timestamp = (typeof ATH_BREAKOUT_DATA !== 'undefined' && ATH_BREAKOUT_DATA && !ATH_BREAKOUT_DATA.__empty)
+        ? ATH_BREAKOUT_DATA.updated : null;
+      label = '평가';
+      break;
+    case 'us':
+      timestamp = (typeof US_DATA !== 'undefined' && US_DATA && !US_DATA.__empty)
+        ? US_DATA.updated : null;
+      label = '미국';
+      break;
+    case 'journal':
+      // 일지는 서버가 만드는 게 아니라 내가 적는 것이다. 갱신 시각이 없다.
+      el.innerHTML = '';
+      return;
   }
   if (!timestamp) {
     el.innerHTML = '';
     return;
   }
+  LAST_BADGE = { label, timestamp };
   el.innerHTML = `<span class="src">${label}</span>${fmtRelativeTime(timestamp)}`;
+}
+
+// 배지를 누르면 "언제 갱신되나요"를 연다. 지금 보고 있는 화면의 실제
+// 갱신 시각을 맨 위에 박아 준다. 상대 시각("5분 전")만으로는
+// 몇 시에 올라오는지를 못 알려 준다.
+let LAST_BADGE = null;
+
+// 절대 시각을 한국 시간으로 보여 준다. 미국 자료는 파일에 UTC 로 적혀 있어서
+// 그대로 내보내면 "00:10 UTC" 가 찍힌다. 보는 사람은 한국에 있다.
+function fmtAbsKST(ts) {
+  // 자금흐름 탭은 시각 없이 거래일(YYYYMMDD)만 넘어올 때가 있다
+  const day = String(ts).match(/^(\d{4})(\d{2})(\d{2})$/);
+  if (day) return `${Number(day[2])}월 ${Number(day[3])}일`;
+  const m = String(ts).match(/(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/);
+  if (!m) return String(ts);
+  const zone = /UTC|GMT|Z\b/i.test(ts) ? '+00:00' : '+09:00';
+  const d = new Date(`${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6] || '00'}${zone}`);
+  if (isNaN(d.getTime())) return String(ts);
+  const p = new Intl.DateTimeFormat('ko-KR', {
+    timeZone: 'Asia/Seoul', month: 'long', day: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  }).format(d);
+  return p;
+}
+
+function openUpdateInfo() {
+  const box = document.getElementById('updInfoNow');
+  if (box) {
+    if (LAST_BADGE && LAST_BADGE.timestamp) {
+      box.innerHTML = `<div class="modal-current">지금 보시는 <b>${LAST_BADGE.label}</b> 자료는
+        <b>${fmtAbsKST(LAST_BADGE.timestamp)}</b> 기준입니다
+        (${fmtRelativeTime(LAST_BADGE.timestamp)}).</div>`;
+    } else {
+      box.innerHTML = '';
+    }
+  }
+  const m = document.getElementById('updateInfoModal');
+  if (m) m.classList.add('show');
+}
+function closeUpdateInfo() {
+  const m = document.getElementById('updateInfoModal');
+  if (m) m.classList.remove('show');
 }
 
 // 1분마다 badge 자동 갱신 ('5분 전' → '6분 전')
@@ -6170,7 +6267,10 @@ function renderAthBreakouts() {
       .catch(() => { ATH_BREAKOUT_DATA = { __empty: true }; })
       .finally(() => { ATH_BREAKOUT_LOADING = null; });
     ATH_BREAKOUT_LOADING.then(() => {
-      if (state.currentView === 'oneil') renderAthBreakouts();
+      if (state.currentView === 'oneil') {
+        renderAthBreakouts();
+        updateBadgeForView('oneil');   // 데이터 도착 시 badge 갱신
+      }
     });
     return;
   }
@@ -6335,7 +6435,12 @@ function renderUsView() {
   if (!el || state.currentView !== 'us') return;
   if (!US_DATA && !US_LOADING) {
     el.innerHTML = `<div class="strength-section"><div class="strength-loading">🇺🇸 미국주식 로딩 중...</div></div>`;
-    loadUsData().then(() => { if (state.currentView === 'us') renderUsView(); });
+    loadUsData().then(() => {
+      if (state.currentView === 'us') {
+        renderUsView();
+        updateBadgeForView('us');   // 데이터 도착 시 badge 갱신
+      }
+    });
     return;
   }
   if (!US_DATA) { el.innerHTML = `<div class="strength-section"><div class="strength-loading">로딩 중...</div></div>`; return; }
