@@ -20,3 +20,6 @@ data/alerts_config.json
 # 키트 폴더 자체에 git init 이 돼 있다(원격 없는 로컬 전용). 백업이 필요하면
 # 깃허브 **비공개** 저장소를 따로 파서 연결한다.
 블로그자동화-실전키트/
+
+# wrangler 로컬 캐시. 배포와 무관하고 용량만 차지한다.
+workers/**/.wrangler/
