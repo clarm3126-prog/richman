@@ -80,6 +80,9 @@ class Runner:
         # 쓰레드는 DM API가 없다. 링크를 원한 사람은 여기 모아뒀다가
         # 운영자에게 텔레그램으로 알려서 직접 보내게 한다.
         self.manual_dm = []
+        # 질문이라 일부러 답을 안 단 댓글. 그냥 두면 묻히므로 알려준다.
+        # 공개 로그라 아이디와 글 주소만 남기고 본문은 남기지 않는다.
+        self.questions = []
 
     def link_for(self, platform):
         """플랫폼 꼬리표를 붙인 링크.
@@ -178,6 +181,11 @@ class Runner:
 
                 hit = matcher.match(reply.get("text"), self.engage)
                 if not hit:
+                    # 질문이면 봇이 답하지 않는다. 대신 운영자에게 알린다.
+                    if (matcher.quiet_on_question(self.engage)
+                            and matcher.is_question(reply.get("text"))
+                            and not matcher.is_skipped(reply.get("text"), self.engage)):
+                        self.questions.append(("쓰레드", author, post.get("permalink") or ""))
                     self.mark("replied", key)  # 규칙 없음 - 다시 보지 않음
                     continue
                 name, rule = hit
@@ -263,6 +271,10 @@ class Runner:
 
                 hit = matcher.match(c.get("text"), self.engage)
                 if not hit:
+                    if (matcher.quiet_on_question(self.engage)
+                            and matcher.is_question(c.get("text"))
+                            and not matcher.is_skipped(c.get("text"), self.engage)):
+                        self.questions.append(("인스타", author, post.get("permalink") or ""))
                     self.mark("replied", key)
                     self.mark("dm", key)
                     continue
@@ -355,6 +367,18 @@ class Runner:
                     lines.append(f"@{author}  <i>{name}</i>")
                 lines.append("\n답글로 '디엠 드릴게요'라고 해뒀습니다.")
                 lines.append("쓰레드는 DM API가 없어 직접 보내주셔야 합니다.")
+                tell_owner("\n".join(lines))
+
+        # 질문은 사람이 답해야 한다. 봇이 "감사해요" 로 덮으면 놓친다.
+        if self.questions:
+            print(f"\n사장님이 답하실 질문 {len(self.questions)}건")
+            for where, author, url in self.questions:
+                print(f"  - [{where}] @{author} {url}")
+            if not self.dry_run:
+                lines = [f"❓ <b>답을 기다리는 질문 {len(self.questions)}건</b>\n"]
+                for where, author, url in self.questions[:10]:
+                    lines.append(f"[{where}] @{author}" + (f"\n{url}" if url else ""))
+                lines.append("\n질문에는 봇이 답하지 않습니다. 직접 답해주세요.")
                 tell_owner("\n".join(lines))
 
         if self.problems:
