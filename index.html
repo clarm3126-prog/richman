@@ -23,6 +23,7 @@
 <meta property="og:title" content="종목노트 — 매일 조건에 걸린 종목만 올립니다">
 <meta property="og:description" content="장 마감 후 국내 전 종목을 훑어 이미 오르기 시작했는지, 거래량이 늘었는지, 실적이 좋아지고 있는지를 봅니다. 조건에 걸린 것만 올리고 목표가·손절 알림과 매매일지까지 전부 무료입니다. 종목 추천이 아닙니다.">
 <meta property="og:url" content="https://stage2.kr/">
+<link rel="canonical" href="https://stage2.kr/">
 <meta property="og:image" content="https://stage2.kr/assets/og.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -105,6 +106,9 @@
     --accent-amber-text: #fde68a;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  /* 화면에서만 숨긴다. display:none 은 검색엔진도 안 읽으므로 쓰지 않는다. */
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+    overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
   html, body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
     background: #f4f5f7;
@@ -1337,6 +1341,10 @@
 </style>
 </head>
 <body>
+
+<!-- 화면에는 안 보이고 검색엔진만 읽는 제목. 앱 화면이라 큰 제목을 둘
+     자리가 없는데, h1 이 아예 없으면 무슨 사이트인지 기계가 못 읽는다. -->
+<h1 class="sr-only">종목노트 — 장 마감 후 국내 전 종목을 같은 기준으로 훑는 무료 주식 스크리너</h1>
 
 <header>
   <div id="updateBadge" class="update-badge" onclick="openUpdateInfo()" title="갱신 일정 보기"></div>
