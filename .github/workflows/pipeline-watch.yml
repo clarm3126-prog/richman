@@ -12,9 +12,9 @@ name: Pipeline Watch
 # 아직 안 나간 글까지 빠졌다고 알린다.
 on:
   schedule:
-    - cron: "40 12 * * 1-5"   # KST 21:40
-    - cron: "40 13 * * 1-5"   # KST 22:40
-    - cron: "40 14 * * 1-5"   # KST 23:40
+    - cron: "10 12 * * 1-5"   # KST 21:10
+    - cron: "10 13 * * 1-5"   # KST 22:10
+    - cron: "10 14 * * 1-5"   # KST 23:10
   workflow_dispatch:
     inputs:
       dry_run:

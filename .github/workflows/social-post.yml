@@ -2,15 +2,24 @@ name: Social Post
 
 on:
   schedule:
-    # 스크리닝 파이프라인이 모두 끝난 뒤, 평일 KST 19:12 (UTC 10:12)
-    # fetch-prices 16:33 → exit-signals 16:47 → screener 17:07 → momentum 그 뒤 → social 19:12
+    # **저녁 것은 일부러 이르게 잡는다.**
+    #
+    # GitHub 이 예약을 띄우는 시각이 한두 시간, 심하면 네다섯 시간 늦는다.
+    # 2026-09-15 에는 21:13 대기열 글이 다음 날 01:54 에 나갔다. 새벽 두 시에
+    # 올라간 글은 아무도 안 본다. 크론 분을 정시에서 비껴 봤지만(09-15)
+    # 지연은 그대로였다. 옮겨서 고칠 수 있는 문제가 아니다.
+    #
+    # 그래서 밀릴 것을 셈에 넣고 시각을 당긴다. 19:40 이면 네 시간이 밀려도
+    # 자정 전이다. 늦게 나가는 것과 새벽에 나가는 것은 다르다.
+    # 스크리닝 파이프라인이 모두 끝난 뒤, 평일 KST 18:40 (UTC 09:40)
+    # fetch-prices 16:33 → exit-signals 16:47 → screener 17:07 → momentum 그 뒤 → social 18:40
     # 이 실행은 --auto라서 스크리너 자동 글만 올린다.
-    - cron: "12 10 * * 1-5"
-    # 평일 KST 21:13 (UTC 12:13). --queue-only라서 content/posts.yml에
+    - cron: "40 9 * * 1-5"
+    # 평일 KST 19:40 (UTC 10:40). --queue-only라서 content/posts.yml에
     # 올릴 글이 남아 있을 때만 발행하고, 큐가 비면 아무것도 하지 않는다.
     # 수동 큐는 자동 글보다 먼저 쓰이기 때문에, 한 실행에서 둘 다 뽑을
     # 수는 없어 이렇게 시간을 갈라 둘 다 매일 나가게 한다.
-    - cron: "13 12 * * 1-5"
+    - cron: "40 10 * * 1-5"
     # 평일 KST 16:08 (UTC 07:08). 국장 마감 요약.
     # 장은 15:30에 끝나고 fetch-prices가 15:55까지 돌므로 숫자가 확정돼 있다.
     - cron: "8 7 * * 1-5"
@@ -112,7 +121,7 @@ jobs:
           case "${{ github.event.schedule }}" in
             "8 7 * * 1-5")  MODE="--brief=kr_close" ;;
             "9 23 * * 0-4") MODE="--brief=us_brief" ;;
-            "13 12 * * 1-5") MODE="--queue-only" ;;
+            "40 10 * * 1-5") MODE="--queue-only" ;;
             "8 7 * * 6,0")  MODE="--queue-only" ;;
             "18 8 * * 5")    MODE="--queue-only" ;;
             *)              MODE="--auto" ;;
