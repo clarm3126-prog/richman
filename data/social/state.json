@@ -8,6 +8,7 @@
     "assets/cards/about.jpg"
    ],
    "kind": "theme",
+   "source": "auto",
    "threads_id": "18078061262512062"
   },
   {
@@ -17,16 +18,19 @@
     "assets/cards/2026-09-09-screener.jpg",
     "assets/cards/about.jpg"
    ],
-   "kind": "screener"
+   "kind": "screener",
+   "source": "auto"
   },
   {
    "date": "2026-09-10",
    "kind": "momentum",
+   "source": "auto",
    "threads_id": "18102303566200038"
   },
   {
    "date": "2026-09-10",
    "kind": "kr_close",
+   "source": "brief",
    "threads_id": "18111961315845321"
   },
   {
@@ -37,6 +41,7 @@
     "assets/cards/promo-list.jpg"
    ],
    "kind": "promo",
+   "source": "manual",
    "threads_id": "18104954087252903"
   },
   {
@@ -47,6 +52,7 @@
     "assets/cards/about.jpg"
    ],
    "kind": "theme",
+   "source": "auto",
    "threads_id": "17907153183523730"
   },
   {
@@ -57,6 +63,7 @@
     "assets/cards/promo-list.jpg"
    ],
    "kind": "promo",
+   "source": "manual",
    "threads_id": "17900244150596249"
   },
   {
@@ -67,6 +74,7 @@
     "assets/cards/about.jpg"
    ],
    "kind": "screener",
+   "source": "auto",
    "threads_id": "18097702511067552"
   },
   {
@@ -77,6 +85,7 @@
     "assets/cards/about.jpg"
    ],
    "kind": "momentum",
+   "source": "auto",
    "threads_id": "17984950947073082"
   },
   {
@@ -87,6 +96,7 @@
     "assets/cards/about.jpg"
    ],
    "kind": "guide",
+   "source": "manual",
    "threads_id": "18078029951401231"
   },
   {
@@ -97,11 +107,13 @@
     "assets/cards/about.jpg"
    ],
    "kind": "guide",
+   "source": "manual",
    "threads_id": "17981359313897707"
   },
   {
    "date": "2026-09-14",
    "kind": "kr_close",
+   "source": "brief",
    "threads_id": "18127041169853582"
   },
   {
@@ -112,6 +124,7 @@
     "assets/cards/about.jpg"
    ],
    "kind": "screener",
+   "source": "auto",
    "threads_id": "17958159849212317"
   },
   {
@@ -122,16 +135,19 @@
     "assets/cards/about.jpg"
    ],
    "kind": "trade_log",
+   "source": "manual",
    "threads_id": "18175469593441199"
   },
   {
    "date": "2026-09-15",
    "kind": "us_brief",
+   "source": "brief",
    "threads_id": "18109574273175302"
   },
   {
    "date": "2026-09-15",
    "kind": "kr_close",
+   "source": "brief",
    "threads_id": "18011651258958200"
   },
   {
@@ -142,11 +158,13 @@
     "assets/cards/about.jpg"
    ],
    "kind": "lesson",
+   "source": "manual",
    "threads_id": "18124155742658582"
   },
   {
    "date": "2026-09-16",
    "kind": "us_brief",
+   "source": "brief",
    "threads_id": "17877949782651892"
   },
   {

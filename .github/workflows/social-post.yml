@@ -15,6 +15,17 @@ on:
     # fetch-prices 16:33 → exit-signals 16:47 → screener 17:07 → momentum 그 뒤 → social 18:40
     # 이 실행은 --auto라서 스크리너 자동 글만 올린다.
     - cron: "40 9 * * 1-5"
+    # 아래 둘은 위 두 개가 밀렸을 때를 위한 여벌이다. 예약 지연이 중앙
+    # 147분, 최대 438분이라 한 번만 걸어 두면 그날 글이 통째로 없어진다.
+    # 창(17:00-22:30) 밖에서 뜬 실행은 스스로 넘어가고, 이미 나간 뒤에
+    # 뜬 실행은 하루 한 번 잠금에 걸린다. 그래서 겹쳐 올라가지 않는다.
+    #
+    # 평일 KST 17:25 — 저녁 대기열 글 여벌 (먼저 시도)
+    - cron: "25 8 * * 1-5"
+    # 평일 KST 20:25 — 자동 글 여벌
+    - cron: "25 11 * * 1-5"
+    # 평일 KST 21:25 — 대기열 글 마지막 여벌
+    - cron: "25 12 * * 1-5"
     # 평일 KST 19:40 (UTC 10:40). --queue-only라서 content/posts.yml에
     # 올릴 글이 남아 있을 때만 발행하고, 큐가 비면 아무것도 하지 않는다.
     # 수동 큐는 자동 글보다 먼저 쓰이기 때문에, 한 실행에서 둘 다 뽑을
@@ -35,11 +46,17 @@ on:
     # 그 자리를 통째로 비워 두고 있었다. 주말은 장이 안 서서 자동 글이
     # 없으므로 대기열 글을 내보낸다.
     - cron: "8 7 * * 6,0"
+    # 토·일 KST 18:08 — 주말 대기열 여벌
+    - cron: "8 9 * * 6,0"
     # 금 KST 17:18 (UTC 08:18). 대기열 글.
     #
     # 금요일 16:08 은 국장 마감이 이미 쓰고 있다. 같은 분에 크론을 하나 더
     # 걸면 두 글이 동시에 나가므로 한 시간 뒤로 둔다. 오후 3~6시 안이다.
     - cron: "18 8 * * 5"
+    # 평일 KST 17:38 — 국장 마감 여벌
+    - cron: "38 8 * * 1-5"
+    # 평일 KST 09:09 — 미장 브리핑 여벌 (개장 뒤라도 없는 것보단 낫다)
+    - cron: "9 0 * * 1-5"
   workflow_dispatch:
     inputs:
       dry_run:
@@ -118,22 +135,32 @@ jobs:
         # 예약이면 schedule이 차 있고 inputs.source가 비어서 아래 case를
         # 그냥 지나간다. 수동이면 그 반대라 source가 모드를 정한다.
         run: |
+          # WINDOW 는 "이 시각대를 벗어나 뜬 실행은 올리지 말라"는 뜻이다.
+          # 예약이 밀려 새벽에 떠도 글이 새벽에 나가지 않는다.
+          WINDOW=""
           case "${{ github.event.schedule }}" in
-            "8 7 * * 1-5")  MODE="--brief=kr_close" ;;
-            "9 23 * * 0-4") MODE="--brief=us_brief" ;;
-            "40 10 * * 1-5") MODE="--queue-only" ;;
-            "8 7 * * 6,0")  MODE="--queue-only" ;;
-            "18 8 * * 5")    MODE="--queue-only" ;;
-            *)              MODE="--auto" ;;
+            "8 7 * * 1-5")   MODE="--brief=kr_close"; WINDOW="15:45-19:00" ;;
+            "38 8 * * 1-5")  MODE="--brief=kr_close"; WINDOW="15:45-19:00" ;;
+            "9 23 * * 0-4")  MODE="--brief=us_brief"; WINDOW="07:30-10:30" ;;
+            "9 0 * * 1-5")   MODE="--brief=us_brief"; WINDOW="07:30-10:30" ;;
+            "25 8 * * 1-5")  MODE="--queue-only";     WINDOW="17:00-22:30" ;;
+            "40 10 * * 1-5") MODE="--queue-only";     WINDOW="17:00-22:30" ;;
+            "25 12 * * 1-5") MODE="--queue-only";     WINDOW="17:00-22:30" ;;
+            "8 7 * * 6,0")   MODE="--queue-only";     WINDOW="15:00-22:30" ;;
+            "8 9 * * 6,0")   MODE="--queue-only";     WINDOW="15:00-22:30" ;;
+            "18 8 * * 5")    MODE="--queue-only";     WINDOW="17:00-22:30" ;;
+            *)               MODE="--auto";           WINDOW="17:00-22:30" ;;
           esac
+          # 사람이 버튼을 누른 실행은 창을 보지 않는다. 지금 올리려고 누른 것이다.
           case "${{ inputs.source }}" in
-            "대기열 글 (posts.yml)") MODE="--queue-only" ;;
-            "국장 마감 (16:00)")     MODE="--brief=kr_close" ;;
-            "미장 브리핑 (08:00)")   MODE="--brief=us_brief" ;;
-            "자동 글 (스크리너)")    MODE="--auto" ;;
+            "대기열 글 (posts.yml)") MODE="--queue-only"; WINDOW="" ;;
+            "국장 마감 (16:00)")     MODE="--brief=kr_close"; WINDOW="" ;;
+            "미장 브리핑 (08:00)")   MODE="--brief=us_brief"; WINDOW="" ;;
+            "자동 글 (스크리너)")    MODE="--auto"; WINDOW="" ;;
           esac
-          echo "모드: $MODE"
+          echo "모드: $MODE  창: ${WINDOW:-없음}"
           python scripts/social_post.py prepare "$MODE" \
+            ${WINDOW:+--window=$WINDOW} \
             ${{ inputs.dry_run && '--dry-run' || '' }} \
             ${{ inputs.force && '--force' || '' }} \
             ${{ (inputs.only != '' && inputs.only != '설정대로') && format('--only={0}', inputs.only) || '' }}

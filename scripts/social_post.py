@@ -71,6 +71,35 @@ def _as_list(value):
     return list(value) if isinstance(value, list) else [value]
 
 
+def in_window(spec, now=None):
+    """지금이 발행해도 되는 시각인가. spec 은 "HH:MM-HH:MM" (KST).
+
+    GitHub 예약은 최대 일곱 시간까지 밀린다. 19:40 에 걸어 둔 글이 새벽
+    두 시에 나간 날이 있었다. 새벽에 올라간 글은 조용히 묻힌다 — 쓰레드는
+    올린 뒤 15~30분 안에 붙는 반응으로 더 퍼뜨릴지를 정하기 때문에,
+    아무도 안 깨어 있는 시각에 나가면 조회 수만 적은 게 아니라 알고리즘이
+    아예 안 집어 간다.
+
+    그래서 늦게 뜬 실행은 올리지 않고 넘긴다. 대신 창 안에 크론을 여러 개
+    걸어 두어, 그중 제때 뜬 실행이 올리게 한다.
+
+    자정을 넘는 창(22:00-02:00)도 받는다.
+    """
+    if not spec:
+        return True, ''
+    try:
+        a, b = spec.split('-')
+        ah, am = (int(x) for x in a.split(':'))
+        bh, bm = (int(x) for x in b.split(':'))
+    except ValueError:
+        raise SystemExit('시간 창 형식이 이상합니다: %s (예: 17:00-22:30)' % spec)
+    now = now or store.now_kst()
+    cur = now.hour * 60 + now.minute
+    lo, hi = ah * 60 + am, bh * 60 + bm
+    ok = (lo <= cur <= hi) if lo <= hi else (cur >= lo or cur <= hi)
+    return ok, '%02d:%02d' % (now.hour, now.minute)
+
+
 def pick_from_queue(state):
     """수동 큐에서 아직 안 올린 글 하나."""
     done = set(state.get("queue_done") or [])
@@ -88,7 +117,7 @@ def pick_from_queue(state):
 
 
 def prepare(dry_run=False, only=None, force=False, auto=False, queue_only=False,
-            brief=None):
+            brief=None, window=None):
     """무엇을 올릴지 정한다.
 
     수동 큐는 자동 생성보다 항상 먼저 쓰이므로, 큐에 글이 쌓여 있으면
@@ -105,6 +134,14 @@ def prepare(dry_run=False, only=None, force=False, auto=False, queue_only=False,
     post_cfg = cfg.get("post") or {}
     if not post_cfg.get("enabled", True):
         print("자동 글쓰기 꺼짐 (post.enabled=false)")
+        return
+
+    # 밀려서 늦게 뜬 실행은 여기서 돌려보낸다. 손으로 누른 실행(--force)과
+    # 예행 연습(--dry-run)은 그대로 통과시킨다.
+    ok, hhmm = in_window(window)
+    if not ok and not dry_run and not force:
+        print("지금 %s 는 발행 시간대(%s)가 아닙니다 - 건너뜀" % (hhmm, window))
+        print("  예약이 밀려 늦게 뜬 실행입니다. 창 안의 다음 실행이 올립니다.")
         return
 
     state = store.load(STATE, {"posts": [], "queue_done": []})
@@ -190,6 +227,14 @@ def prepare(dry_run=False, only=None, force=False, auto=False, queue_only=False,
         }
         print(f"시황 글: {post['title']}")
     elif manual:
+        # 자동 글에는 있던 하루 한 번 잠금이 대기열 글에는 없었다. 창 안에
+        # 크론을 여러 개 걸면 그중 둘이 제때 떠서 서로 다른 글 두 편이
+        # 같은 날 나간다. kind 로는 못 막는다 — 대기열 글은 kind 가 제각각
+        # (lesson·promo·trade_log)이라 서로 다른 값으로 잡히기 때문이다.
+        if any(p.get("source") == "manual" for p in state.get("posts", [])
+               if p.get("date") == today) and not dry_run and not force:
+            print("오늘 대기열 글은 이미 나갔습니다 - 건너뜀")
+            return
         text = manual["text"].strip()
         targets = [p for p in (manual.get("platforms") or platforms) if p in platforms]
         # 인스타는 해시태그로 도달이 갈리므로 자동 글과 같은 태그를 붙인다.
@@ -361,7 +406,10 @@ def publish():
 
     creds = config.credentials()
     state = store.load(STATE, {"posts": [], "queue_done": []})
-    record = {"date": store.today_kst(), "kind": plan.get("kind") or plan.get("source")}
+    # source 를 같이 남긴다. 대기열 글인지 자동 글인지 가려야 하루 한 번
+    # 잠금이 걸린다. kind 만으로는 대기열 글끼리 구분되지 않는다.
+    record = {"date": store.today_kst(), "kind": plan.get("kind") or plan.get("source"),
+              "source": plan.get("source")}
     if plan.get("image_rels"):
         record["images"] = plan["image_rels"]
 
@@ -476,6 +524,7 @@ if __name__ == "__main__":
     stage = args[0] if args and not args[0].startswith("-") else "prepare"
     only = next((a.split("=", 1)[1] for a in args if a.startswith("--only=")), None)
     brief = next((a.split("=", 1)[1] for a in args if a.startswith("--brief=")), None)
+    window = next((a.split("=", 1)[1] for a in args if a.startswith("--window=")), None)
     try:
         if stage == "publish":
             publish()
@@ -487,6 +536,7 @@ if __name__ == "__main__":
                 auto="--auto" in args,
                 queue_only="--queue-only" in args,
                 brief=brief or None,
+                window=window or None,
             )
     except Exception:
         traceback.print_exc()
