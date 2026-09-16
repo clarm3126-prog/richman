@@ -54,7 +54,7 @@ def fetch_daily(code, start, end):
     raw = urllib.request.urlopen(req, timeout=30).read().decode("utf-8")
     rows = json.loads(raw.replace("'", '"'))
     # 첫 줄은 머리글이다
-    return [{"d": r[0], "c": r[4], "v": r[5]} for r in rows[1:] if r[4]]
+    return [{"d": r[0], "h": r[2], "l": r[3], "c": r[4], "v": r[5]} for r in rows[1:] if r[4]]
 
 
 def _at(rows, date):
@@ -90,13 +90,22 @@ def draw_chart(d, rows, box, buy_i, sell_i):
     f_tag = C._font(True, 30)
     f_small = C._font(False, 24)
 
-    def mark(i, color, label, above):
+    # 짧은 매매는 두 점이 붙어 라벨이 겹친다. 그때는 좌우로 갈라 놓는다.
+    close = abs(X(sell_i) - X(buy_i)) < 190
+
+    def mark(i, color, label, above, side=None):
         x, y = X(i), Y(rows[i]["c"])
         r = 11
         d.ellipse([x - r, y - r, x + r, y + r], fill=color)
         d.ellipse([x - r - 5, y - r - 5, x + r + 5, y + r + 5], outline=color, width=3)
         tw = d.textlength(label, font=f_tag)
-        bx = min(max(x - tw / 2 - 16, x0 + 16), x1 - tw - 48)
+        if side == "left":
+            bx = x - tw - 62
+        elif side == "right":
+            bx = x + 26
+        else:
+            bx = x - tw / 2 - 16
+        bx = min(max(bx, x0 + 16), x1 - tw - 48)
         by = y - 68 if above else y + 30
         # 바닥 근처에서 산 경우 아래로 붙이면 판을 뚫고 날짜와 겹친다.
         if by + 46 > py1 + 10:
@@ -106,8 +115,8 @@ def draw_chart(d, rows, box, buy_i, sell_i):
         d.rounded_rectangle([bx, by, bx + tw + 32, by + 46], radius=14, fill=color)
         d.text((bx + 16, by + 7), label, font=f_tag, fill=(255, 255, 255))
 
-    mark(buy_i, UP, "매수", False)
-    mark(sell_i, DOWN, "매도", True)
+    mark(buy_i, UP, "매수", False, "left" if close else None)
+    mark(sell_i, DOWN, "매도", True, "right" if close else None)
 
     # 기간만 적는다. 값은 안 적는다.
     def ymd(s):
@@ -124,8 +133,12 @@ def render(spec, out_path):
         raise SystemExit("%s: 봉이 %d개뿐입니다" % (spec["name"], len(rows)))
     buy_i, buy = _at(rows, spec["buy"])
     sell_i, sell = _at(rows, spec["sell"])
-    gain = (sell["c"] / buy["c"] - 1) * 100
-    after = (max(r["c"] for r in rows[sell_i:]) / sell["c"] - 1) * 100
+    # 체결가를 적어 두었으면 그것으로 센다. 종가로 재면 실제와 몇 %씩 어긋난다.
+    # 여러 번 나눠 샀으면 평균 단가를 적는다.
+    bp = spec.get("buy_price") or buy["c"]
+    sp = spec.get("sell_price") or sell["c"]
+    gain = (sp / bp - 1) * 100
+    after = (max(r["h"] for r in rows[sell_i:]) / sp - 1) * 100
 
     img = Image.new("RGB", (C.W, C.H), C.BG)
     d = ImageDraw.Draw(img)
@@ -137,7 +150,11 @@ def render(spec, out_path):
     y += 10
 
     f_sub = C._font(False, 30)
-    sub = "보유 %d거래일 · 판 뒤 고점까지 %+.0f%%" % (sell_i - buy_i, after)
+    # 보유 기간은 달력 기준으로 쓴다. 거래일로 쓰면 제목("11일 만에")과 어긋난다.
+    import datetime as _dt
+    _d = lambda s: _dt.date(int(s[:4]), int(s[4:6]), int(s[6:8]))
+    held = (_d(sell["d"]) - _d(buy["d"])).days
+    sub = "%+.0f%% · 보유 %d일 · 판 뒤 고점까지 %+.0f%%" % (gain, held, after)
     d.text((C.PAD, y), sub, font=f_sub, fill=C.FG_DIM)
     y += 56
 
