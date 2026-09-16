@@ -165,7 +165,6 @@ jobs:
             "9 23 * * 0-4")  MODE="--brief=us_brief"; WINDOW="07:30-10:30" ;;
             "5 12 * * 1-5")  MODE="--queue-only";     WINDOW="17:00-22:30" ;;
             "8 7 * * 6,0")   MODE="--queue-only";     WINDOW="15:00-22:30" ;;
-            "18 8 * * 5")    MODE="--queue-only";     WINDOW="17:00-22:30" ;;
             *)               MODE="--auto";           WINDOW="17:00-22:30" ;;
           esac
           fi
