@@ -1,0 +1,95 @@
+# 매매 기록 카드의 재료.
+#
+# scripts/make_trade_cards.py 가 이걸 읽어 차트가 들어간 카드를 만든다.
+# 시세는 네이버에서 받아오므로 여기엔 날짜만 적으면 된다.
+#
+# ⚠️ buy/sell 은 **실제 매수·매도한 날**이다. 지금 적힌 값은 주가 흐름에서
+#    뽑아낸 임시값이라, 실제 날짜로 바꿔야 한다. 금액은 적지 않는다 —
+#    카드에도 퍼센트만 나온다.
+#
+#   from/to  차트에 보여줄 구간 (매수 앞뒤로 넉넉히)
+#   buy/sell YYYYMMDD. 휴장일이면 다음 거래일로 맞춰 찍힌다
+
+trades:
+  - file: trade-taesung.jpg
+    name: 태성
+    code: "323280"
+    from: "20240401"
+    to: "20241220"
+    buy: "20240503"      # TODO 실제 매수일
+    sell: "20240612"     # TODO 실제 매도일
+    headline: ["태성", "팔고 나서 더 갔습니다"]
+    sections:
+      - heading: 매수
+        body: 저점에서 긴 횡보 뒤 거래량이 터졌다. 매집 구간이라고 봤다.
+      - heading: 매도
+        body: 오른 뒤 힘이 빠졌다고 보고, 더 좋아 보이는 종목으로 갈아타려고 팔았다.
+      - heading: 무엇이 문제였나
+        body: 조정에도 거래량이 실리지 않았다. 추세가 깨진 게 아니라 내가 못 기다린 것이다.
+
+  # 아래 넷은 날짜를 넣어야 만들어진다. buy/sell 이 비어 있으면 건너뛴다.
+  # 문구는 기존 카드(scripts/make_blog_cards.py)에서 옮겨 온 것이다.
+
+  - file: trade-soslab.jpg
+    name: 에스오에스랩
+    code: "464080"
+    from: ""
+    to: ""
+    buy: ""
+    sell: ""
+    headline: ["에스오에스랩", "코인 보고 판 매매"]
+    sections:
+      - heading: 매수
+        body: 하락 추세를 벗어나 상승 초입이라고 판단했다.
+      - heading: 매도
+        body: 지루한 횡보 중에 주변의 코인 수익을 보고 청산했다.
+      - heading: 무엇이 문제였나
+        body: 판 뒤로 더 올랐다. 매도 버튼을 누르게 한 건 차트가 아니라 남의 수익률이었다.
+
+  - file: trade-ligachem.jpg
+    name: 리가켐바이오
+    code: "141080"
+    from: ""
+    to: ""
+    buy: ""
+    sell: ""
+    headline: ["리가켐바이오", "조금 먹고 나온 매매"]
+    sections:
+      - heading: 매수
+        body: 긴 횡보 뒤 추세 전환. 지지 자리에서 반등을 확인하고 샀다.
+      - heading: 버틴 구간
+        body: 조정을 맞았지만 거래량이 안 터져 계속 들고 있었다. 여기까진 원칙대로였다.
+      - heading: 무엇이 문제였나
+        body: 매물대에 한 번 막히자 지루함이 겹쳐 급하게 팔았다. 거래량도 차트도 안 봤다.
+
+  - file: trade-daewon.jpg
+    name: 대원전선
+    code: "006340"
+    from: ""
+    to: ""
+    buy: ""
+    sell: ""
+    headline: ["대원전선", "11일 만에 정리"]
+    sections:
+      - heading: 매수
+        body: 1년 횡보 뒤 거래량 실린 신고가 돌파. 전력 케이블 교체 주기와 데이터센터 증설이 겹치는 자리였다.
+      - heading: 매도
+        body: 투자경고 지정. 과매수 구간이었고 경고 종목은 며칠 안에 급락하는 경우가 많았다.
+      - heading: 무엇이 문제였나
+        body: 계획대로 나온 매매다. 다만 경고가 없었다면 언제 팔았을지는 정해두지 않았었다.
+
+  - file: trade-pskholdings.jpg
+    name: 피에스케이홀딩스
+    code: "031980"
+    from: ""
+    to: ""
+    buy: ""
+    sell: ""
+    headline: ["피에스케이홀딩스", "아직 보유 중"]
+    sections:
+      - heading: 매수 근거
+        body: 반도체 장비주. 전 고점을 돌파해 신고가를 갱신했고 3년 연속 순이익이 늘었다.
+      - heading: 달라진 것
+        body: 실패한 매매를 하나씩 적고 나서야 문제가 보였다. 추세가 깨져서 판 적은 한 번도 없었다.
+      - heading: 지금
+        body: 살 때 정한 기준대로 들고 있다.
