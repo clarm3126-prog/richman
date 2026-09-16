@@ -78,7 +78,19 @@ def main():
                 lines.append("")
             lines.append("안 올린 커밋 %s개" % ahead)
 
-    # 4. 작업일지의 마지막 날짜만 짚어 준다.
+    # 4. 크론 간격 규칙을 어긴 슬롯이 있으면 알린다. 없으면 조용하다.
+    #    세션이 셋이라 규칙을 기억에만 두면 다시 깨진다.
+    try:
+        r = subprocess.run([sys.executable, str(ROOT / "scripts" / "cron_check.py")],
+                           cwd=ROOT, capture_output=True, timeout=20)
+        if r.returncode == 1:
+            if lines:
+                lines.append("")
+            lines.append(r.stdout.decode("utf-8", "replace").strip())
+    except Exception:
+        pass
+
+    # 5. 작업일지의 마지막 날짜만 짚어 준다.
     note = ROOT / "docs" / "작업일지.md"
     if note.exists():
         for l in note.read_text(encoding="utf-8").split("\n"):
