@@ -48,7 +48,7 @@ CARDS = {
         "footer": FOOTER,
     },
     "blog-taesung.jpg": {
-        "headline": ["태성", "팔고 나서 400%"],
+        "headline": ["태성", "팔고 나서 280%"],
         "sections": [
             {
                 "heading": "매수",
@@ -56,7 +56,7 @@ CARDS = {
             },
             {
                 "heading": "매도",
-                "body": "200% 오른 뒤 힘이 빠졌다고 보고, 더 좋아 보이는 종목으로 "
+                "body": "167% 오른 뒤 힘이 빠졌다고 보고, 더 좋아 보이는 종목으로 "
                         "갈아타려고 매도.",
             },
             {
