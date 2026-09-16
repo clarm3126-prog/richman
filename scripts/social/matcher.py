@@ -13,6 +13,10 @@ skip 목록에 걸리는 댓글에는 아무 반응도 하지 않는다.
 answers_question: true 로 열어준다. 지금은 link_request 하나뿐이다 -
 그건 "답"이 아니라 달라고 한 것을 건네주는 일이라서다.
 
+그 위에 auto_reply_rules 가 하나 더 있다. 거기 적힌 규칙만 답글을 단다.
+2026-09-17 사장님 결정으로 link_request 하나만 열려 있다. 인사도
+사람이 직접 단다.
+
 허용 목록으로 뒤집은 이유: 처음에는 인사(thanks·default)만 막았는데,
 "손절은 어떻게 잡으시나요?" 가 how_it_works 의 '어떻게' 에 걸려
 종목 고르는 기준을 읊는 엉뚱한 답이 나갔다. 질문 규칙의 낱말은
@@ -45,6 +49,18 @@ def is_question(text):
     if not t:
         return False
     return bool(_QMARK.search(t) or _QTAIL.search(t) or _QWORD.search(t))
+
+
+def _auto_reply_allowed(name, engage_cfg):
+    """이 규칙이 자동 답글을 달아도 되나.
+
+    social.yml 의 auto_reply_rules 에 적힌 규칙만 답글을 단다.
+    목록이 아예 없으면 종전대로 전부 허용한다(설정을 안 쓰는 경우).
+    """
+    allow = (engage_cfg or {}).get("auto_reply_rules")
+    if allow is None:
+        return True
+    return name in allow
 
 
 def is_skipped(text, engage_cfg):
@@ -117,11 +133,16 @@ def match(text, engage_cfg):
     for rule in engage_cfg.get("rules") or []:
         if _hit(rule.get("keywords"), spaced, tight):
             name = rule.get("name") or "rule"
+            if not _auto_reply_allowed(name, engage_cfg):
+                return None
             if quiet and not (rule.get("answers_question") or name in ANSWERS_QUESTION):
                 return None
             return (name, rule)
 
     if quiet:
+        return None
+
+    if not _auto_reply_allowed("default", engage_cfg):
         return None
 
     default = engage_cfg.get("default") or {}
