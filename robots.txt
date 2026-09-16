@@ -1,0 +1,26 @@
+# stage2.kr — 종목노트
+#
+# 막는 것이 없습니다. 검색에 걸려야 사람이 옵니다.
+# 종목 목록은 로그인 없이도 전부 보이므로, 크롤러가 봐서 곤란한 것도 없습니다.
+#
+# 개인 정보가 들어 있는 곳(관심 종목·매매일지·알림)은 로그인한 뒤
+# Supabase 에서 불러오므로 이 사이트의 파일에는 없습니다. 막을 것이 없습니다.
+
+User-agent: *
+Allow: /
+
+# AI 학습 수집을 막고 싶어지면 아래 주석을 푸세요.
+# 다만 지금은 알려지는 쪽이 급하고, 막으면 AI 답변에 인용되는 길도 같이
+# 닫힙니다. ChatGPT·Perplexity 가 답하면서 stage2.kr 을 짚어주는 것이
+# 지금으로서는 검색만큼 쓸모 있습니다.
+#
+# User-agent: GPTBot
+# Disallow: /
+#
+# User-agent: Google-Extended
+# Disallow: /
+#
+# User-agent: CCBot
+# Disallow: /
+
+Sitemap: https://stage2.kr/sitemap.xml
