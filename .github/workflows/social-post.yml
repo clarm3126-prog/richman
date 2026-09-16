@@ -57,6 +57,14 @@ on:
     - cron: "38 8 * * 1-5"
     # 평일 KST 09:09 — 미장 브리핑 여벌 (개장 뒤라도 없는 것보단 낫다)
     - cron: "9 0 * * 1-5"
+
+  # Cloudflare Worker 가 정확한 시각에 쏘는 신호.
+  #
+  # 위 크론은 남겨 둔다. Worker 가 멎어도 글은 나가야 하기 때문이다.
+  # 둘 다 떠도 아래 시간 창과 하루 한 번 잠금이 겹치는 것을 막는다.
+  repository_dispatch:
+    types: [post]
+
   workflow_dispatch:
     inputs:
       dry_run:
@@ -131,6 +139,8 @@ jobs:
           THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN }}
           IG_USER_ID: ${{ secrets.IG_USER_ID }}
           IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          DISPATCH_MODE: ${{ github.event.client_payload.mode }}
+          DISPATCH_WINDOW: ${{ github.event.client_payload.window }}
         # 예약 실행은 cron으로, 수동 실행은 source 입력으로 갈린다.
         # 예약이면 schedule이 차 있고 inputs.source가 비어서 아래 case를
         # 그냥 지나간다. 수동이면 그 반대라 source가 모드를 정한다.
@@ -138,6 +148,28 @@ jobs:
           # WINDOW 는 "이 시각대를 벗어나 뜬 실행은 올리지 말라"는 뜻이다.
           # 예약이 밀려 새벽에 떠도 글이 새벽에 나가지 않는다.
           WINDOW=""
+          # Worker 가 보낸 값. 밖에서 들어오는 값이라 명령줄에 바로 끼워
+          # 넣지 않고, 아는 이름인지 확인한 뒤에 쓴다.
+          case "$DISPATCH_MODE" in
+            queue)    MODE="--queue-only" ;;
+            auto)     MODE="--auto" ;;
+            kr_close) MODE="--brief=kr_close" ;;
+            us_brief) MODE="--brief=us_brief" ;;
+            "")       ;;
+            *) echo "모르는 모드: $DISPATCH_MODE"; exit 1 ;;
+          esac
+          if [ -n "$DISPATCH_MODE" ]; then
+            # 창은 "HH:MM-HH:MM" 만 받는다.
+            if echo "$DISPATCH_WINDOW" | grep -Eq '^[0-2][0-9]:[0-5][0-9]-[0-2][0-9]:[0-5][0-9]$'; then
+              WINDOW="$DISPATCH_WINDOW"
+            else
+              echo "창 형식이 이상해 무시합니다: $DISPATCH_WINDOW"
+            fi
+          fi
+          # 크론으로 뜬 것만 여기서 모드를 정한다. Worker 신호로 들어오면
+          # github.event.schedule 이 비어 있어 *) 에 걸리고, 그러면 위에서
+          # 정한 모드가 --auto 로 덮어써진다.
+          if [ -z "$DISPATCH_MODE" ]; then
           case "${{ github.event.schedule }}" in
             "8 7 * * 1-5")   MODE="--brief=kr_close"; WINDOW="15:45-19:00" ;;
             "38 8 * * 1-5")  MODE="--brief=kr_close"; WINDOW="15:45-19:00" ;;
@@ -151,6 +183,7 @@ jobs:
             "18 8 * * 5")    MODE="--queue-only";     WINDOW="17:00-22:30" ;;
             *)               MODE="--auto";           WINDOW="17:00-22:30" ;;
           esac
+          fi
           # 사람이 버튼을 누른 실행은 창을 보지 않는다. 지금 올리려고 누른 것이다.
           case "${{ inputs.source }}" in
             "대기열 글 (posts.yml)") MODE="--queue-only"; WINDOW="" ;;

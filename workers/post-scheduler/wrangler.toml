@@ -1,0 +1,14 @@
+# 발행 시각을 GitHub 밖에서 재는 Worker.
+#
+# 무료 요금제는 Worker 하나에 크론 트리거 3개까지다. 하나만 쓴다.
+# 1분마다 깨어나 지금이 예정 시각인지 보고, 맞으면 GitHub 에 신호를 쏜다.
+# 시각을 늘리려면 src/worker.js 의 SCHEDULE 에 줄만 더하면 된다.
+#
+# 하루 1440번 깨어난다. 무료 요금제가 하루 10만 번이라 여유롭다.
+
+name = "stage2-post-scheduler"
+main = "src/worker.js"
+compatibility_date = "2026-09-16"
+
+[triggers]
+crons = ["* * * * *"]
