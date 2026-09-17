@@ -194,12 +194,19 @@
    "kind": "theme",
    "source": "auto",
    "threads_id": "18008095076976573"
+  },
+  {
+   "date": "2026-09-17",
+   "kind": "promo",
+   "source": "manual",
+   "threads_id": "17979464624908587"
   }
  ],
  "queue_done": [
   "c6323a1e1df7",
   "30fae72c67de",
   "e14b525289da",
-  "f9b4cca3efc2"
+  "f9b4cca3efc2",
+  "c6cb7d89fcd2"
  ]
 }
