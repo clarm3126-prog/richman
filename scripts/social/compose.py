@@ -502,6 +502,22 @@ def render(post, platform, cfg):
     return _finish(lines, post, platform, cfg)
 
 
+def _with_question(cta, post, post_cfg):
+    """링크 안내 앞에 질문 한 줄을 붙인다. 날짜로 돌려 쓴다.
+
+    질문이 앞에 있어야 답글이 문장으로 온다. 한 단어 유도는 한 단어 답글을
+    만들고 그건 분류기에서 할인된다.
+
+    같은 날 여러 종류가 나가도 서로 다른 질문이 나오도록 kind를 같이 섞는다.
+    무작위가 아니라 날짜로 정하므로, 같은 날 다시 만들어도 같은 글이 나온다.
+    """
+    qs = post_cfg.get("cta_questions") or []
+    if not qs:
+        return cta
+    key = now_kst().strftime("%Y%m%d") + (post.get("kind") or "")
+    return qs[sum(ord(c) for c in key) % len(qs)] + chr(10) + cta
+
+
 def _finish(lines, post, platform, cfg):
     """본문 뒤에 링크·댓글 유도·해시태그를 붙이고 길이를 맞춘다."""
     link_cfg = cfg.get("link") or {}
@@ -512,6 +528,8 @@ def _finish(lines, post, platform, cfg):
     append_link = post_cfg.get("append_link", True)
     # 하루에 여러 번 나가는 시황 글까지 같은 유도 문구를 달면 반복이 심해진다
     cta = None if post.get("no_cta") else post_cfg.get("cta")
+    if cta:
+        cta = _with_question(cta, post, post_cfg)
 
     if platform == "instagram":
         if url and append_link:
