@@ -218,6 +218,17 @@
    "kind": "lesson",
    "source": "manual",
    "threads_id": "18122660485675275"
+  },
+  {
+   "date": "2026-09-18",
+   "ig_id": "18117479033293608",
+   "images": [
+    "assets/cards/2026-09-18-screener.jpg",
+    "assets/cards/about.jpg"
+   ],
+   "kind": "screener",
+   "source": "auto",
+   "threads_id": "17889870321446994"
   }
  ],
  "queue_done": [
