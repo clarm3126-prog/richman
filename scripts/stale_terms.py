@@ -29,12 +29,20 @@ if hasattr(sys.stdout, "reconfigure"):
 ROOT = Path(__file__).resolve().parents[1]
 
 # (찾을 것, 지금 쓰는 말, 왜)
+#
+# **이름이 바뀐 것만 넣는다.** 어디에 나오든 무조건 틀린 것이라야 한다.
+#
+# "5분마다 갱신" 과 "ath_cache" 도 넣어 봤다가 뺐다. 둘 다 한 번 고친
+# 문구일 뿐 이름이 바뀐 게 아니어서, 맥락에 따라 맞기도 하다. 실제로
+# 「왜 실시간이 아닌가」 글은 **"5분마다라고 적어놨는데 틀렸다"** 를 두 번
+# 인용하는데 검사기가 그걸 고칠 자리로 잡았다. 고친 자취를 고치라고
+# 하는 셈이다.
+#
+# 헛걸리는 경고는 결국 안 읽힌다. 확실한 것만 남긴다.
 STALE = [
     (r"21일선", "20일선", "2026-09-16 에 계산까지 20일로 바꿨다"),
     (r"MA21", "MA20", "같은 건. backtest.py TRAIL_STEPS 도 20 이다"),
     (r"21일 평균선", "20일 평균선", "같은 건"),
-    (r"5분마다\s*(?:갱신|자동|감지)", "실제 갱신 시각", "고정 시각으로 바꿨다(09:10·11:10·13:10·15:35·20:05)"),
-    (r"ath_cache|Stock Metadata 워크플로", "쉬운 말", "사용자 화면에 개발자 말이 새어 나간 자리"),
 ]
 
 # 사용자가 읽는 것만 본다. 코드 주석과 이력은 뺀다.
@@ -43,6 +51,10 @@ TARGETS = [
     "content/posts.yml", "content/고정글.txt", "content/social.yml",
 ]
 GLOBS = ["docs/블로그글/*.txt", "docs/*.md", "docs/*.txt"]
+
+# 키트 정본은 저장소 밖에 있다. 원고를 그쪽에서 쓰므로 같이 본다.
+KIT = Path("C:/블로그자동화-실전키트")
+KIT_GLOBS = ["posts/*.md", "기준문서/*.md", "CLAUDE.md"]
 
 # 여기 파일들은 "왜 바꿨는지" 적는 곳이라 옛 이름이 나오는 게 정상이다.
 SKIP = {"docs/작업일지.md"}
@@ -56,30 +68,51 @@ def files():
             seen.append(p)
     for g in GLOBS:
         seen += sorted(ROOT.glob(g))
+    if KIT.exists():
+        for g in KIT_GLOBS:
+            seen += sorted(KIT.glob(g))
+
     out, done = [], set()
     for p in seen:
-        rel = p.relative_to(ROOT).as_posix()
+        try:
+            rel = p.relative_to(ROOT).as_posix()
+        except ValueError:
+            rel = "키트/" + p.relative_to(KIT).as_posix()
+        # 접은 원고는 옛 낱말이 남아 있는 게 정상이다
+        if p.name.startswith("_폐기_"):
+            continue
         if rel in SKIP or rel in done:
             continue
         done.add(rel)
-        out.append(p)
+        out.append((p, rel))
     return out
 
 
 def main():
     hits = []
-    for p in files():
+    for p, rel in files():
         try:
             text = p.read_text(encoding="utf-8-sig")
         except Exception:
             continue
-        for i, line in enumerate(text.split("\n"), 1):
+        lines = text.split("\n")
+        # 원고 앞머리(--- 사이)는 "전에는 이렇게 썼다" 식 기록이 들어간다.
+        # 고쳐야 할 자리가 아니라 고친 자취다.
+        head_end = 0
+        if lines and lines[0].strip() == "---":
+            for n, l in enumerate(lines[1:], 2):
+                if l.strip() == "---":
+                    head_end = n
+                    break
+        for i, line in enumerate(lines, 1):
+            if i <= head_end:
+                continue
             s = line.strip()
             if not s or s.startswith("#") or s.lstrip().startswith("//"):
                 continue
             for pat, now, why in STALE:
                 if re.search(pat, s):
-                    hits.append((p.relative_to(ROOT).as_posix(), i, s[:70], now, why))
+                    hits.append((rel, i, s[:70], now, why))
                     break
 
     if not hits:
