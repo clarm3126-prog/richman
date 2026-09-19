@@ -77,6 +77,36 @@ def values():
                     out["%s.%s.avg" % (prefix, slot)] = x.get("avg_return")
                     out["%s.%s.bench" % (prefix, slot)] = x.get("benchmark_avg")
 
+    # 조건 통과율. 매일 다시 계산되고 평가 종목 수부터 바뀐다.
+    sc = _load("screener_conditions.json")
+    stocks = sc.get("stocks") or {}
+    tt = sc.get("tt_keys") or []
+    if stocks and tt:
+        total = len(stocks)
+        out["cond.total"] = total
+        hit = [0] * len(tt)
+        for v in stocks.values():
+            bits = str(v.get("tt") or "")
+            for i, ch in enumerate(bits[: len(tt)]):
+                if ch == "1":
+                    hit[i] += 1
+        # 화면에 쓰는 이름으로 짧게 건다
+        SHORT = {
+            "within_25pct_of_52w_high": "high25",
+            "above_25pct_from_52w_low": "low25",
+            "ma50_above_ma150": "ma50_150",
+            "ma150_above_ma200": "ma150_200",
+            "ma200_uptrend": "ma200up",
+            "price_above_ma50": "ma50",
+            "price_above_ma150": "ma150",
+            "price_above_ma200": "ma200",
+            "rs_rating_70plus": "rs",
+        }
+        for key, c in zip(tt, hit):
+            name = SHORT.get(key, key)
+            out["cond.%s.count" % name] = c
+            out["cond.%s.pct" % name] = round(c * 100 / total, 1) if total else None
+
     ss = _load("stop_sensitivity.json")
     for x in (ss.get("levels") or []):
         # "-5%" → stop.5 / "안 걸면" → stop.none
