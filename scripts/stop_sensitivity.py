@@ -55,7 +55,10 @@ def main():
     histories = bt.fetch_all_stock_history(codes, days=bt.HISTORY_DAYS)
 
     # 픽마다 (일봉, 매수 인덱스, 매도 인덱스)를 한 번만 찾아 둔다.
+    # 평가에 실제로 쓰인 픽(used)을 따로 모은다. 표본 기간을 이것으로
+    # 적기 위해서다 - 아래 save() 설명을 보라.
     rows = []
+    used = []
     for p in picks:
         h = histories.get(p["code"]) or []
         ei = next(
@@ -68,6 +71,7 @@ def main():
         ti = ei + DAYS
         if ti < len(h):
             rows.append((h, ei, ti))
+            used.append(p)
     print(f"평가 가능한 픽 {len(rows)}건\n")
 
     original = bt.STOP_PCT
@@ -106,7 +110,7 @@ def main():
         bt.STOP_PCT = original
 
     print("\n표본 기간이 어땠는지를 같이 보지 않으면 이 표는 오해를 부릅니다.")
-    save(levels_out, picks, codes)
+    save(levels_out, used, sorted({p["code"] for p in used}))
 
 
 def save(levels_out, picks, codes):
@@ -114,6 +118,13 @@ def save(levels_out, picks, codes):
 
     period는 backtest.py가 쓰는 것과 같은 모양으로 맞춘다. 두 파일을 나란히
     읽을 때 같은 구간을 보고 있는지 바로 드러나게 하려는 것이다.
+
+    ⚠️ 2026-09-19 수정. 여기 넘어오는 picks 는 **평가에 실제로 쓰인 픽**이어야
+    한다. 예전에는 평가 전 픽 전체를 넘겨서 entry_days 가 57 로 나왔는데,
+    표의 건수(918)는 평가된 것만 센 값이라 둘이 어긋났다. backtest.py 는
+    처음부터 평가된 것만 세어 54 였다. 같은 표본인데 두 파일이 다른 숫자를
+    말하고 있었고, 그걸 블로그에 "918건 ... 57거래일" 로 인용했다.
+    건수와 기간은 **같은 대상**에서 나와야 한다.
     """
     dates = sorted({p["date"] for p in picks})
     out = {
