@@ -444,6 +444,15 @@ queue:
       - assets/cards/promo-backtest.jpg
       - assets/cards/promo-list.jpg
     published: false
+    figures:
+      bt30.avg: "-14.7%"
+      bt30.index: "-14.5%"
+      bt30.win: "21.2%"
+      bt30.min: "-60.9%"
+      bt30r.avg: "-6.3%"
+      bt30r.min: "-22.9%"
+      bt30r.win: "15.8%"
+      bt30.codes: "77"
     text: |-
       조건표가 얼마나 맞는지
       넉 달치로 돌려봤습니다.
@@ -884,6 +893,19 @@ queue:
       - assets/cards/stop-levels.jpg
       - assets/cards/about.jpg
     published: false
+    figures:
+      stop.none.count: "918"
+      bt30.min: "-60.9%"
+      stop.5.avg: "-5.7%"
+      stop.5.win: "13.6%"
+      stop.7.avg: "-6.3%"
+      stop.7.win: "15.8%"
+      stop.10.avg: "-7.3%"
+      stop.10.win: "19.4%"
+      stop.15.avg: "-9.1%"
+      stop.15.win: "23.4%"
+      stop.none.avg: "-12.9%"
+      stop.none.win: "28.8%"
     text: |-
       "손절선을 몇 %로 잡나요?"
       받은 질문입니다.
@@ -955,22 +977,29 @@ queue:
       - assets/cards/promo-backtest.jpg
       - assets/cards/about.jpg
     published: false
+    figures:
+      bt30.count: "918"
+      bt30.win: "21.2%"
+      bt30.avg: "-14.66%"
+      bt30.index: "-14.5%"
+      bt60.win: "12.1%"
+      bt60.avg: "-20.45%"
     text: |-
-      제 조건표를 907건 돌려봤습니다.
+      제 조건표를 918건 돌려봤습니다.
       결과가 좋지 않았습니다.
 
       조건에 걸린 날 사서
       30거래일 들고 있었다면
 
       이긴 비율 21.2%
-      평균 -14.81%
+      평균 -14.66%
 
-      같은 기간 코스피는 -10.1%였습니다.
-      졌습니다.
+      같은 기간 코스피는 -14.5%였습니다.
+      지수와 다를 게 없었습니다.
 
       더 오래 들면 나아질까 싶어
       60일도 세어봤습니다.
-      승률 13.3%, 평균 -20.02%.
+      승률 12.1%, 평균 -20.45%.
       반대였습니다.
 
       조건에 걸렸다는 건
@@ -988,12 +1017,18 @@ queue:
     kind: lesson
     platforms: [threads]
     published: false
+    figures:
+      bt30.count: "918"
+      bt30.avg: "-14.66%"
+      bt30.median: "-18.87%"
+      bt30.bigwin: "65"
+      bt30.bigloss: "591"
     text: |-
       평균 수익률에 속으면 안 됩니다.
 
-      907건을 돌렸을 때
-      평균은 -14.81%였는데
-      중앙값은 -19.11%였습니다.
+      918건을 돌렸을 때
+      평균은 -14.66%였는데
+      중앙값은 -18.87%였습니다.
 
       평균이 중앙값보다 높다는 건
       소수의 대박이
@@ -1001,8 +1036,8 @@ queue:
 
       실제로 세어보니
 
-      20% 넘게 오른 것 64건
-      10% 넘게 빠진 것 588건
+      20% 넘게 오른 것 65건
+      10% 넘게 빠진 것 591건
 
       열 번에 한 번도 안 되는 대박이
       평균을 예쁘게 만들고 있었습니다.
@@ -1020,6 +1055,11 @@ queue:
     kind: lesson
     platforms: [threads]
     published: false
+    figures:
+      bt60.count: "487"
+      bt60.top.avg: "-13.72%"
+      bt60.mid.avg: "-24.24%"
+      bt60.bot.avg: "-19.50%"
     text: |-
       "잘 고르면 됩니다"는
       아무 말도 아닙니다.
@@ -1031,13 +1071,13 @@ queue:
       그래서 사는 날 화면에
       이미 떠 있던 점수로 갈랐습니다.
 
-      60일이 지난 428건을
+      60일이 지난 487건을
       셋으로 나눠 봤습니다.
 
-      상위 25%  -12.88%
-      가운데    -23.79%
-      하위 25%  -19.63%
-      같은 날 지수는 -15~17%
+      상위 25%  -13.72%
+      가운데    -24.24%
+      하위 25%  -19.50%
+      같은 날 지수는 -16~19%
 
       상위만 지수를 앞섰습니다.
 

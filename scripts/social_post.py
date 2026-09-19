@@ -30,7 +30,7 @@ import requests
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from social import card, compose, config, rules, store  # noqa: E402
+from social import card, compose, config, figures, rules, store  # noqa: E402
 from social.instagram_api import Instagram, InstagramError  # noqa: E402
 from social.notify import tell_owner  # noqa: E402
 from social.threads_api import Threads  # noqa: E402
@@ -227,6 +227,10 @@ def prepare(dry_run=False, only=None, force=False, auto=False, queue_only=False,
         }
         print(f"시황 글: {post['title']}")
     elif manual:
+        # 발행 직전에 숫자를 현재 값과 맞춘다. 백테스트가 매일 다시 돌아
+        # 대기열에서 2~3주 기다리는 사이에 숫자가 낡는다. 작은 차이는
+        # 넘어가도 되지만, 지수 수익률처럼 움직이면 글의 주장이 바뀐다.
+        fig_notes = []
         # 자동 글에는 있던 하루 한 번 잠금이 대기열 글에는 없었다. 창 안에
         # 크론을 여러 개 걸면 그중 둘이 제때 떠서 서로 다른 글 두 편이
         # 같은 날 나간다. kind 로는 못 막는다 — 대기열 글은 kind 가 제각각
@@ -235,7 +239,10 @@ def prepare(dry_run=False, only=None, force=False, auto=False, queue_only=False,
                if p.get("date") == today) and not dry_run and not force:
             print("오늘 대기열 글은 이미 나갔습니다 - 건너뜀")
             return
-        text = manual["text"].strip()
+        raw_text = manual["text"].strip()
+        text, fig_notes = figures.refresh(raw_text, manual.get("figures"))
+        for note in fig_notes:
+            print(f"  [숫자] {note}")
         targets = [p for p in (manual.get("platforms") or platforms) if p in platforms]
         # 인스타는 해시태그로 도달이 갈리므로 자동 글과 같은 태그를 붙인다.
         # key는 태그를 뺀 본문으로 잡아야 설정에서 태그를 바꿔도 이미 올린
@@ -247,7 +254,9 @@ def prepare(dry_run=False, only=None, force=False, auto=False, queue_only=False,
             # 이게 없으면 무료배포글·매매기록·질문글이 전부 manual 하나로
             # 뭉쳐서, 성과 요약에서 어떤 형식이 먹혔는지 구분할 수 없다.
             "kind": (manual.get("kind") or "manual").strip(),
-            "key": text_key(text),
+            # 숫자를 고쳐도 같은 글이다. 키는 YAML 원문으로 잡아야
+            # 다음 실행 때 안 나간 글로 되살아나지 않는다.
+            "key": text_key(raw_text),
             # 쓰레드는 기본이 글만이다. 사진을 붙이면 첫 화면에서 글이 접혀
             # 읽히는 양이 줄기 때문에, 사진이 본론인 글에만 켠다.
             # 켜면 image의 첫 장이 쓰레드에도 올라간다.
@@ -258,6 +267,7 @@ def prepare(dry_run=False, only=None, force=False, auto=False, queue_only=False,
                 for p in targets
             },
             "image_rels": _as_list(manual.get("image")),
+            "figure_notes": fig_notes,
         }
         print(f"수동 큐 사용: {text[:40]}...")
     else:
@@ -322,6 +332,8 @@ def prepare(dry_run=False, only=None, force=False, auto=False, queue_only=False,
     threads_text = plan["texts"].get("threads")
     if threads_text:
         plan["warnings"] = rules.check(threads_text, prose=plan["source"] == "manual")
+        # 숫자를 고쳤거나 못 고쳤으면 같이 알린다. 텔레그램으로 간다.
+        plan["warnings"] += plan.get("figure_notes") or []
         for w in plan["warnings"]:
             print(f"  [규칙] {w}")
 
