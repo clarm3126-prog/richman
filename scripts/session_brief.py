@@ -90,7 +90,19 @@ def main():
     except Exception:
         pass
 
-    # 5. 작업일지의 마지막 날짜만 짚어 준다.
+    # 5. 이름을 바꿨는데 안 따라온 글이 있으면 알린다. 없으면 조용하다.
+    #    숫자는 figures.py 가 발행 직전에 맞추지만 낱말은 못 잡는다.
+    try:
+        r = subprocess.run([sys.executable, str(ROOT / "scripts" / "stale_terms.py")],
+                           cwd=ROOT, capture_output=True, timeout=20)
+        if r.returncode == 1:
+            if lines:
+                lines.append("")
+            lines.append(r.stdout.decode("utf-8", "replace").strip())
+    except Exception:
+        pass
+
+    # 6. 작업일지의 마지막 날짜만 짚어 준다.
     note = ROOT / "docs" / "작업일지.md"
     if note.exists():
         for l in note.read_text(encoding="utf-8").split("\n"):

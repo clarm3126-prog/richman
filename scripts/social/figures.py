@@ -47,35 +47,38 @@ def _load(name):
 def values():
     """키 → 현재 숫자. 없는 키는 빠진 채로 돌려준다."""
     out = {}
-    bt = (_load("backtest_stats.json").get("categories") or {}).get("minervini_strong") or {}
+    cats = _load("backtest_stats.json").get("categories") or {}
 
-    for horizon, prefix in (("30d", "bt30"), ("60d", "bt60")):
-        c = bt.get(horizon)
-        if not c:
-            continue
-        out[prefix + ".count"] = c.get("count")
-        out[prefix + ".codes"] = c.get("unique_codes")
-        out[prefix + ".win"] = c.get("win_rate")
-        out[prefix + ".avg"] = c.get("avg_return")
-        out[prefix + ".median"] = c.get("median_return")
-        out[prefix + ".min"] = c.get("min_return")
-        out[prefix + ".bigwin"] = c.get("big_wins_20pct")
-        out[prefix + ".bigloss"] = c.get("big_losses_neg10pct")
-        idx = ((c.get("period") or {}).get("index") or {})
-        out[prefix + ".index"] = idx.get("change_pct")
-        out[prefix + ".drawdown"] = idx.get("max_drawdown_pct")
-        r = c.get("rules") or {}
-        out[prefix + "r.win"] = r.get("win_rate")
-        out[prefix + "r.avg"] = r.get("avg_return")
-        out[prefix + "r.min"] = r.get("min_return")
-        out[prefix + "r.days"] = r.get("avg_days")
-        # 점수대별. label 이 한글이라 자리로 잡는다.
-        for slot, label in (("bot", "하위 25%"), ("mid", "가운데 50%"), ("top", "상위 25%")):
-            for x in (c.get("by_score") or []):
-                if x.get("label") == label:
-                    out["%s.%s.count" % (prefix, slot)] = x.get("count")
-                    out["%s.%s.avg" % (prefix, slot)] = x.get("avg_return")
-                    out["%s.%s.bench" % (prefix, slot)] = x.get("benchmark_avg")
+    # bt* = 미너비니, mom* = 모멘텀. 둘이 다른 표본이라 섞으면 안 된다.
+    for cat, tag in (("minervini_strong", "bt"), ("momentum_strong", "mom")):
+        for horizon, span in (("30d", "30"), ("60d", "60")):
+            prefix = tag + span
+            c = (cats.get(cat) or {}).get(horizon)
+            if not c:
+                continue
+            out[prefix + ".count"] = c.get("count")
+            out[prefix + ".codes"] = c.get("unique_codes")
+            out[prefix + ".win"] = c.get("win_rate")
+            out[prefix + ".avg"] = c.get("avg_return")
+            out[prefix + ".median"] = c.get("median_return")
+            out[prefix + ".min"] = c.get("min_return")
+            out[prefix + ".bigwin"] = c.get("big_wins_20pct")
+            out[prefix + ".bigloss"] = c.get("big_losses_neg10pct")
+            idx = ((c.get("period") or {}).get("index") or {})
+            out[prefix + ".index"] = idx.get("change_pct")
+            out[prefix + ".drawdown"] = idx.get("max_drawdown_pct")
+            r = c.get("rules") or {}
+            out[prefix + "r.win"] = r.get("win_rate")
+            out[prefix + "r.avg"] = r.get("avg_return")
+            out[prefix + "r.min"] = r.get("min_return")
+            out[prefix + "r.days"] = r.get("avg_days")
+            # 점수대별. label 이 한글이라 자리로 잡는다.
+            for slot, label in (("bot", "하위 25%"), ("mid", "가운데 50%"), ("top", "상위 25%")):
+                for x in (c.get("by_score") or []):
+                    if x.get("label") == label:
+                        out["%s.%s.count" % (prefix, slot)] = x.get("count")
+                        out["%s.%s.avg" % (prefix, slot)] = x.get("avg_return")
+                        out["%s.%s.bench" % (prefix, slot)] = x.get("benchmark_avg")
 
     # 조건 통과율. 매일 다시 계산되고 평가 종목 수부터 바뀐다.
     sc = _load("screener_conditions.json")
