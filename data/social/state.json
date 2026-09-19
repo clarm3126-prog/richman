@@ -229,6 +229,12 @@
    "kind": "screener",
    "source": "auto",
    "threads_id": "17889870321446994"
+  },
+  {
+   "date": "2026-09-19",
+   "kind": "lesson",
+   "source": "manual",
+   "threads_id": "18078981263706777"
   }
  ],
  "queue_done": [
@@ -237,6 +243,7 @@
   "e14b525289da",
   "f9b4cca3efc2",
   "c6cb7d89fcd2",
-  "5aff1befc36f"
+  "5aff1befc36f",
+  "3d272ed22eba"
  ]
 }
