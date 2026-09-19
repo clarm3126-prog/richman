@@ -2832,7 +2832,12 @@ let alertCheckInterval = null;
 function startAlertChecking() {
   if (alertCheckInterval) clearInterval(alertCheckInterval);
   // 5분마다 market.json 재조회 + 알림 체크
-  // (서버는 5분 cron이라 더 자주 fetch는 낭비, 또한 갱신 시간 같으면 작업 skip)
+  //
+  // 서버는 이제 5분 cron이 아니다. 09:10·11:10·13:10·15:35·20:05 고정이다.
+  // (5분 cron은 GitHub이 두 시간에 한 번으로 솎아서 실제로는 하루 서너 번만
+  //  돌고 있었다.) 그래서 5분 주기는 같은 파일을 여러 번 받는 셈인데,
+  //  갱신 시각이 같으면 그냥 건너뛰므로 값이 거의 안 든다. 발행 직후를
+  //  놓치지 않으려면 이 정도가 낫다.
   alertCheckInterval = setInterval(async () => {
     try {
       const fresh = await loadMarket();
@@ -6306,7 +6311,7 @@ function renderAthBreakoutData(el, d, archiveDate) {
       ${selector}
       <div class="strength-meta">${archiveDate
         ? '이 날짜에는 돌파 종목 기록이 없습니다.'
-        : '아직 돌파 종목이 없습니다.<br><span style="font-size:11px">장중 5분마다 + 마감 후 자동 감지 · ath_cache 생성 후 동작 (Stock Metadata 워크플로우 실행 필요)</span>'}</div>
+        : '아직 돌파 종목이 없습니다.<br><span style="font-size:11px">장중과 마감 뒤에 자동으로 찾습니다. 36일을 세어보니 하루 중앙값이 1개였고, 여섯 날은 0개였습니다.</span>'}</div>
     </div>`;
     return;
   }
