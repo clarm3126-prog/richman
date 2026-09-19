@@ -518,6 +518,10 @@ def evaluate_minervini(stock_code, history, financials, market_history):
     ma50 = sma(closes, 50)
     ma150 = sma(closes, 150)
     ma200 = sma(closes, 200)
+    # 한국에서 흔히 쓰는 60일선. **판정에는 안 쓴다.** 나중에 50 과 견주려고
+    # 기록만 남긴다. 스냅샷에 50 기준 결과만 박혀 있으면 되돌려 셀 수 없어서,
+    # 지금부터 쌓아 두어야 몇 달 뒤에 답이 나온다.
+    ma60 = sma(closes, 60)
 
     # === Trend Template (8) ===
     tt = {}
@@ -527,6 +531,9 @@ def evaluate_minervini(stock_code, history, financials, market_history):
     tt["ma50_above_ma150"] = ma50 > ma150 if (ma50 and ma150) else False
     tt["ma150_above_ma200"] = ma150 > ma200 if (ma150 and ma200) else False
     tt["ma200_uptrend"] = is_uptrend(closes, 200, 21)
+    # 그림자 기록. 이름 앞에 _ 를 붙여 판정 계산(trend_checks)과 섞이지 않게 한다.
+    tt["_shadow_price_above_ma60"] = cur_close > ma60 if ma60 else False
+    tt["_shadow_ma60_above_ma150"] = ma60 > ma150 if (ma60 and ma150) else False
     # 52주 고가/저가
     high_52w = max(highs[-252:])
     low_52w = min(lows[-252:])
@@ -670,6 +677,7 @@ def evaluate_minervini(stock_code, history, financials, market_history):
         "high_52w": high_52w,
         "low_52w": low_52w,
         "ma50": ma50,
+        "ma60": ma60,
         "ma150": ma150,
         "ma200": ma200,
     }
@@ -966,6 +974,11 @@ TT_BOOL_KEYS = [
     "ma50_above_ma150", "ma150_above_ma200", "ma200_uptrend",
     "within_25pct_of_52w_high", "above_25pct_from_52w_low", "rs_rating_70plus",
 ]
+# 판정에 안 쓰는 그림자 조건. 50 대신 60 을 넣었을 때 어떻게 갈리는지
+# 나중에 세려고 남긴다. TT_BOOL_KEYS 와 섞으면 화면의 "추세 N/8" 이 틀어진다.
+SHADOW_BOOL_KEYS = [
+    "_shadow_price_above_ma60", "_shadow_ma60_above_ma150",
+]
 SETUP_BOOL_KEYS = [
     "5day_tightness_10pct", "5day_open_close_5pct",
     "trade_value_7B_1x", "impulse_25pct_20d",
@@ -1006,6 +1019,8 @@ def save_conditions(results):
             "fn": [fund.get(k) for k in FUND_NUM_KEYS],
             "sc": r.get("total_score"),
             "ttn": r.get("tt_passed_count"),
+            # 60일선 그림자. 판정에는 안 쓰고 나중에 50 과 견주려고 남긴다.
+            "s60": bits(tt, SHADOW_BOOL_KEYS),
             "fdn": r.get("fund_passed_count"),
         }
         if tt.get("_rs_value") is not None:
@@ -1021,6 +1036,7 @@ def save_conditions(results):
         "updated": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
         "trading_day": datetime.now(KST).strftime("%Y%m%d"),
         "tt_keys": TT_BOOL_KEYS,
+        "shadow_keys": SHADOW_BOOL_KEYS,
         "setup_keys": SETUP_BOOL_KEYS,
         "fund_bool_keys": FUND_BOOL_KEYS,
         "fund_num_keys": FUND_NUM_KEYS,
@@ -1028,6 +1044,38 @@ def save_conditions(results):
     }, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     kb = path.stat().st_size / 1024
     print(f"  saved screener_conditions.json ({len(out)} stocks, {kb:.0f}KB)")
+    archive_conditions(out)
+
+
+def archive_conditions(out):
+    """전 종목 조건표를 하루치로 쌓는다. 나중에 되돌려 세려고 남긴다.
+
+    screener_results_history 는 점수 상위 100개만 담는데, **그 100개를 고른
+    잣대가 50일선이다.** 60 이었으면 뽑혔을 종목은 애초에 안 들어온다. 그
+    보관함만 보고 50 과 60 을 견주면 50 쪽으로 기운 표본을 보게 된다.
+
+    그래서 전 종목을 남긴다. 이름과 펀더멘털 숫자는 빼고 접은 자리만
+    담으므로 하루 26KB 다. 결과 보관함이 하루 98KB 이니 넉 배쯤 가볍다.
+    """
+    day = datetime.now(KST).strftime("%Y%m%d")
+    d = Path("data/screener_conditions_history")
+    d.mkdir(parents=True, exist_ok=True)
+    dst = d / ("%s.json" % day)
+    if dst.exists():
+        return
+    lean = {c: [v.get("tt"), v.get("s60"), v.get("ttn"), v.get("sc")]
+            for c, v in out.items()}
+    dst.write_text(json.dumps({
+        "trading_day": day,
+        # 푸는 쪽이 순서를 알아야 한다. 조건을 하나 더할 때 한쪽만 고치는
+        # 일이 없도록 파일 안에 같이 적는다.
+        "fields": ["tt", "s60", "ttn", "sc"],
+        "tt_keys": TT_BOOL_KEYS,
+        "shadow_keys": SHADOW_BOOL_KEYS,
+        "stocks": lean,
+    }, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    print("  archived conditions: %s (%d stocks, %.0fKB)"
+          % (dst.name, len(lean), dst.stat().st_size / 1024))
 
 
 # ================================
