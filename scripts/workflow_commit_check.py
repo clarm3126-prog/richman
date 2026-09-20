@@ -33,9 +33,24 @@
 고장이다. 둘 다 결과는 같다 — 아무도 안 보게 된다. 그래서 스스로 시험하는
 자리를 뒀다. 규칙을 고쳤으면 `--test` 를 돌려라.
 
+  5. **담는 쪽을 못 읽어 양쪽이 다 비었다.** 루프 변수를 `f` 로만 알아봐서
+     `for p in data/social; do ... git add "$p"` 를 통째로 못 읽었고, 같은
+     워크플로의 쓰기도 `from social import store` 꼴을 안 이어 못 봤다.
+     **쓴다 0 · 담는다 0 이면 구멍이 나올 수가 없다. 조용한 게 통과가
+     아니었다.** 둘 중 하나만 고쳤으면 그 워크플로가 통째로 헛걸렸다.
+
+■ 이 자가 못 보는 것 — 알고 쓰라
+
+  · **경로를 인자로 받아 쓰는 함수.** `card.py` 의 `_save(img, out_path)`
+    처럼 부르는 쪽이 경로를 정하면 여기서는 알 수 없다. 카드 이미지가
+    그렇다(`social-post.yml` 이 `assets/cards` 를 담고 있어 지금은 구멍이
+    아니다). 그런 자리에 새 경로가 생기면 **말이 없으니 사람이 봐야 한다.**
+  · `data/` 와 `assets/` 밖. 다른 뿌리를 쓰기 시작하면 `ROOTS` 에 더해라.
+
   python scripts/workflow_commit_check.py        깨끗하면 조용
   python scripts/workflow_commit_check.py -v     깨끗해도 한 줄 찍는다
   python scripts/workflow_commit_check.py --test 잡을 힘이 있는지 시험한다
+  python scripts/workflow_commit_check.py --map  워크플로마다 쓴다/담는다를 찍는다
 """
 import ast
 import re
@@ -47,6 +62,9 @@ if hasattr(sys.stdout, "reconfigure"):
 
 ROOT = Path(__file__).resolve().parents[1]
 WF = ROOT / ".github" / "workflows"
+
+# 저장소에 남겨야 하는 뿌리들. 카드 이미지가 assets/ 밑에 쌓인다.
+ROOTS = ("data", "assets")
 
 # 워크플로가 안 담아도 되는 것들. .gitignore 에 있는 개인 자료다.
 SKIP = {
@@ -70,7 +88,7 @@ def _literal(node, names):
     """
     if isinstance(node, ast.Constant) and isinstance(node.value, str):
         v = node.value
-        return v if v == "data" or v.startswith("data/") else None
+        return v if any(v == r or v.startswith(r + "/") for r in ROOTS) else None
     if isinstance(node, ast.Name):
         got = names.get(node.id)
         return next(iter(got)) if got and len(got) == 1 else None
@@ -79,9 +97,9 @@ def _literal(node, names):
     if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Div):
         left = _literal(node.left, names)
         if left is None:
-            # ROOT / "data" / ... — 왼쪽을 몰라도 "data" 면 거기서 시작한다
-            if isinstance(node.right, ast.Constant) and node.right.value == "data":
-                return "data"
+            # ROOT / "data" / ... — 왼쪽을 몰라도 뿌리 이름이면 거기서 시작한다
+            if isinstance(node.right, ast.Constant) and node.right.value in ROOTS:
+                return node.right.value
             return None
         if isinstance(node.right, ast.Constant) and isinstance(node.right.value, str):
             return left.rstrip("/") + "/" + node.right.value
@@ -145,7 +163,7 @@ def _writes_in(nodes, names):
 
 def _tidy(paths):
     """틀은 빼고, 위 디렉터리가 이미 있으면 그 안의 파일은 따로 말하지 않는다."""
-    out = {p for p in paths if "{" not in p and p != "data"}
+    out = {p for p in paths if "{" not in p and p not in ROOTS}
     out = {p for p in out
            if not any(o != p and p.startswith(o.rstrip("/") + "/") for o in out)}
     return {p for p in out if p not in SKIP}
@@ -197,62 +215,110 @@ def func_writes(src):
     return out
 
 
-def borrowed_names(src, module):
-    """`module` 에서 가져다 **실제로 부르는** 이름들.
+def _module_file(mod):
+    """`social/store` → `scripts/social/store.py`. 없으면 None."""
+    for cand in ("scripts/%s.py" % mod, "scripts/%s/__init__.py" % mod):
+        if (ROOT / cand).exists():
+            return cand
+    return None
+
+
+def module_uses(src):
+    """이 소스가 **가져다 부르는** 것들. `{모듈경로: {이름, ...}}`
 
     이름만 맞춰 이으면 안 된다. `main` 은 어느 스크립트에나 있어서,
     스크리너의 `main` 이 쓰는 파일이 backtest 쪽으로 딸려 왔다. 흔한
-    이름 하나가 워크플로 다섯을 헛걸리게 했다.
+    이름 하나가 워크플로 다섯을 헛걸리게 했다. 그래서 **어디서
+    가져왔는지까지** 본다. 세 꼴을 다 잇는다.
 
-    그래서 **어디서 가져왔는지까지 본다.**
-      from screener import save_chart_data  →  save_chart_data
-      import screener; screener.save_chart_data()  →  save_chart_data
+      import screener                      →  screener.save_chart_data()
+      from screener import save_chart_data →  save_chart_data()
+      from social import store             →  store.save()   ← 모듈을 이름으로
+
+    마지막 꼴을 빠뜨려 `social/store.py` 의 `data/social` 쓰기를 통째로
+    못 봤다. 그러면서 담는 쪽도 못 읽어 **양쪽이 다 비어 조용했다.
+    통과가 아니라 안 본 것이었다.**
     """
     try:
         tree = ast.parse(src)
     except SyntaxError:
-        return set()
-    leaf = module.split("/")[-1]           # scripts/social/store → store
-    alias = set()                          # 이 모듈을 가리키는 이름
-    named = set()                          # from ... import 로 가져온 이름
+        return {}
+    alias = {}      # 이름 → 모듈경로 (모듈을 통째로 가리키는 이름)
+    named = {}      # 이름 → 모듈경로 (from ... import 로 가져온 함수)
     for n in ast.walk(tree):
         if isinstance(n, ast.Import):
             for a_ in n.names:
-                if a_.name.split(".")[-1] == leaf:
-                    alias.add(a_.asname or a_.name.split(".")[-1])
+                mod = a_.name.replace(".", "/")
+                if _module_file(mod):
+                    alias[a_.asname or a_.name.split(".")[-1]] = mod
         elif isinstance(n, ast.ImportFrom):
-            if (n.module or "").split(".")[-1] == leaf:
-                named |= {a_.asname or a_.name for a_ in n.names}
-    out = set()
+            base = (n.module or "").replace(".", "/")
+            for a_ in n.names:
+                sub = (base + "/" + a_.name) if base else a_.name
+                if _module_file(sub):
+                    # from social import store — 모듈을 이름으로 가져온 꼴
+                    alias[a_.asname or a_.name] = sub
+                elif _module_file(base):
+                    named[a_.asname or a_.name] = base
+
+    out = {}
     for n in ast.walk(tree):
         if not isinstance(n, ast.Call):
             continue
         f = n.func
         if isinstance(f, ast.Name) and f.id in named:
-            out.add(f.id)
-        elif isinstance(f, ast.Attribute) and isinstance(f.value, ast.Name)                 and f.value.id in alias:
-            out.add(f.attr)
+            out.setdefault(named[f.id], set()).add(f.id)
+        elif isinstance(f, ast.Attribute) and isinstance(f.value, ast.Name) \
+                and f.value.id in alias:
+            out.setdefault(alias[f.value.id], set()).add(f.attr)
     return out
 
 
+def _clean_token(tok):
+    """셸 토큰에서 경로만 남긴다. 경로가 아니면 빈 문자열."""
+    t = tok.strip("\"'`;()").rstrip(";")
+    if not t or "/" not in t:
+        return ""
+    # `2>/dev/null` 같은 것이 `/` 만 보고 섞여 들어온다
+    if ">" in t or "<" in t or t.startswith("-") or t.startswith("/dev/"):
+        return ""
+    return t
+
+
 def adds_of(text):
-    """이 워크플로가 담는 경로. `<전부>` 면 git add -A 다."""
+    """이 워크플로가 담는 경로. `<전부>` 면 git add -A 다.
+
+    ⚠️ **담는 쪽을 못 읽으면 쓰는 쪽이 통째로 헛걸린다.** 실제로 루프
+    변수를 `f` 로만 알아봐서 `for p in data/social; do ... git add "$p"` 를
+    통째로 못 읽었다. 그때 쓰는 쪽까지 못 보고 있어 양쪽이 다 비었고,
+    그래서 **조용했다. 통과가 아니라 안 본 것이었다.**
+    한쪽만 고치면 그 워크플로의 모든 경로가 헛걸린다.
+    """
     if re.search(r"git add\s+(-A|\.)(\s|$)", text):
         return {"<전부>"}
-    # `if [ -e x ]; then git add x; fi` 처럼 한 줄에 붙여 쓴 것도 읽는다.
-    # 세미콜론이 붙은 채로 잡으면 목록과 안 맞아, **담고 있는데 안 담는다고**
-    # 말하게 된다. 헛걸림 하나가 남으면 다음 사람은 목록 전체를 안 믿는다.
-    def clean(tok):
-        return tok.strip("\"'`;()").rstrip(";")
+
+    # `for <아무 이름> in a b c; do` — 루프 변수 이름은 f 일 수도 p 일 수도 있다
+    loops = {}
+    for m in re.finditer(r"for\s+(\w+)\s+in\s+([^;\n]+)[;\n]", text):
+        paths = {_clean_token(x) for x in m.group(2).split()}
+        paths.discard("")
+        if paths:
+            loops[m.group(1)] = paths
 
     adds = set()
-    for m in re.finditer(r"for f in ([^;]+);", text):
-        adds |= {clean(x) for x in m.group(1).split() if "/" in x}
     for m in re.finditer(r"git add\s+([^\n|&]+)", text):
-        if "$f" in m.group(1):
-            continue
-        adds |= {clean(x) for x in m.group(1).split() if "/" in x}
-    return {a for a in adds if a}
+        arg = m.group(1)
+        hit = False
+        for var, paths in loops.items():
+            if "$" + var in arg or "${" + var + "}" in arg:
+                adds |= paths
+                hit = True
+        if hit:
+            continue          # 루프 변수를 담는 줄이면 그 목록이 답이다
+        toks = {_clean_token(x) for x in arg.split()}
+        toks.discard("")
+        adds |= toks
+    return adds
 
 
 def writes_for(workflow_text):
@@ -276,19 +342,14 @@ def writes_for(workflow_text):
         seen.add(sp)
         src = p.read_text(encoding="utf-8")
         out |= written_paths(src)
-        for m in re.finditer(r"^\s*(?:import|from)\s+([\w.]+)", src, re.M):
-            mod = m.group(1).replace(".", "/")
-            for cand in ("scripts/%s.py" % mod, "scripts/%s/__init__.py" % mod):
-                mp = ROOT / cand
-                if not mp.exists() or cand in seen:
-                    continue
-                seen.add(cand)
-                borrowed = borrowed_names(src, mod)
-                if not borrowed:
-                    continue
-                for fname, paths in func_writes(mp.read_text(encoding="utf-8")).items():
-                    if fname in borrowed:
-                        out |= paths
+        for mod, borrowed in module_uses(src).items():
+            cand = _module_file(mod)
+            if not cand:
+                continue
+            seen.add(cand)
+            for fname, paths in func_writes((ROOT / cand).read_text(encoding="utf-8")).items():
+                if fname in borrowed:
+                    out |= paths
     return _tidy(out), seen
 
 
@@ -324,9 +385,28 @@ CASES = [
     ('def a():\n    path = Path("data/p.json")\n    path.write_text(x)\n'
      'def b():\n    path = Path("data/q.json")\n    path.write_text(x)',
      {"data/p.json", "data/q.json"}),
+    # data/ 만 보다가 카드 이미지를 놓쳤다. assets/ 도 본다.
+    ('def f():\n    p = Path("assets/cards") / "a.jpg"\n    p.write_bytes(b)',
+     {"assets/cards/a.jpg"}),
     # 읽기만 하는 함수의 경로가 딸려 오면 안 된다
     ('def a():\n    path = Path("data/r.json")\n    return load_json(path, {})\n'
      'def b():\n    path = Path("data/s.json")\n    path.write_text(x)', {"data/s.json"}),
+]
+
+
+# 담는 쪽 시험. **쓰는 쪽만 시험하면 반쪽이다.**
+# 실제로 루프 변수를 `f` 로만 알아봐서 `for p in ...` 을 통째로 못 읽었다.
+# 그때 쓰는 쪽도 못 보고 있어 양쪽이 비었고, 그래서 조용했다.
+ADD_CASES = [
+    ("for f in data/a.json data/b; do\n  git add \"$f\"\ndone", {"data/a.json", "data/b"}),
+    # 루프 변수 이름은 f 가 아닐 수 있다
+    ("for p in data/social; do\n  if [ -e \"$p\" ]; then git add \"$p\"; fi\ndone",
+     {"data/social"}),
+    ("if [ -e data/w.json ]; then git add data/w.json; fi", {"data/w.json"}),
+    ("git add data/x.json assets/cards", {"data/x.json", "assets/cards"}),
+    ("git add -A", {"<전부>"}),
+    # `2>/dev/null` 이 `/` 만 보고 섞여 들어오던 것
+    ("git add data/y.json 2>/dev/null || true", {"data/y.json"}),
 ]
 
 
@@ -335,8 +415,12 @@ def selftest():
 
     "이상 없음"은 잡을 힘이 있을 때만 뜻이 있다. 이 자는 두 번, 못 잡으면서
     이상 없음을 찍었다. 한 번은 반대로 56곳을 헛걸었다.
+
+    **쓰는 쪽과 담는 쪽을 둘 다 시험한다.** 한쪽만 보면 양쪽이 비어서
+    조용한 것을 통과로 읽는다.
     """
     bad = 0
+    print("■ 쓰는 쪽")
     for src, want in CASES:
         got = written_paths(src)
         ok = got == want
@@ -345,13 +429,44 @@ def selftest():
         print("  %s %-46s 얻음 %s" % ("✅" if ok else "❌", head, sorted(got) or "없음"))
         if not ok:
             print("     바랐던 것: %s" % (sorted(want) or "없음"))
-    print("\n시험 %d개 중 %d개 실패" % (len(CASES), bad))
+    print("\n■ 담는 쪽")
+    for text, want in ADD_CASES:
+        got = adds_of(text)
+        ok = got == want
+        bad += not ok
+        head = text.split("\n")[0][:44]
+        print("  %s %-46s 얻음 %s" % ("✅" if ok else "❌", head, sorted(got) or "없음"))
+        if not ok:
+            print("     바랐던 것: %s" % (sorted(want) or "없음"))
+    total = len(CASES) + len(ADD_CASES)
+    print("\n시험 %d개 중 %d개 실패" % (total, bad))
     return 1 if bad else 0
+
+
+def show_map():
+    """워크플로마다 `쓴다 / 담는다` 를 나란히 찍는다.
+
+    **검사기가 조용한 까닭이 "없다"인지 "안 봤다"인지를 가른다.**
+    양쪽이 다 비면 통과가 아니다 — 안 본 것일 수 있다. 실제로 제
+    워크플로 둘이 그렇게 조용했다(2026-09-20, 12318 이 잡음).
+    쓰지도 담지도 않는 워크플로(점검·알림만 하는 것)면 비는 게 맞다.
+    """
+    for y in sorted(WF.glob("*.yml")):
+        text = y.read_text(encoding="utf-8")
+        writes, scripts = writes_for(text)
+        if not scripts:
+            continue
+        adds = adds_of(text)
+        mark = "  ← 양쪽이 빔. 정말 안 남기는지 보라" if not writes and not adds else ""
+        print("%-28s 쓴다 %-2d  담는다 %-2d%s" % (y.name, len(writes), len(adds), mark))
+    return 0
 
 
 def main():
     if "--test" in sys.argv:
         return selftest()
+    if "--map" in sys.argv:
+        return show_map()
     found = holes()
     if not found:
         if "-v" in sys.argv:
