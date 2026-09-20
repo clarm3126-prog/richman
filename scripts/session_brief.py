@@ -102,7 +102,19 @@ def main():
     except Exception:
         pass
 
-    # 6. 작업일지의 마지막 날짜만 짚어 준다.
+    # 6. 스크립트가 쓰는데 워크플로가 안 담는 파일이 있으면 알린다.
+    #    커밋이 안 되면 흔적도 안 남아서, 몇 달 뒤에야 안다.
+    try:
+        r = subprocess.run([sys.executable, str(ROOT / "scripts" / "workflow_commit_check.py")],
+                           cwd=ROOT, capture_output=True, timeout=20)
+        if r.returncode == 1:
+            if lines:
+                lines.append("")
+            lines.append(r.stdout.decode("utf-8", "replace").strip())
+    except Exception:
+        pass
+
+    # 7. 작업일지의 마지막 날짜만 짚어 준다.
     note = ROOT / "docs" / "작업일지.md"
     if note.exists():
         for l in note.read_text(encoding="utf-8").split("\n"):
