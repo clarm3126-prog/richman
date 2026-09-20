@@ -51,6 +51,7 @@
   python scripts/workflow_commit_check.py -v     깨끗해도 한 줄 찍는다
   python scripts/workflow_commit_check.py --test 잡을 힘이 있는지 시험한다
   python scripts/workflow_commit_check.py --map  워크플로마다 쓴다/담는다를 찍는다
+  python scripts/workflow_commit_check.py --prove 담는 줄을 지워 보고 짚는지 센다
 """
 import ast
 import re
@@ -354,7 +355,19 @@ def writes_for(workflow_text):
 
 
 def holes():
-    found = []
+    """(구멍, 눈먼 곳).
+
+    **구멍**은 쓰는데 안 담는 것이다.
+
+    **눈먼 곳**은 담는데 쓰는 걸 못 본 것이다. 무언가를 커밋하고 있다면
+    누군가는 그걸 쓴다. 그런데 이 자에게 쓰기가 안 보이면, 그 워크플로에
+    대해서는 **아무 말도 할 수 없는 상태**다. 그걸 "이상 없음"으로 읽으면
+    안 된다 — 실제로 `social-engage` · `social-post` 가 양쪽 다 비어
+    조용했고, 통과가 아니라 안 본 것이었다(2026-09-20, 12318 이 잡음).
+
+    쓰지도 담지도 않는 워크플로(점검·알림 전용)는 둘 다 비는 게 맞다.
+    """
+    found, blind = [], []
     for y in sorted(WF.glob("*.yml")):
         text = y.read_text(encoding="utf-8")
         writes, scripts = writes_for(text)
@@ -363,10 +376,13 @@ def holes():
         adds = adds_of(text)
         if "<전부>" in adds:
             continue
+        if adds and not writes:
+            blind.append((y.name, sorted(adds)))
+            continue
         for w in sorted(writes):
             if not any(w == a or w.startswith(a.rstrip("/") + "/") for a in adds):
                 found.append((y.name, w))
-    return found
+    return found, blind
 
 
 CASES = [
@@ -443,6 +459,38 @@ def selftest():
     return 1 if bad else 0
 
 
+def prove():
+    """워크플로마다 **담는 줄을 지워 보고** 이 자가 짚는지 센다.
+
+    훑어서 0곳이 나오는 건 여전히 "못 잡아서"일 수 있다. 일부러
+    망가뜨려야 안다. 12318 이 쓴 방법을 자에 넣었다.
+
+    파일은 안 건드린다. 본문만 메모리에서 바꿔 넣는다.
+    """
+    bad = 0
+    shown = 0
+    for y in sorted(WF.glob("*.yml")):
+        text = y.read_text(encoding="utf-8")
+        writes, scripts = writes_for(text)
+        if not scripts:
+            continue
+        adds = adds_of(text)
+        if not adds or "<전부>" in adds:
+            continue
+        shown += 1
+        broken = re.sub(r".*git add.*", "", text)
+        b_adds = adds_of(broken)
+        missed = [w for w in sorted(writes)
+                  if not any(w == a or w.startswith(a.rstrip("/") + "/") for a in b_adds)]
+        bad += not missed
+        print("  %s %-28s %s" % (
+            "✅" if missed else "❌", y.name,
+            ", ".join(missed[:3]) if missed else "아무것도 안 잡음 — 눈먼 곳"))
+    print("\n담는 줄이 있는 워크플로 %d개 가운데 %s"
+          % (shown, "전부 잡습니다" if not bad else "%d개를 못 잡습니다" % bad))
+    return 1 if bad else 0
+
+
 def show_map():
     """워크플로마다 `쓴다 / 담는다` 를 나란히 찍는다.
 
@@ -467,15 +515,28 @@ def main():
         return selftest()
     if "--map" in sys.argv:
         return show_map()
-    found = holes()
-    if not found:
+    if "--prove" in sys.argv:
+        return prove()
+    found, blind = holes()
+    if not found and not blind:
         if "-v" in sys.argv:
             print("워크플로 커밋 목록: 이상 없음")
         return 0
-    print("워크플로가 안 담는 파일 %d곳 — 만들어지고 그대로 버려집니다" % len(found))
-    for wf, path in found:
-        print("  %s  →  %s" % (wf, path))
-    print("  (.github/workflows 의 git add 목록에 넣으세요)")
+    if found:
+        print("워크플로가 안 담는 파일 %d곳 — 만들어지고 그대로 버려집니다" % len(found))
+        for wf, path in found:
+            print("  %s  →  %s" % (wf, path))
+        print("  (.github/workflows 의 git add 목록에 넣으세요)")
+    if blind:
+        if found:
+            print("")
+        # 담는데 쓰는 걸 못 봤다. 이 워크플로에 대해서는 아무 말도 할 수
+        # 없는 상태다. "이상 없음"으로 읽으면 안 된다.
+        print("담고는 있는데 쓰는 자리를 못 찾은 워크플로 %d개 — 검사기가 눈먼 곳입니다" % len(blind))
+        for wf, adds in blind:
+            print("  %s  담는다: %s" % (wf, ", ".join(adds)))
+        print("  (경로를 인자로 받아 쓰거나, 이 자가 모르는 꼴일 수 있습니다.")
+        print("   손으로 확인하고 --test 에 그 꼴을 사례로 넣으세요)")
     return 1
 
 
