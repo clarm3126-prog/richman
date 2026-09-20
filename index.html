@@ -5462,11 +5462,21 @@ function stockSummaryLines(code) {
     // ETF·ETN 은 이 기준선(개별 종목만)과 견주지 않는다. 다른 것끼리
     // 견주면 숫자가 맞아도 뜻이 틀린다.
     if (base && s.kind === 'stock') {
-      // "위에서 85%"는 나쁜 자리인데 좋게 읽힌다. 아래쪽이면 뒤집어 말한다.
+      // **중앙값이라는 말을 안 쓴다.** 셈하는 사람의 말이지 읽는 사람의
+      // 말이 아니다. -43% 와 -44% 를 나란히 놓으면 어느 쪽이 나은지 한 번
+      // 더 생각해야 한다. 줄 세워 몇 번째인지로 바꾸면 설명이 필요 없다.
+      //
+      // 대상(2,666개)은 그대로 남긴다. 옆 세션이 같은 값을 조건 통과
+      // 200개로 재서 -27% 를 얻은 적이 있다. 무엇을 세었는지는 못 뺀다.
       const top = rankFromTop(base.offs, off);
-      const rank = top <= 50 ? `위쪽 ${top}%` : `아래쪽 ${Math.max(1, 101 - top)}%`;
-      t += `. 개별 종목 ${base.n.toLocaleString('ko-KR')}개의 중앙값이 `
-         + `${Math.round(base.median)}%라 그중에서는 ${rank}입니다`;
+      const N = base.n.toLocaleString('ko-KR');
+      let rank;
+      if (top <= 15)      rank = `위에서 ${top}%쯤으로, 덜 빠진 축입니다`;
+      else if (top <= 40) rank = `위에서 ${top}%쯤입니다`;
+      else if (top <= 60) rank = '딱 한가운데쯤입니다';
+      else if (top <= 85) rank = `아래에서 ${101 - top}%쯤입니다`;
+      else                rank = `아래에서 ${Math.max(1, 101 - top)}%쯤으로, 많이 빠진 축입니다`;
+      t += `. 개별 종목 ${N}개를 줄 세우면 ${rank}`;
     }
     lines.push(t + '.');
   }
