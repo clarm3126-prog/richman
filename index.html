@@ -6099,6 +6099,65 @@ function render() {
   renderContent();
 }
 
+// 테마 카드 하나. 테마 안에서 찾은 것과 테마 밖에서 찾은 것이 같은 모양이라야
+// 읽는 사람이 둘을 견줄 수 있다. 그래서 한 군데서 그린다.
+function themeCardHtml(c) {
+  const roleClass = c.role === '핵심주' ? 'role-core' : 'role-related';
+  const sd = (typeof MARKET !== 'undefined' && MARKET) ? MARKET.stocks[c.code] : null;
+  let chgHtml = '';
+  let priceRow = '';
+  if (sd) {
+    const cls = sd.change > 0 ? 'up' : sd.change < 0 ? 'down' : 'flat';
+    const sign = sd.change > 0 ? '+' : '';
+    chgHtml = `<span class="card-change ${cls}">${sign}${sd.change.toFixed(2)}%</span>`;
+    const changeWon = sd.change !== 0
+      ? Math.round(sd.price * sd.change / (100 + sd.change))
+      : 0;
+    const arrow = sd.change > 0 ? '▲' : sd.change < 0 ? '▼' : '─';
+    const wonStr = changeWon === 0 ? '0' : Math.abs(changeWon).toLocaleString('ko-KR');
+    priceRow = `<div class="price-row">
+      <span class="price">${sd.price.toLocaleString('ko-KR')}원</span>
+      <span class="change-won ${cls}">${arrow} ${wonStr}</span>
+      <span class="volume-info">거래량 ${fmtVolume(sd.volume)}</span>
+    </div>`;
+  }
+  const fullDesc = (typeof STOCK_DESC_FNGUIDE !== 'undefined' && STOCK_DESC_FNGUIDE[c.code])
+    ? STOCK_DESC_FNGUIDE[c.code]
+    : (c.description || '');
+  let descBlock = '';
+  if (fullDesc) {
+    if (fullDesc.length > 100) {
+      const escaped = escapeHtml(fullDesc);
+      const preview = escapeHtml(fullDesc.slice(0, 100)) + '…';
+      descBlock = `<div class="description-wrap" data-full="${escaped}" onclick="event.stopPropagation();toggleDesc(this)">
+        <div class="description description-text">${preview}</div>
+        <div class="desc-toggle">▼ 더보기</div>
+      </div>`;
+    } else {
+      descBlock = `<div class="description">${escapeHtml(fullDesc)}</div>`;
+    }
+  }
+  const watched = isWatched(c.code);
+  const starBtn = `<button class="star-btn ${watched ? 'starred' : ''}" data-star-code="${c.code}" onclick="event.stopPropagation();toggleWatchlist('${c.code}','${c.name.replace(/'/g, "\\'")}')" title="관심 종목">${watched ? '★' : '☆'}</button>`;
+  return `<div class="card" onclick="openStockModal('${c.code}')" style="cursor:pointer">
+    <div class="card-top">
+      <div class="name-block">
+        ${starBtn}
+        <span class="company-name">${c.name}</span>
+        <span class="company-code">${c.code}</span>
+        ${chgHtml}
+      </div>
+      ${c.role ? `<span class="role ${roleClass}">${c.role}</span>` : ''}
+    </div>
+    ${priceRow}
+    ${descBlock}
+    <div class="links" onclick="event.stopPropagation()">
+      <a class="link-btn" target="_blank" rel="noopener" href="https://finance.naver.com/item/main.naver?code=${c.code}">네이버 증권</a>
+      <a class="link-btn" target="_blank" rel="noopener" href="https://m.stock.naver.com/domestic/stock/${c.code}/total">모바일 시세</a>
+    </div>
+  </div>`;
+}
+
 function renderContent() {
   const contentEl = document.getElementById('content');
   if (!contentEl) return;
@@ -6133,64 +6192,55 @@ function renderContent() {
       </div>
       <div class="theme-desc">${theme.description}</div>`;
 
-    filtered.forEach(c => {
-      const roleClass = c.role === '핵심주' ? 'role-core' : 'role-related';
-      const sd = (typeof MARKET !== 'undefined' && MARKET) ? MARKET.stocks[c.code] : null;
-      let chgHtml = '';
-      let priceRow = '';
-      if (sd) {
-        const cls = sd.change > 0 ? 'up' : sd.change < 0 ? 'down' : 'flat';
-        const sign = sd.change > 0 ? '+' : '';
-        chgHtml = `<span class="card-change ${cls}">${sign}${sd.change.toFixed(2)}%</span>`;
-        const changeWon = sd.change !== 0
-          ? Math.round(sd.price * sd.change / (100 + sd.change))
-          : 0;
-        const arrow = sd.change > 0 ? '▲' : sd.change < 0 ? '▼' : '─';
-        const wonStr = changeWon === 0 ? '0' : Math.abs(changeWon).toLocaleString('ko-KR');
-        priceRow = `<div class="price-row">
-          <span class="price">${sd.price.toLocaleString('ko-KR')}원</span>
-          <span class="change-won ${cls}">${arrow} ${wonStr}</span>
-          <span class="volume-info">거래량 ${fmtVolume(sd.volume)}</span>
-        </div>`;
-      }
-      const fullDesc = (typeof STOCK_DESC_FNGUIDE !== 'undefined' && STOCK_DESC_FNGUIDE[c.code])
-        ? STOCK_DESC_FNGUIDE[c.code]
-        : (c.description || '');
-      let descBlock = '';
-      if (fullDesc) {
-        if (fullDesc.length > 100) {
-          const escaped = escapeHtml(fullDesc);
-          const preview = escapeHtml(fullDesc.slice(0, 100)) + '…';
-          descBlock = `<div class="description-wrap" data-full="${escaped}" onclick="event.stopPropagation();toggleDesc(this)">
-            <div class="description description-text">${preview}</div>
-            <div class="desc-toggle">▼ 더보기</div>
-          </div>`;
-        } else {
-          descBlock = `<div class="description">${escapeHtml(fullDesc)}</div>`;
-        }
-      }
-      const watched = isWatched(c.code);
-      const starBtn = `<button class="star-btn ${watched ? 'starred' : ''}" data-star-code="${c.code}" onclick="event.stopPropagation();toggleWatchlist('${c.code}','${c.name.replace(/'/g, "\\'")}')" title="관심 종목">${watched ? '★' : '☆'}</button>`;
-      html += `<div class="card" onclick="openStockModal('${c.code}')" style="cursor:pointer">
-        <div class="card-top">
-          <div class="name-block">
-            ${starBtn}
-            <span class="company-name">${c.name}</span>
-            <span class="company-code">${c.code}</span>
-            ${chgHtml}
-          </div>
-          <span class="role ${roleClass}">${c.role}</span>
-        </div>
-        ${priceRow}
-        ${descBlock}
-        <div class="links" onclick="event.stopPropagation()">
-          <a class="link-btn" target="_blank" rel="noopener" href="https://finance.naver.com/item/main.naver?code=${c.code}">네이버 증권</a>
-          <a class="link-btn" target="_blank" rel="noopener" href="https://m.stock.naver.com/domestic/stock/${c.code}/total">모바일 시세</a>
-        </div>
-      </div>`;
-    });
+    filtered.forEach(c => { html += themeCardHtml(c); });
     html += `</section>`;
   });
+
+  // 테마에 없는 종목도 찾아 준다.
+  //
+  // 전에는 검색어를 위 테마들의 소속 종목에만 걸었다. 그런데 그 목록은
+  // 강세 전환 20 + 네이버 강세 상위 20 + 업종 상위 10 + 직접 적은 것뿐이다.
+  // 네이버 테마가 267개인데 화면에 오르는 건 37개라, 4,300종목 중 906개만
+  // 찾혔다. 현대차·기아도 그날 강세가 아니면 안 나왔다.
+  //
+  // 제보로 알았다. "코데즈컴바인이 안 찾힌다." 그 종목은 남북경협에 들어
+  // 있는데, 남북경협이 강세가 아닌 날에는 통째로 사라졌다. 테마가 없어서가
+  // 아니었다.
+  //
+  // 탭 목록은 그대로 둔다. 267개를 다 올리면 고르기가 더 나빠진다.
+  // 넓히는 것은 **검색어를 쳤을 때뿐**이다.
+  if (q && MARKET && MARKET.stocks) {
+    const inThemes = new Set();
+    themes.forEach(t => t.companies.forEach(c => inThemes.add(c.code)));
+    const outside = [];
+    for (const [code, sd] of Object.entries(MARKET.stocks)) {
+      if (inThemes.has(code)) continue;
+      const name = (sd.name || '').toLowerCase();
+      if (!(code.includes(q) || name.includes(q))) continue;
+      // ETF·ETN 은 배지로 알아보게 한다. 카드의 역할 자리를 그대로 쓴다.
+      const kind = sd.kind === 'etf' ? 'ETF' : sd.kind === 'etn' ? 'ETN' : '';
+      outside.push({ code, name: sd.name, role: kind, _etp: kind ? 1 : 0 });
+    }
+    if (outside.length) {
+      // 순서가 중요하다. "삼성전자"로 찾으면 열여덟이 걸리는데 열여섯이
+      // ETF·ETN 이다. 30개에 자르기 전에 순서를 안 잡으면 정작 삼성전자가
+      // 뒤로 밀린다. 코드를 그대로 친 것 → 개별 종목 → ETF·ETN 순으로 둔다.
+      outside.sort((a, b) => (b.code === q) - (a.code === q) || a._etp - b._etp);
+      const MAX = 30;
+      totalShown += outside.length;
+      const cut = outside.length > MAX
+        ? `<div class="theme-desc">여기까지 ${MAX}개입니다. 더 좁혀서 쳐보세요 (외 ${outside.length - MAX}개).</div>`
+        : '';
+      html += `<section class="theme-section">
+        <div class="theme-header">
+          <span class="theme-name">🔎 테마 밖</span>
+          <span class="count-badge">${outside.length}종목</span>
+        </div>
+        <div class="theme-desc">오늘 오른 테마에는 없지만 검색어에 맞는 종목입니다. 개별 종목을 먼저 보여드립니다.</div>`;
+      outside.slice(0, MAX).forEach(c => { html += themeCardHtml(c); });
+      html += cut + `</section>`;
+    }
+  }
 
   if (!totalShown) {
     html = `<div class="empty">검색 결과가 없습니다.</div>`;
