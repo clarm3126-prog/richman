@@ -786,7 +786,8 @@ def fetch_52w_high_for_stock(code):
 
 def detect_ath_breakouts(stocks, investor_top, bot_token, chat_id):
     """52주 신고가 + 거래량 동반 돌파 감지 → Telegram (A 장중 / B 마감).
-    data/ath_cache.json (주간 갱신)의 ATH/평균거래량 활용.
+    고가는 data/ath_cache.json (주간), 20일 평균 거래량은
+    data/avg_volume.json (날마다). 없으면 ath_cache 값으로 물러선다.
     A (장중): 9~16시 — 거래량 1.0배+ / B (마감): 16시+ — 거래량 1.5배+
     """
     ath_path = Path("data/ath_cache.json")
@@ -796,6 +797,20 @@ def detect_ath_breakouts(stocks, investor_top, bot_token, chat_id):
     ath_cache = load_json(ath_path, {}).get("stocks", {})
     if not ath_cache:
         return
+
+    # 20일 평균 거래량은 날마다 낸 값을 먼저 쓴다.
+    #
+    # ath_cache 는 주 1회 갱신이다. 역대 고가는 긴 시세가 있어야 해서
+    # 그게 맞지만, **20일 평균까지 이레 묵으면 배수가 부풀려진다.**
+    # 닷새 전에 거래량이 터진 종목은 그 폭발이 아직 분모에 없다.
+    #
+    # ⚠️ 이 값이 `ath_breakouts_history` 의 vol_ratio 로 들어간다.
+    # 2026-09-20 이전 기록은 주간 분모로 낸 것이라 그 뒤와 조금 다르다.
+    # 정의가 바뀐 게 아니라 낡음을 고친 것이지만, 긴 기간을 한데 묶어
+    # 셀 때는 알고 세야 한다.
+    fresh_vol = load_json(Path("data/avg_volume.json"), {}).get("stocks", {})
+    if fresh_vol:
+        print(f"  avg_volume.json 사용 ({len(fresh_vol)}종목, 날마다 갱신)")
 
     now = datetime.now(KST)
     today_str = now.strftime("%Y%m%d")
@@ -829,7 +844,7 @@ def detect_ath_breakouts(stocks, investor_top, bot_token, chat_id):
         if excl:
             continue
         ath = info.get("ath", 0)
-        avg_vol = info.get("avg_vol_20d", 0)
+        avg_vol = fresh_vol.get(code) or info.get("avg_vol_20d", 0)
         all_time = info.get("all_time_high", 0)
         price = s.get("price", 0)
         vol = s.get("volume", 0)

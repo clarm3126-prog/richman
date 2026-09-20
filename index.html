@@ -5391,9 +5391,15 @@ function loadStockRefs() {
   if (STOCK_REFS) return Promise.resolve(STOCK_REFS);
   if (STOCK_REFS_LOADING) return STOCK_REFS_LOADING;
   const grab = p => fetch(p + '?t=' + Date.now()).then(r => r.ok ? r.json() : null).catch(() => null);
-  STOCK_REFS_LOADING = Promise.all([grab('data/52w_cache.json'), grab('data/ath_cache.json')])
-    .then(([w, a]) => {
-      STOCK_REFS = { high52: (w && w.high) || {}, ath: (a && a.stocks) || {} };
+  STOCK_REFS_LOADING = Promise.all([
+    grab('data/52w_cache.json'), grab('data/ath_cache.json'), grab('data/avg_volume.json'),
+  ])
+    .then(([w, a, v]) => {
+      // 20일 평균 거래량은 날마다 낸 값을 먼저 쓴다. ath_cache 는 주 1회라
+      // 이레 묵은 분모로 나누면 배수가 부풀려진다. 다만 거기에는 후보
+      // 종목(거래대금 10억+)만 있어서, 없으면 주간 값으로 물러선다.
+      STOCK_REFS = { high52: (w && w.high) || {}, ath: (a && a.stocks) || {},
+                     avgVol: (v && v.stocks) || {} };
       return STOCK_REFS;
     })
     .finally(() => { STOCK_REFS_LOADING = null; });
@@ -5442,7 +5448,7 @@ function hottestTheme(code) {
 function stockSummaryLines(code) {
   const s = MARKET && MARKET.stocks[code];
   if (!s) return null;
-  const refs = STOCK_REFS || { high52: {}, ath: {} };
+  const refs = STOCK_REFS || { high52: {}, ath: {}, avgVol: {} };
   const base = marketBaseline();
   const cond = conditionsReady() ? COND_MV.stocks[code] : null;
   const lines = [];
@@ -5510,7 +5516,7 @@ function stockSummaryLines(code) {
       : `최근 반년 수익률은 시장 하위 ${Math.max(1, Math.round(cond.rs))}%`);
   }
   // 거래량과 테마는 **평소와 다를 때만** 말한다. 늘 말하면 아무 뜻이 없다.
-  const avg = (refs.ath[code] || {}).avg_vol_20d;
+  const avg = (refs.avgVol && refs.avgVol[code]) || (refs.ath[code] || {}).avg_vol_20d;
   if (avg && s.volume) {
     const r = s.volume / avg;
     if (r >= 1.5) m.push(`오늘 거래량은 20일 평균의 ${r.toFixed(1)}배`);

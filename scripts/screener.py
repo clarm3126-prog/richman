@@ -922,24 +922,41 @@ def notify_new_minervini(results):
 # 차트 데이터 저장 (frontend 종목 모달용)
 # ================================
 
-def save_chart_data(results, histories):
-    """results 종목들의 252일 OHLC를 data/charts/{code}.json으로 저장.
+# 252일 그대로 담는다.
+#
+# 화면이 그리는 창은 180일이라 줄이려 했는데, `drawCandlestickSVG` 가
+# **파일에 담긴 종가 전체**로 이동평균을 낸 뒤 그 창을 잘라 쓴다.
+# 180일만 담으면 200일선이 통째로 사라지고 150일선도 끝자락만 남는다.
+# 용량을 줄이려다 선을 지울 뻔했다.
+CHART_DAYS = 252
+
+
+def save_chart_data(results, histories, names=None):
+    """후보 종목들의 OHLC를 data/charts/{code}.json으로 저장.
     Frontend가 종목 모달 열 때 fetch해서 candlestick + MA 차트 그림.
+
+    **상위 200개만 쓰면 차트가 멈춘다.** 조건에서 빠진 종목의 파일은
+    그대로 남는데, 화면은 그게 옛날 것인 줄 모르고 그린다. 실제로
+    1,570개 중 478개가 5~7월에 멈춰 있었다(2026-09-20 확인).
+
+    시세는 후보 전체에 대해 이미 받아놨다. 안 쓰고 버릴 까닭이 없다.
     """
     charts_dir = Path("data/charts")
     charts_dir.mkdir(parents=True, exist_ok=True)
+    names = names or {}
     saved = 0
     for r in results:
-        code = r.get("code")
+        code = r.get("code") if isinstance(r, dict) else r
         if not code:
             continue
         history = histories.get(code)
         if not history or len(history) < 30:
             continue
+        history = history[-CHART_DAYS:]
         # 컴팩트 array format (frontend MA 자체 계산)
         chart = {
             "code": code,
-            "name": r.get("name", code),
+            "name": (r.get("name") if isinstance(r, dict) else None) or names.get(code) or code,
             "dates": [h["date"] for h in history],
             "open": [h["open"] for h in history],
             "high": [h["high"] for h in history],
@@ -992,6 +1009,40 @@ FUND_NUM_KEYS = [
     "eps_growth_q_yoy", "sales_growth_q_yoy",
     "op_margin_q", "op_margin_annual", "op_margin_3y_avg",
 ]
+
+
+def save_avg_volume(histories, day_codes):
+    """20일 평균 거래량을 날마다 낸다 — data/avg_volume.json
+
+    지금까지는 `ath_cache.json` 에 들어 있었는데 그 파일이 **주 1회**
+    갱신이다. 역대 고가는 전 종목의 긴 시세가 있어야 해서 주 1회가
+    맞다. 그런데 20일 평균은 20일만 있으면 된다.
+
+    이레 묵은 평균으로 나누면 배수가 부풀려진다. 닷새 전에 거래량이
+    터진 종목은 그 폭발이 아직 분모에 안 들어가 있기 때문이다.
+    화면의 "20일 평균의 O배"와 신고가 돌파 감지가 같이 쓴다.
+
+    여기 시세는 후보 전체(거래대금 10억+)만 있다. 그 밖의 종목은
+    읽는 쪽이 `ath_cache.json` 으로 물러선다.
+    """
+    out = {}
+    for code in day_codes:
+        h = histories.get(code)
+        if not h or len(h) < 20:
+            continue
+        vols = [x.get("volume") or 0 for x in h[-20:]]
+        vols = [v for v in vols if v > 0]
+        if len(vols) < 20:
+            continue
+        out[code] = round(sum(vols) / len(vols))
+    path = Path("data/avg_volume.json")
+    path.write_text(json.dumps({
+        "updated": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
+        "trading_day": datetime.now(KST).strftime("%Y%m%d"),
+        "days": 20,
+        "stocks": out,
+    }, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    print(f"  saved avg_volume.json ({len(out)} stocks, {path.stat().st_size/1024:.0f}KB)")
 
 
 def save_conditions(results):
@@ -1209,8 +1260,16 @@ def main():
     }, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     print(f"\n✅ Saved screener_results.json ({len(to_save)} stocks: must_include {len(must_include)} + others {len(to_save) - len(must_include)})")
 
-    # 8.5 차트 데이터 저장 (252일 OHLC) — 종목 모달에서 사용
-    save_chart_data(to_save, histories)
+    # 8.5 차트 데이터 저장 — 종목 모달에서 사용
+    #
+    # **상위 200개가 아니라 시세를 받아둔 후보 전체**에 쓴다. 200개만
+    # 쓰면 조건에서 빠진 종목의 차트가 그 자리에 멈춘다. 시세는 이미
+    # 받아놨으니 더 드는 값은 없다.
+    chart_names = {c: s.get("name", c) for c, s in candidates.items()}
+    save_chart_data(list(histories.keys()), histories, names=chart_names)
+
+    # 8.55 20일 평균 거래량 — 주 1회 갱신인 ath_cache 대신 날마다 낸다
+    save_avg_volume(histories, list(histories.keys()))
 
     # 8.6 조건 요약 — 관심 종목은 점수 순위와 무관하므로 전 종목을 담는다
     save_conditions(results)
