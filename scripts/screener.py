@@ -1035,6 +1035,12 @@ def save_avg_volume(histories, day_codes):
         if len(vols) < 20:
             continue
         out[code] = round(sum(vols) / len(vols))
+    if not out:
+        # 시세를 하나도 못 받은 날이다. 빈 파일로 덮으면 전 종목이 주간
+        # 값으로 물러서는데, **아무 소리도 안 나서 눈에 안 띈다.** 옛
+        # 파일을 남기고 소리를 낸다. 하루 묵은 평균이 빈 것보다 낫다.
+        print("  avg_volume: 쓸 시세가 없어 옛 파일을 그대로 둡니다")
+        return
     path = Path("data/avg_volume.json")
     path.write_text(json.dumps({
         "updated": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),

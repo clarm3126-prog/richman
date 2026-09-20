@@ -866,6 +866,13 @@ def detect_ath_breakouts(stocks, investor_top, bot_token, chat_id):
             skipped_runner += 1
             continue
         # 3. 거래량 동반
+        #
+        # ⚠️ 분모가 2026-09-20 부터 날마다 갱신된다. **배수만 바뀌는 게
+        # 아니라 이 문턱을 넘느냐가 바뀐다.** 최근에 거래량이 터진 종목은
+        # 분모가 커져 배수가 내려가고, 그래서 목록에서 빠진다.
+        # → **09-20 전후로 돌파 건수를 비교하면 "돌파가 줄었다"로 잘못
+        #   읽힌다.** 목록의 구성 자체가 달라진 것이다. 긴 기간을 한데
+        #   묶어 셀 때는 그 날을 걸치는지 봐야 한다.
         vol_ratio = vol / avg_vol if avg_vol > 0 else 0
         if vol_ratio < vol_threshold:
             continue
