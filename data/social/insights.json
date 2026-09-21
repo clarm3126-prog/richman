@@ -473,7 +473,7 @@
     "replies": 0,
     "reposts": 0,
     "shares": 0,
-    "views": 18
+    "views": 19
    },
    "platform": "threads"
   },
@@ -488,7 +488,7 @@
     "replies": 0,
     "reposts": 0,
     "shares": 0,
-    "views": 19
+    "views": 20
    },
    "platform": "threads"
   },
@@ -503,7 +503,7 @@
     "replies": 0,
     "reposts": 0,
     "shares": 0,
-    "views": 21
+    "views": 22
    },
    "platform": "threads"
   },
@@ -534,7 +534,7 @@
     "replies": 0,
     "reposts": 0,
     "shares": 0,
-    "views": 38
+    "views": 39
    },
    "platform": "threads"
   },
@@ -549,7 +549,7 @@
     "replies": 0,
     "reposts": 0,
     "shares": 0,
-    "views": 23
+    "views": 24
    },
    "platform": "threads"
   },
@@ -564,7 +564,7 @@
     "replies": 0,
     "reposts": 0,
     "shares": 0,
-    "views": 19
+    "views": 21
    },
    "platform": "threads"
   },
@@ -579,7 +579,7 @@
     "replies": 0,
     "reposts": 0,
     "shares": 0,
-    "views": 45
+    "views": 47
    },
    "platform": "threads"
   },
@@ -594,7 +594,7 @@
     "replies": 0,
     "reposts": 0,
     "shares": 0,
-    "views": 39
+    "views": 44
    },
    "platform": "threads"
   },
@@ -621,6 +621,21 @@
    "kind": "lesson",
    "media_id": "18078981263706777",
    "metrics": {},
+   "platform": "threads"
+  },
+  {
+   "checked": "2026-09-21",
+   "date": "2026-09-21",
+   "kind": "us_brief",
+   "media_id": "17910016629522278",
+   "metrics": {
+    "likes": 1,
+    "quotes": 0,
+    "replies": 0,
+    "reposts": 0,
+    "shares": 0,
+    "views": 10
+   },
    "platform": "threads"
   }
  ],
