@@ -28,6 +28,46 @@ sys.path.insert(0, str(Path(__file__).parent))
 from common import load_json, send_message  # noqa: E402
 
 KST = pytz.timezone("Asia/Seoul")
+
+# 이 실행이 다루는 **장이 열린 날**. `datetime.now()` 가 아니다.
+#
+# 크론은 17:07(KST)인데 깃허브가 늘 늦게 돌린다. 몇 시간 밀려 자정을
+# 넘기면 `now()` 가 다음 날이 되고, 그날 자료가 **다음 날 이름으로**
+# 저장된다. 그러면 이튿날 진짜 그 이름으로 저장하려 할 때
+# `if dst.exists(): return` 에 막혀 **그날 자료가 조용히 버려진다.**
+#
+# 2026-09-24 에 실제로 찾았다. 9/21(월) 자료가 `20260922.json` 으로
+# 들어갔고, 9/22(화) 자료는 그 이름이 이미 있어서 통째로 사라졌다.
+# 창 94거래일 가운데 8일이 비어 있고, 장이 안 열린 날 이름으로 6개가
+# 들어가 있었다.
+#
+# 시세의 마지막 날짜가 곧 그 장날이다. 그걸 쓴다.
+_TRADING_DAY = None
+
+
+def set_trading_day(histories):
+    """받아온 시세의 마지막 날짜를 이 실행의 장날로 잡는다.
+
+    종목마다 마지막 날짜가 다를 수 있다(거래정지 등). 가장 많이 나온
+    날짜를 고른다. 시세가 없으면 예전처럼 오늘 날짜로 물러선다.
+    """
+    global _TRADING_DAY
+    tally = {}
+    for h in (histories or {}).values():
+        if h:
+            d = h[-1].get("date")
+            if d:
+                tally[d] = tally.get(d, 0) + 1
+    if tally:
+        _TRADING_DAY = max(tally, key=lambda k: (tally[k], k))
+        print(f"  장날: {_TRADING_DAY} (시세 {tally[_TRADING_DAY]}종목 기준)")
+    return _TRADING_DAY
+
+
+def trading_day():
+    return _TRADING_DAY or datetime.now(KST).strftime("%Y%m%d")
+
+
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; MinerviniScreener/1.0)"}
 
 DART_KEY = os.environ.get("DART_API_KEY", "")
@@ -1044,7 +1084,7 @@ def save_avg_volume(histories, day_codes):
     path = Path("data/avg_volume.json")
     path.write_text(json.dumps({
         "updated": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
-        "trading_day": datetime.now(KST).strftime("%Y%m%d"),
+        "trading_day": trading_day(),
         "days": 20,
         "stocks": out,
     }, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
@@ -1091,7 +1131,7 @@ def save_conditions(results):
     path = Path("data/screener_conditions.json")
     path.write_text(json.dumps({
         "updated": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
-        "trading_day": datetime.now(KST).strftime("%Y%m%d"),
+        "trading_day": trading_day(),
         "tt_keys": TT_BOOL_KEYS,
         "shadow_keys": SHADOW_BOOL_KEYS,
         "setup_keys": SETUP_BOOL_KEYS,
@@ -1114,11 +1154,13 @@ def archive_conditions(out):
     그래서 전 종목을 남긴다. 이름과 펀더멘털 숫자는 빼고 접은 자리만
     담으므로 하루 26KB 다. 결과 보관함이 하루 98KB 이니 넉 배쯤 가볍다.
     """
-    day = datetime.now(KST).strftime("%Y%m%d")
+    day = trading_day()
     d = Path("data/screener_conditions_history")
     d.mkdir(parents=True, exist_ok=True)
     dst = d / ("%s.json" % day)
     if dst.exists():
+        # 조용히 건너뛰면 이름이 밀린 탓에 하루가 버려진 것을 못 본다.
+        print(f"  archive_conditions: {dst.name} 이 이미 있어 건너뜁니다")
         return
     lean = {c: [v.get("tt"), v.get("s60"), v.get("ttn"), v.get("sc")]
             for c, v in out.items()}
@@ -1192,6 +1234,9 @@ def main():
     # 4. 가격 히스토리 (252일)
     print("\n[Naver] 252일 OHLC 수집...")
     histories = fetch_all_stock_history(candidate_codes, days=252)
+    # **저장할 이름을 여기서 정한다.** now() 로 정하면 실행이 자정을 넘긴
+    # 날에 하루가 밀리고, 그 다음 날 자료가 이름 충돌로 버려진다.
+    set_trading_day(histories)
 
     # 5. 지수 history (RS Rating용)
     market_index_history = []
@@ -1258,7 +1303,7 @@ def main():
     out_path = Path("data/screener_results.json")
     out_path.write_text(json.dumps({
         "updated": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
-        "trading_day": datetime.now(KST).strftime("%Y%m%d"),
+        "trading_day": trading_day(),
         "total_evaluated": len(results),
         "minervini_strict_count": strict_count,
         "minervini_strong_count": strong_count,

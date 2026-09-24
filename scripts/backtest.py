@@ -537,6 +537,10 @@ def save_current_screener_to_history():
             d = Path(dst_dir)
             d.mkdir(parents=True, exist_ok=True)
             dst_path = d / f"{day}.json"
+            if dst_path.exists():
+                # 조용히 건너뛰면 이름이 밀린 탓에 하루가 버려진 것을 못 본다.
+                # 2026-09-24 에 9/22 자료가 그렇게 사라진 걸 찾았다.
+                print(f"  {dst_dir}/{dst_path.name} 이 이미 있어 건너뜁니다")
             if not dst_path.exists():
                 # 전체 상세 (기술 신호/펀더멘털/setup 등 모두 포함) — top 100, 과거 조회용
                 archive = {

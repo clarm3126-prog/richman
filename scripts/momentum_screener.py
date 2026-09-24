@@ -36,6 +36,7 @@ from screener import (
     sma, send_telegram,
     load_metadata, is_pump_or_warning, is_excluded_security, DEDUP_RESET_DAYS,
     save_chart_data, log_alert, bits,
+    set_trading_day, trading_day,
 )
 
 
@@ -468,7 +469,7 @@ def notify_confluence(momentum_results):
     🏆🏆 더블 (2/3) — 미너비니+오닐 / 미너비니+모멘텀 / 모멘텀+오닐
     momentum_screener가 체인 마지막이라 이 시점엔 3개 결과 파일 모두 존재.
     """
-    today = datetime.now(KST).strftime("%Y%m%d")
+    today = trading_day()
     today_date = datetime.now(KST).strftime("%Y-%m-%d")
 
     # 1. 미너비니 (오늘 데이터만)
@@ -699,7 +700,7 @@ def save_momentum_conditions(results):
     path = Path("data/momentum_conditions.json")
     path.write_text(json.dumps({
         "updated": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
-        "trading_day": datetime.now(KST).strftime("%Y%m%d"),
+        "trading_day": trading_day(),
         "bool_keys": MOM_BOOL_KEYS,
         "num_keys": MOM_NUM_KEYS,
         "stocks": out,
@@ -793,6 +794,11 @@ def main():
     # 6. OHLC 252일 fetch
     print("\n[Naver] 252일 OHLC 수집...")
     histories = fetch_all_stock_history(candidate_codes, days=252)
+    # **저장할 이름을 여기서 정한다.** now() 로 정하면 실행이 자정을 넘긴
+    # 날에 하루가 밀리고, 다음 날 자료가 이름 충돌로 버려진다.
+    # 스크리너와 같은 함수를 쓴다 — 두 보관함이 같은 날을 가리켜야
+    # backtest 가 짝을 맞출 수 있다.
+    set_trading_day(histories)
 
     # 7. 평가
     print("\n[평가] 모멘텀 시그널 적용...")
@@ -841,7 +847,7 @@ def main():
     out_path = Path("data/momentum_results.json")
     out_path.write_text(json.dumps({
         "updated": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
-        "trading_day": datetime.now(KST).strftime("%Y%m%d"),
+        "trading_day": trading_day(),
         "market_bullish": market_bullish,
         "rising_themes": rising_themes,
         "total_evaluated": len(results),
