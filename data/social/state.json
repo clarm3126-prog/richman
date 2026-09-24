@@ -321,6 +321,12 @@
    "kind": "screener",
    "source": "auto",
    "threads_id": "18073298069723977"
+  },
+  {
+   "date": "2026-09-25",
+   "kind": "us_brief",
+   "source": "brief",
+   "threads_id": "17986639326074310"
   }
  ],
  "queue_done": [
