@@ -49,6 +49,23 @@ def _day_label(day):
     return d
 
 
+def _is_today(data):
+    """이 자료가 오늘 장 것인가."""
+    day = str((data or {}).get("trading_day") or "")
+    return day == now_kst().strftime("%Y%m%d")
+
+
+def _titled(data, today_title, day_title):
+    """장날이 오늘이 아니면 제목에서 "오늘"을 뗀다.
+
+    추석·대체휴일처럼 장이 안 열린 날에도 평일 크론은 돈다. 어제 자료로
+    글이 나가는 것은 맞다(계정이 조용해지지 않는다). 그런데 제목이
+    "오늘의"인 채로 바로 아랫줄에 "9월 23일 기준"이 붙으면, 읽는 사람이
+    두 줄을 스스로 맞춰야 한다.
+    """
+    return today_title if _is_today(data) else day_title
+
+
 def _stale(data, max_age_days=4):
     """trading_day가 너무 오래된 데이터로는 글을 쓰지 않는다."""
     day = (data or {}).get("trading_day")
@@ -99,8 +116,12 @@ def compose_screener():
         # 프로필 그리드 썸네일은 아주 작게 보이므로 클릭 전에도
         # 무슨 글인지 알 수 있게 짧고 큰 두 줄로 만든다.
         "badge": "미너비니 스크리닝",
-        "headline": ["오늘 조건을", "통과한 종목"],
-        "title": "오늘의 미너비니 조건 통과 종목",
+        # 아랫줄(subtitle)이 이미 날짜를 말한다. 제목에서는 "오늘"만 뗀다 —
+        # 날짜를 제목에도 넣으면 같은 날짜가 두 줄 연달아 나온다.
+        "headline": (["오늘 조건을", "통과한 종목"] if _is_today(data)
+                     else ["조건을", "통과한 종목"]),
+        "title": _titled(data, "오늘의 미너비니 조건 통과 종목",
+                         "미너비니 조건 통과 종목"),
         "subtitle": f"{_day_label(data.get('trading_day'))} 기준 · {len(picks)}종목",
         "items": items,
         "tail": "추세·수급·실적 조건을 전부 통과한 종목만 추렸습니다.",
