@@ -188,11 +188,26 @@ def _scopes(tree):
             yield node.name, body, names
 
 
-def written_paths(src):
-    """이 소스가 실제로 **쓰는** data/ 경로."""
+# 파싱이 안 된 스크립트들. **빈 결과와 구분해야 한다.**
+#
+# 12318 이 준 규칙이다 — "빈 값을 아니다로 읽지 않는다." 그쪽 판정기가
+# 댓글 본문을 못 읽고도 "링크 요청 아님"으로 적어, 16명이 영영 제외됐다.
+# 여기도 같았다. 파싱 실패를 `set()` 으로 돌려주면 부르는 쪽은 그걸
+# "쓰는 게 없다"로 읽고, 구멍이 있어도 조용하다.
+UNPARSED = set()
+
+
+def written_paths(src, origin=None):
+    """이 소스가 실제로 **쓰는** data/ 경로.
+
+    파싱이 안 되면 **빈 집합이 아니라 「모른다」다.** `UNPARSED` 에 적어
+    두고, 부르는 쪽이 그걸 사람에게 알린다.
+    """
     try:
         tree = ast.parse(src)
     except SyntaxError:
+        if origin:
+            UNPARSED.add(origin)
         return set()
     out = set()
     for _, body, names in _scopes(tree):
@@ -342,7 +357,7 @@ def writes_for(workflow_text):
             continue
         seen.add(sp)
         src = p.read_text(encoding="utf-8")
-        out |= written_paths(src)
+        out |= written_paths(src, origin=sp)
         for mod, borrowed in module_uses(src).items():
             cand = _module_file(mod)
             if not cand:
@@ -518,10 +533,17 @@ def main():
     if "--prove" in sys.argv:
         return prove()
     found, blind = holes()
-    if not found and not blind:
+    if not found and not blind and not UNPARSED:
         if "-v" in sys.argv:
             print("워크플로 커밋 목록: 이상 없음")
         return 0
+    if UNPARSED:
+        # 못 읽은 것을 없는 것으로 말하지 않는다.
+        print("파싱이 안 되는 스크립트 %d개 — 이 파일들에 대해서는 아무 말도 못 합니다"
+              % len(UNPARSED))
+        for x in sorted(UNPARSED):
+            print("  %s" % x)
+        print("")
     if found:
         print("워크플로가 안 담는 파일 %d곳 — 만들어지고 그대로 버려집니다" % len(found))
         for wf, path in found:

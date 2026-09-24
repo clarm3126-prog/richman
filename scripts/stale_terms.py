@@ -92,10 +92,14 @@ def files():
 
 def main():
     hits = []
+    unread = []
     for p, rel in files():
         try:
             text = p.read_text(encoding="utf-8-sig")
-        except Exception:
+        except Exception as e:
+            # **못 읽은 것을 깨끗한 것으로 말하지 않는다.** 조용히 건너뛰면
+            # 그 파일에 낡은 낱말이 있어도 "이상 없음"이 뜬다.
+            unread.append((rel, type(e).__name__))
             continue
         lines = text.split("\n")
         # 원고 앞머리(--- 사이)는 "전에는 이렇게 썼다" 식 기록이 들어간다.
@@ -117,10 +121,14 @@ def main():
                     hits.append((rel, i, s[:70], now, why))
                     break
 
+    if unread:
+        print("못 읽은 파일 %d개 — 이 파일들은 검사하지 못했습니다" % len(unread))
+        for rel, why in unread:
+            print("  %s  (%s)" % (rel, why))
     if not hits:
-        if "-v" in sys.argv:
+        if "-v" in sys.argv and not unread:
             print("낡은 낱말 검사: 이상 없음")
-        return 0
+        return 1 if unread else 0
 
     print("낡은 낱말 %d곳 — 이름을 바꿨는데 안 따라온 자리입니다" % len(hits))
     for path, n, s, now, why in hits[:15]:

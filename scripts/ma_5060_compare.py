@@ -38,14 +38,27 @@ NEED_DAYS = 40        # 이만큼 쌓여야 이야기를 시작한다
 
 
 def load():
-    out = []
+    """쌓인 하루치들. **못 읽은 것은 없는 것이 아니라 「모른다」다.**
+
+    조용히 빼면 쌓인 날수만 줄고 왜 줄었는지가 안 나온다. 몇 달 뒤에
+    답을 보러 왔을 때 "생각보다 적네" 하고 넘어가게 된다.
+    """
+    out, bad = [], []
     for p in sorted(HIST.glob("2*.json")):
         try:
             d = json.loads(p.read_text(encoding="utf-8"))
-        except Exception:
+        except Exception as e:
+            bad.append((p.name, type(e).__name__))
             continue
         if d.get("stocks"):
             out.append(d)
+        else:
+            bad.append((p.name, "stocks 가 비었음"))
+    if bad:
+        print("⚠️ 못 읽은 하루치 %d개 — 아래 셈에서 빠졌습니다" % len(bad))
+        for name, why in bad:
+            print("    %s  (%s)" % (name, why))
+        print("")
     return out
 
 
