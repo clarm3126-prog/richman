@@ -327,6 +327,17 @@
    "kind": "us_brief",
    "source": "brief",
    "threads_id": "17986639326074310"
+  },
+  {
+   "date": "2026-09-25",
+   "ig_id": "18070169129768712",
+   "images": [
+    "assets/cards/2026-09-25-momentum.jpg",
+    "assets/cards/about.jpg"
+   ],
+   "kind": "momentum",
+   "source": "auto",
+   "threads_id": "18148580113552477"
   }
  ],
  "queue_done": [
