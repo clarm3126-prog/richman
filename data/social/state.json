@@ -350,6 +350,17 @@
    "kind": "kr_close",
    "source": "brief",
    "threads_id": "18114648362010291"
+  },
+  {
+   "date": "2026-09-28",
+   "ig_id": "18124749445861676",
+   "images": [
+    "assets/cards/2026-09-28-theme.jpg",
+    "assets/cards/about.jpg"
+   ],
+   "kind": "theme",
+   "source": "auto",
+   "threads_id": "17910834198499912"
   }
  ],
  "queue_done": [
