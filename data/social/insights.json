@@ -320,7 +320,7 @@
     "replies": 0,
     "reposts": 0,
     "shares": 0,
-    "views": 39
+    "views": 40
    },
    "platform": "threads"
   },
@@ -564,7 +564,7 @@
     "replies": 0,
     "reposts": 0,
     "shares": 0,
-    "views": 23
+    "views": 24
    },
    "platform": "threads"
   },
@@ -579,7 +579,7 @@
     "replies": 0,
     "reposts": 0,
     "shares": 0,
-    "views": 50
+    "views": 51
    },
    "platform": "threads"
   },
@@ -594,7 +594,7 @@
     "replies": 0,
     "reposts": 0,
     "shares": 0,
-    "views": 48
+    "views": 50
    },
    "platform": "threads"
   },
@@ -634,7 +634,7 @@
     "replies": 0,
     "reposts": 0,
     "shares": 0,
-    "views": 21
+    "views": 24
    },
    "platform": "threads"
   },
@@ -649,7 +649,7 @@
     "replies": 0,
     "reposts": 0,
     "shares": 0,
-    "views": 31
+    "views": 33
    },
    "platform": "threads"
   },
@@ -664,7 +664,7 @@
     "replies": 0,
     "reposts": 0,
     "shares": 0,
-    "views": 17
+    "views": 19
    },
    "platform": "threads"
   },
@@ -695,7 +695,7 @@
     "replies": 0,
     "reposts": 0,
     "shares": 0,
-    "views": 18
+    "views": 21
    },
    "platform": "threads"
   },
@@ -710,7 +710,7 @@
     "replies": 0,
     "reposts": 0,
     "shares": 0,
-    "views": 13
+    "views": 14
    },
    "platform": "threads"
   },
@@ -725,7 +725,7 @@
     "replies": 0,
     "reposts": 0,
     "shares": 0,
-    "views": 26
+    "views": 27
    },
    "platform": "threads"
   },
@@ -756,7 +756,7 @@
     "replies": 0,
     "reposts": 0,
     "shares": 0,
-    "views": 34
+    "views": 37
    },
    "platform": "threads"
   },
@@ -771,7 +771,7 @@
     "replies": 0,
     "reposts": 0,
     "shares": 0,
-    "views": 9
+    "views": 12
    },
    "platform": "threads"
   },
@@ -786,7 +786,7 @@
     "replies": 0,
     "reposts": 0,
     "shares": 0,
-    "views": 14
+    "views": 17
    },
    "platform": "threads"
   },
@@ -817,7 +817,7 @@
     "replies": 0,
     "reposts": 0,
     "shares": 0,
-    "views": 33
+    "views": 35
    },
    "platform": "threads"
   },
@@ -832,7 +832,7 @@
     "replies": 0,
     "reposts": 0,
     "shares": 0,
-    "views": 14
+    "views": 16
    },
    "platform": "threads"
   },
@@ -863,7 +863,7 @@
     "replies": 0,
     "reposts": 0,
     "shares": 0,
-    "views": 29
+    "views": 31
    },
    "platform": "threads"
   },
@@ -878,7 +878,7 @@
     "replies": 0,
     "reposts": 0,
     "shares": 0,
-    "views": 27
+    "views": 29
    },
    "platform": "threads"
   },
@@ -897,6 +897,21 @@
     "views": 1
    },
    "platform": "instagram"
+  },
+  {
+   "checked": "2026-09-28",
+   "date": "2026-09-28",
+   "kind": "us_brief",
+   "media_id": "18098852411533290",
+   "metrics": {
+    "likes": 1,
+    "quotes": 0,
+    "replies": 0,
+    "reposts": 0,
+    "shares": 0,
+    "views": 66
+   },
+   "platform": "threads"
   }
  ],
  "updated": "2026-09-28"
