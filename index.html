@@ -5448,6 +5448,14 @@ let MARKET_BASELINE = null;
 function marketBaseline() {
   if (MARKET_BASELINE) return MARKET_BASELINE;
   if (!MARKET || !STOCK_REFS) return null;
+  // **무엇을 세는지 못 박아 둔다.** `kind === 'stock'` 은 ETF·ETN 을 뺀 것이고,
+  // **우선주는 남는다** — 네이버가 우선주에도 `stock` 을 준다(9/29 기준 98개:
+  // 삼성전자우·현대차2우B 등). 삼성전자와 삼성전자우가 둘 다 분포에 든다.
+  //
+  // 우선주까지 빼면 2,576개 · 중앙값 -44.7% 다(포함하면 2,674개 · -44.5%).
+  // **0.2%p 차이라 바꾸지 않는다.** 발행본이 같은 집합으로 나갔으니 화면과
+  // 글이 같은 숫자를 말하는 편이 낫다. 다만 "개별 종목"이라는 말에
+  // 우선주가 들어 있다는 것은 알고 있어야 한다.
   const offs = [];
   for (const [code, s] of Object.entries(MARKET.stocks)) {
     if (s.kind !== 'stock') continue;          // ETF·ETN 은 기준선을 흐린다
