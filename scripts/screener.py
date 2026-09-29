@@ -153,6 +153,15 @@ def is_excluded_security(name, code="", kind=""):
     # 통과한다.
     if code and len(code) == 6 and code.isdigit() and code[-1] in ("5", "7"):
         return True, "우선주"
+    # 끝자리 9 도 우선주다. 본주 끝 0 에 5·7·9 를 붙인다.
+    #   현대차 005380 · 우 005385 · 2우B 005387 · **3우B 005389**
+    # 5·7 만 보다가 `005389 현대차3우B` 가 멀쩡한 주식으로 평가됐다
+    # (2026-09-29 확인. 조건표에 들어가 있었다).
+    #
+    # 9 는 **이름까지 같이 본다.** 5·7 은 전 종목에서 89개가 100% 우선주라
+    # 무조건 걸러도 되지만, 9 는 지금 표본이 하나뿐이라 그 근거가 없다.
+    if code and len(code) == 6 and code.isdigit() and code[-1] == "9"             and re.search(r"\d*우[A-Z]?$", n):
+        return True, "우선주"
     if code and code[-1:].isalpha() and re.search(r"\d*우[A-Z]?$", n):
         return True, "우선주"
 
