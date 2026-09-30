@@ -396,6 +396,17 @@
    "kind": "kr_close",
    "source": "brief",
    "threads_id": "18460294267185977"
+  },
+  {
+   "date": "2026-09-30",
+   "ig_id": "17993287910845424",
+   "images": [
+    "assets/cards/2026-09-30-screener.jpg",
+    "assets/cards/about.jpg"
+   ],
+   "kind": "screener",
+   "source": "auto",
+   "threads_id": "18196034173391710"
   }
  ],
  "queue_done": [
