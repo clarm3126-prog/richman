@@ -134,6 +134,65 @@ def evaluate_forecast_period(forecast, actual_history, days_forward, top_n=5):
     }
 
 
+def evaluate_naive_period(forecast, actual_history, days_forward, top_n=5):
+    """**아무 머리도 안 쓴 기준선** — 그날 실제 상위 N개를 그냥 들고 간다.
+
+    예측의 적중률만 내놓으면 높은지 낮은지 알 수가 없다. 17.3% 가 좋은
+    숫자인지는 **그냥 오늘 1등들을 들고 갔을 때**와 견줘야 나온다.
+
+    예측 평가와 **같은 날짜·같은 판정**을 쓴다. 다른 걸 쓰면 또 못 견준다.
+    """
+    day = forecast.get("trading_day", forecast.get("_date"))
+    if not day:
+        return None
+    today = actual_history.get(day)
+    if not today:
+        return None
+    picks = [{"name": t.get("name")} for t in (today.get("themes") or [])[:top_n]]
+    if not picks:
+        return None
+    # 예측 자리에 그날 실제 상위를 끼워 넣고 같은 함수로 센다.
+    return evaluate_forecast_period(
+        {"themes": picks, "trading_day": day}, actual_history, days_forward, top_n=top_n)
+
+
+def random_baseline(forecasts, actual_history, days_forward, slots=20):
+    """**아무거나 집었을 때** 상위 `slots` 에 들 확률.
+
+    ⚠️ **분모를 하나로 고르면 안 된다.** 스냅샷의 테마 수가 날마다 100 또는
+    266~267 로 갈린다(모으는 범위가 중간에 늘었다). 중앙값으로 잡으면 20%,
+    264 로 잡으면 7.6% 가 나온다 — **세 배 차이다.** 실제로 두 세션이 각각
+    다른 분모를 골라 두 숫자를 말했다(2026-10-02).
+
+    그래서 **날짜마다 그날 테마 수로 재고 평균을 낸다.** 평가하는 날짜와
+    같은 날짜를 쓴다. 범위도 같이 적어 한 숫자로 읽히지 않게 한다.
+    """
+    rates, ns = [], []
+    for f in forecasts:
+        day = f.get("trading_day", f.get("_date"))
+        dates_after = date_range_after(day, days_forward) if day else []
+        snap = None
+        for d in reversed(dates_after):
+            if d in actual_history:
+                snap = actual_history[d]
+                break
+        n = len(((snap or {}).get("themes")) or [])
+        if n:
+            ns.append(n)
+            rates.append(slots / n * 100)
+    if not rates:
+        return None
+    ns.sort()
+    return {
+        "slots": slots,
+        "n_periods": len(rates),
+        "hit_rate": round(sum(rates) / len(rates), 1),
+        "themes_min": ns[0],
+        "themes_max": ns[-1],
+        "note": "날짜마다 그날 테마 수로 재어 평균. 테마 수가 날마다 갈려서 한 숫자로 못 적는다.",
+    }
+
+
 def aggregate_stats(evaluations, days_forward):
     """여러 evaluation을 평균."""
     valid = [e for e in evaluations if e]
@@ -196,9 +255,28 @@ def main():
     eval_14d_top5 = [evaluate_forecast_period(a, actual_history, 14, top_n=5) for a in eligible_14d[-30:]] if eligible_14d else []
     eval_30d_top5 = [evaluate_forecast_period(a, actual_history, 30, top_n=5) for a in eligible_30d[-30:]] if eligible_30d else []
 
+    # 기준선도 같은 기간·같은 판정으로 낸다.
+    naive_7d = [evaluate_naive_period(a, actual_history, 7, top_n=5) for a in eligible_7d[-30:]]
+    naive_14d = [evaluate_naive_period(a, actual_history, 14, top_n=5) for a in eligible_14d[-30:]] if eligible_14d else []
+    naive_30d = [evaluate_naive_period(a, actual_history, 30, top_n=5) for a in eligible_30d[-30:]] if eligible_30d else []
+
     stats = {
         "updated": datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST"),
         "status": "ok",
+        # 읽는 법을 파일 안에 적어 둔다. 적중률만 보면 높은지 낮은지 모른다.
+        "_읽는_법": [
+            "avg_hit_rate 는 **예측한 상위 5개** 가운데 N일 뒤 실제 상위 20에 든 비율이다. "
+            "「오늘 뜬 테마가 남을 확률」이 아니다.",
+            "**혼자 보면 뜻이 없다.** baseline_naive(그날 실제 상위5를 그냥 들고 가기)와 "
+            "baseline_random(아무거나 집기)과 같이 봐야 한다. 예측이 그 둘을 못 넘으면 "
+            "예측이 하는 일이 없다는 뜻이다.",
+            "n_periods 는 기간 수이고 테마 수가 아니다. top5 면 한 기간에 5개를 본다.",
+        ],
+        "baseline_random_7d": random_baseline(eligible_7d[-30:], actual_history, 7),
+        "baseline_random_30d": random_baseline(eligible_30d[-30:], actual_history, 30) if eligible_30d else None,
+        "baseline_naive_7d_top5": aggregate_stats(naive_7d, 7),
+        "baseline_naive_14d_top5": aggregate_stats(naive_14d, 14),
+        "baseline_naive_30d_top5": aggregate_stats(naive_30d, 30),
         "n_archives": len(archives),
         "n_eligible_7d": len(eligible_7d),
         "n_eligible_14d": len(eligible_14d),
@@ -223,6 +301,21 @@ def main():
     Path("data/theme_forecast_stats.json").write_text(
         json.dumps(stats, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"\n✅ Saved theme_forecast_stats.json")
+
+    # 출력 — 기준선을 나란히 찍는다. 따로 찍으면 또 적중률만 본다.
+    br = stats.get("baseline_random_7d") or {}
+    print()
+    print("--- 기준선 ---")
+    print(f"  아무거나 집기: {br.get('hit_rate')}% "
+          f"(자리 {br.get('slots')}개 ÷ 테마 {br.get('themes_min')}~{br.get('themes_max')}개, 날짜별 평균)")
+    for h in (7, 14, 30):
+        nb = stats.get(f"baseline_naive_{h}d_top5") or {}
+        fc = stats.get(f"stats_{h}d_top5") or {}
+        if nb.get("avg_hit_rate") is None:
+            continue
+        gap = (fc.get("avg_hit_rate") or 0) - nb["avg_hit_rate"]
+        print(f"  {h}일: 예측 {fc.get('avg_hit_rate')}% vs 그냥 상위5 {nb['avg_hit_rate']}%"
+              f"  → 차이 {gap:+.1f}%p")
 
     # 출력
     if stats["stats_7d_top5"]:

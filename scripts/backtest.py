@@ -695,6 +695,20 @@ def main():
         # 옛 파일에는 이 키가 없으므로, 숫자가 왜 달라졌는지 구분이 된다.
         "price_basis": "adjusted_close",
         "horizon_ready": horizon_readiness(minervini_snaps + momentum_snaps),
+        # 읽는 법을 파일 안에 적어 둔다. 나란히 놓인 것이 곧 견줄 수 있다는
+        # 뜻이 아닌데, 표가 그렇게 손짓한다. 실제로 옆 세션이 30d·60d 를
+        # 그대로 견줘 공개 글을 쓸 뻔했다(2026-10-01).
+        "_읽는_법": [
+            "30d·60d·120d 를 그대로 견주지 마라. **진입 창이 다르다.** "
+            "60일이 차려면 두 달이 더 걸리므로 60d 는 늦게 들어온 픽을 아예 못 센다. "
+            "각 horizon 의 period.first_entry/last_entry/entry_days 를 펴 보라.",
+            "win_rate 는 **픽 단위**다. 같은 종목이 며칠씩 걸려 있어 한 종목이 "
+            "여러 번 세어진다(미너비니 30일: 87종목 1,042픽). by_date.win_rate 는 "
+            "하루를 한 표로 센 값이고 둘은 다른 질문이다. 글에는 종목 수도 같이 적어라.",
+            "지수와 견줄 때는 **rules.benchmark_matched** 를 쓴다. benchmark 는 "
+            "기간 내내 들고 있던 지수라, 7~8일에 손절로 빠져나온 수익률과 견주면 "
+            "덜 들고 있어서 덜 잃은 것이 잘 고른 것처럼 보인다.",
+        ],
         "categories": cat_results,
     }, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     print(f"\n✅ Saved backtest_stats.json")
