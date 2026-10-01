@@ -419,6 +419,17 @@
    "kind": "kr_close",
    "source": "brief",
    "threads_id": "17917003869452679"
+  },
+  {
+   "date": "2026-10-01",
+   "ig_id": "18114132875077909",
+   "images": [
+    "assets/cards/2026-10-01-momentum.jpg",
+    "assets/cards/about.jpg"
+   ],
+   "kind": "momentum",
+   "source": "auto",
+   "threads_id": "18126087607869948"
   }
  ],
  "queue_done": [
