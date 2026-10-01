@@ -3942,7 +3942,20 @@ function renderBacktestBanner(category) {
   const cands = shown.filter(r => r.s.rules && r.s.benchmark);
   const lead = cands.length ? cands[cands.length - 1] : null;
   if (lead) {
-    const lr = lead.s.rules, bm = lead.s.benchmark;
+    const lr = lead.s.rules;
+    // **같은 날수만큼의 지수와 견준다.** 기간 내내 들고 있던 지수와 견주면
+    // 안 된다 — 규칙은 대부분 손절로 7~8일에 빠져나오므로, **덜 들고 있어서
+    // 덜 잃은 것이 종목을 잘 고른 것처럼** 보인다.
+    //
+    // `backtest.py` 가 못 박아 뒀다 — *"이 값을 빼고 avg_return을 지수와
+    // 견주면 비교가 성립하지 않는다. 들고 있던 날수만큼의 지수 ... 이 둘의
+    // 차이만이 '종목을 잘 골랐나'에 해당한다."*
+    //
+    // 2026-10-01 까지 **기간 내내 지수와 견주고 있었고, 세 곳에서 부호가
+    // 뒤집혔다.** 미너비니 60일이 화면에 `+10.14%p 덜 잃었습니다` 로 떴는데
+    // 공정하게는 `-4.70%p 더 잃었다` 였다. 옆 세션(12318)이 찾아 알려줬다.
+    const bm = lr.benchmark_matched || lead.s.benchmark;
+    const fair = !!lr.benchmark_matched;
     const gap = Math.round((lr.avg_return - bm.avg_return) * 100) / 100;
     const won = gap > 0;
     const money = Math.round(100000 * Math.abs(gap));  // 1,000만원 기준 차액
@@ -3950,7 +3963,7 @@ function renderBacktestBanner(category) {
       ? (won ? `지수보다 ${Math.abs(gap)}%p 더 벌었습니다` : `지수보다 ${Math.abs(gap)}%p 덜 벌었습니다`)
       : (won ? `지수보다 ${Math.abs(gap)}%p 덜 잃었습니다` : `지수보다 ${Math.abs(gap)}%p 더 잃었습니다`);
     headline = `<div style="background:var(--bg-card);border-radius:8px;padding:12px 14px;margin:8px 0 10px">
-      <div style="font-size:13px;color:var(--fg-mid);margin-bottom:3px">${lead.h}일 기준 · 규칙대로 사고 팔았다면</div>
+      <div style="font-size:13px;color:var(--fg-mid);margin-bottom:3px">${lead.h}일 기준 · 규칙대로 사고 팔았다면${fair ? ` (평균 ${lr.avg_days}일 보유 · 코스피도 같은 날수만 들고 견줌)` : ''}</div>
       <div style="font-size:17px;font-weight:800;color:${won ? '#dc2626' : '#2563eb'};line-height:1.35">${what}</div>
       <div style="font-size:13px;color:var(--fg-mid);margin-top:4px">1,000만원이면 ${money.toLocaleString()}원 ${won ? '덜 깎였습니다' : '더 깎였습니다'}</div>
     </div>`;
@@ -3983,7 +3996,8 @@ function renderBacktestBanner(category) {
       <tr><th></th>${head}</tr>
       ${row('그냥 들고 있기', s => s.avg_return, false)}
       ${row('규칙대로 사고 팔기', s => (s.rules ? s.rules.avg_return : null), true)}
-      ${row('코스피를 들고 있기', s => (s.benchmark ? s.benchmark.avg_return : null), false)}
+      ${row('코스피도 같은 날수만', s => (s.rules && s.rules.benchmark_matched ? s.rules.benchmark_matched.avg_return : null), false)}
+      ${row('코스피를 기간 내내', s => (s.benchmark ? s.benchmark.avg_return : null), false)}
     </table>`;
   }
 
@@ -3992,7 +4006,9 @@ function renderBacktestBanner(category) {
   if (lead && lead.s.rules && lead.s.rules.avg_days) {
     const lr = lead.s.rules;
     const matched = lr.benchmark_matched ? lr.benchmark_matched.avg_return : null;
-    const beat = lr.avg_return > lead.s.benchmark.avg_return;
+    // 머리글과 같은 잣대로 판정한다. 여기만 기간 내내 지수로 보면
+    // 머리글은 "졌다"인데 설명은 "앞선 것은 ~ 때문"이 된다.
+    const beat = lr.avg_return > (matched !== null ? matched : lead.s.benchmark.avg_return);
     // 이긴 날과 진 날의 설명이 달라야 한다. 졌는데도 "앞선 것은 ~ 때문"이라고
     // 하면 화면이 제 숫자와 다른 말을 한다.
     const cause = beat
