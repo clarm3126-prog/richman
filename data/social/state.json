@@ -442,6 +442,17 @@
    "kind": "kr_close",
    "source": "brief",
    "threads_id": "18051287948812615"
+  },
+  {
+   "date": "2026-10-02",
+   "ig_id": "18394028017165305",
+   "images": [
+    "assets/cards/2026-10-02-theme.jpg",
+    "assets/cards/about.jpg"
+   ],
+   "kind": "theme",
+   "source": "auto",
+   "threads_id": "17906223720570288"
   }
  ],
  "queue_done": [
