@@ -459,6 +459,17 @@
    "kind": "us_brief",
    "source": "brief",
    "threads_id": "18107071487266209"
+  },
+  {
+   "date": "2026-10-05",
+   "ig_id": "17959012440249159",
+   "images": [
+    "assets/cards/2026-10-05-screener.jpg",
+    "assets/cards/about.jpg"
+   ],
+   "kind": "screener",
+   "source": "auto",
+   "threads_id": "18028644080898996"
   }
  ],
  "queue_done": [
