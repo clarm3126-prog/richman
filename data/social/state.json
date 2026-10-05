@@ -470,6 +470,12 @@
    "kind": "screener",
    "source": "auto",
    "threads_id": "18028644080898996"
+  },
+  {
+   "date": "2026-10-06",
+   "kind": "us_brief",
+   "source": "brief",
+   "threads_id": "18198329983389377"
   }
  ],
  "queue_done": [
