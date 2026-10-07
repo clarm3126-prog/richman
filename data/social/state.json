@@ -2,12 +2,6 @@
  "posts": [
   {
    "date": "2026-09-10",
-   "kind": "momentum",
-   "source": "auto",
-   "threads_id": "18102303566200038"
-  },
-  {
-   "date": "2026-09-10",
    "kind": "kr_close",
    "source": "brief",
    "threads_id": "18111961315845321"
@@ -478,6 +472,12 @@
    "kind": "us_brief",
    "source": "brief",
    "threads_id": "17959972878231220"
+  },
+  {
+   "date": "2026-10-07",
+   "kind": "kr_close",
+   "source": "brief",
+   "threads_id": "18139562620628045"
   }
  ],
  "queue_done": [
