@@ -1,17 +1,6 @@
 {
  "posts": [
   {
-   "date": "2026-09-13",
-   "ig_id": "18120485992926398",
-   "images": [
-    "assets/cards/telegram-guide.jpg",
-    "assets/cards/about.jpg"
-   ],
-   "kind": "guide",
-   "source": "manual",
-   "threads_id": "18078029951401231"
-  },
-  {
    "date": "2026-09-14",
    "ig_id": "18113957492281205",
    "images": [
@@ -468,6 +457,12 @@
    "kind": "screener",
    "source": "auto",
    "threads_id": "18074300003779382"
+  },
+  {
+   "date": "2026-10-12",
+   "kind": "us_brief",
+   "source": "brief",
+   "threads_id": "18090146687300341"
   }
  ],
  "queue_done": [
