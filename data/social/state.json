@@ -1,12 +1,6 @@
 {
  "posts": [
   {
-   "date": "2026-09-14",
-   "kind": "kr_close",
-   "source": "brief",
-   "threads_id": "18127041169853582"
-  },
-  {
    "date": "2026-09-15",
    "ig_id": "17945887875336630",
    "images": [
@@ -458,6 +452,17 @@
    "kind": "kr_close",
    "source": "brief",
    "threads_id": "18132059800838457"
+  },
+  {
+   "date": "2026-10-12",
+   "ig_id": "18025577525869686",
+   "images": [
+    "assets/cards/2026-10-12-screener.jpg",
+    "assets/cards/about.jpg"
+   ],
+   "kind": "screener",
+   "source": "auto",
+   "threads_id": "18036650147894920"
   }
  ],
  "queue_done": [
