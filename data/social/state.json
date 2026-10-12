@@ -2,17 +2,6 @@
  "posts": [
   {
    "date": "2026-09-15",
-   "ig_id": "17945887875336630",
-   "images": [
-    "assets/cards/2026-09-15-screener.jpg",
-    "assets/cards/about.jpg"
-   ],
-   "kind": "screener",
-   "source": "auto",
-   "threads_id": "17958159849212317"
-  },
-  {
-   "date": "2026-09-15",
    "ig_id": "17919845808222084",
    "images": [
     "assets/cards/blog-taesung.jpg",
@@ -463,6 +452,12 @@
    "kind": "screener",
    "source": "auto",
    "threads_id": "18036650147894920"
+  },
+  {
+   "date": "2026-10-13",
+   "kind": "us_brief",
+   "source": "brief",
+   "threads_id": "18384124666237312"
   }
  ],
  "queue_done": [
