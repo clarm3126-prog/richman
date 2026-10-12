@@ -2,37 +2,6 @@
  "posts": [
   {
    "checked": "2026-10-12",
-   "date": "2026-09-13",
-   "kind": "guide",
-   "media_id": "18078029951401231",
-   "metrics": {
-    "likes": 3,
-    "quotes": 0,
-    "replies": 0,
-    "reposts": 0,
-    "shares": 0,
-    "views": 56
-   },
-   "platform": "threads"
-  },
-  {
-   "checked": "2026-10-12",
-   "date": "2026-09-13",
-   "kind": "guide",
-   "media_id": "18120485992926398",
-   "metrics": {
-    "comments": 0,
-    "likes": 0,
-    "reach": 1,
-    "saved": 0,
-    "shares": 0,
-    "total_interactions": 0,
-    "views": 4
-   },
-   "platform": "instagram"
-  },
-  {
-   "checked": "2026-10-12",
    "date": "2026-09-14",
    "kind": "guide",
    "media_id": "17981359313897707",
@@ -1245,6 +1214,21 @@
     "views": 2
    },
    "platform": "instagram"
+  },
+  {
+   "checked": "2026-10-12",
+   "date": "2026-10-12",
+   "kind": "us_brief",
+   "media_id": "18090146687300341",
+   "metrics": {
+    "likes": 0,
+    "quotes": 0,
+    "replies": 0,
+    "reposts": 0,
+    "shares": 0,
+    "views": 1
+   },
+   "platform": "threads"
   }
  ],
  "updated": "2026-10-12"
