@@ -2,17 +2,6 @@
  "posts": [
   {
    "date": "2026-09-14",
-   "ig_id": "18113957492281205",
-   "images": [
-    "assets/cards/alert-rules.jpg",
-    "assets/cards/about.jpg"
-   ],
-   "kind": "guide",
-   "source": "manual",
-   "threads_id": "17981359313897707"
-  },
-  {
-   "date": "2026-09-14",
    "kind": "kr_close",
    "source": "brief",
    "threads_id": "18127041169853582"
@@ -463,6 +452,12 @@
    "kind": "us_brief",
    "source": "brief",
    "threads_id": "18090146687300341"
+  },
+  {
+   "date": "2026-10-12",
+   "kind": "kr_close",
+   "source": "brief",
+   "threads_id": "18132059800838457"
   }
  ],
  "queue_done": [
