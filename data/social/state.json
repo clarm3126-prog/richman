@@ -1,12 +1,6 @@
 {
  "posts": [
   {
-   "date": "2026-09-15",
-   "kind": "kr_close",
-   "source": "brief",
-   "threads_id": "18011651258958200"
-  },
-  {
    "date": "2026-09-16",
    "ig_id": "17949620469276399",
    "images": [
@@ -458,6 +452,12 @@
    "kind": "momentum",
    "source": "auto",
    "threads_id": "18117476819059172"
+  },
+  {
+   "date": "2026-10-14",
+   "kind": "us_brief",
+   "source": "brief",
+   "threads_id": "17902888044599855"
   }
  ],
  "queue_done": [
