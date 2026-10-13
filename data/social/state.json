@@ -2,17 +2,6 @@
  "posts": [
   {
    "date": "2026-09-15",
-   "ig_id": "17919845808222084",
-   "images": [
-    "assets/cards/blog-taesung.jpg",
-    "assets/cards/about.jpg"
-   ],
-   "kind": "trade_log",
-   "source": "manual",
-   "threads_id": "18175469593441199"
-  },
-  {
-   "date": "2026-09-15",
    "kind": "us_brief",
    "source": "brief",
    "threads_id": "18109574273175302"
@@ -458,6 +447,12 @@
    "kind": "us_brief",
    "source": "brief",
    "threads_id": "18384124666237312"
+  },
+  {
+   "date": "2026-10-13",
+   "kind": "kr_close",
+   "source": "brief",
+   "threads_id": "18166844590482671"
   }
  ],
  "queue_done": [
