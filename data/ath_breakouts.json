@@ -1,1 +1,1 @@
-{"trading_day":"20261014","intraday":[],"close":[],"updated":"2026-10-14 03:07:58 KST"}
+{"trading_day":"20261014","intraday":[{"code":"028670","name":"팬오션","market":"KOSPI","price":7340,"change":12.06,"ath":6600.0,"ath_date":"20260303","is_all_time":false,"base_days":225,"volume":13216658,"vol_ratio":3.9,"supply_demand":true}],"close":[],"updated":"2026-10-14 13:48:31 KST"}
