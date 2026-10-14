@@ -2,17 +2,6 @@
  "posts": [
   {
    "date": "2026-09-16",
-   "ig_id": "17949620469276399",
-   "images": [
-    "assets/cards/promo-what.jpg",
-    "assets/cards/about.jpg"
-   ],
-   "kind": "lesson",
-   "source": "manual",
-   "threads_id": "18124155742658582"
-  },
-  {
-   "date": "2026-09-16",
    "kind": "us_brief",
    "source": "brief",
    "threads_id": "17877949782651892"
@@ -458,6 +447,12 @@
    "kind": "us_brief",
    "source": "brief",
    "threads_id": "17902888044599855"
+  },
+  {
+   "date": "2026-10-14",
+   "kind": "kr_close",
+   "source": "brief",
+   "threads_id": "18109529564601451"
   }
  ],
  "queue_done": [
