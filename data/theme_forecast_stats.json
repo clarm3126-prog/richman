@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-10 16:13:22 KST",
+  "updated": "2026-10-17 14:38:24 KST",
   "status": "ok",
   "_읽는_법": [
     "avg_hit_rate 는 **예측한 상위 5개** 가운데 N일 뒤 실제 상위 20에 든 비율이다. 「오늘 뜬 테마가 남을 확률」이 아니다.",
@@ -9,63 +9,63 @@
   "baseline_random_7d": {
     "slots": 20,
     "n_periods": 30,
-    "hit_rate": 7.5,
+    "hit_rate": 7.6,
     "themes_min": 264,
-    "themes_max": 267,
+    "themes_max": 266,
     "note": "날짜마다 그날 테마 수로 재어 평균. 테마 수가 날마다 갈려서 한 숫자로 못 적는다."
   },
   "baseline_random_30d": {
     "slots": 20,
     "n_periods": 30,
-    "hit_rate": 7.5,
+    "hit_rate": 7.6,
     "themes_min": 264,
-    "themes_max": 267,
+    "themes_max": 266,
     "note": "날짜마다 그날 테마 수로 재어 평균. 테마 수가 날마다 갈려서 한 숫자로 못 적는다."
   },
   "baseline_naive_7d_top5": {
-    "n_periods": 27,
+    "n_periods": 25,
     "days_forward": 7,
-    "avg_hit_rate": 25.2,
-    "avg_change_after": 0.34
+    "avg_hit_rate": 28.8,
+    "avg_change_after": 0.24
   },
   "baseline_naive_14d_top5": {
     "n_periods": 27,
     "days_forward": 14,
     "avg_hit_rate": 24.4,
-    "avg_change_after": 0.42
+    "avg_change_after": 0.21
   },
   "baseline_naive_30d_top5": {
-    "n_periods": 30,
+    "n_periods": 29,
     "days_forward": 30,
-    "avg_hit_rate": 10.7,
-    "avg_change_after": 0.25
+    "avg_hit_rate": 13.1,
+    "avg_change_after": 0.2
   },
-  "n_archives": 103,
-  "n_eligible_7d": 98,
-  "n_eligible_14d": 94,
-  "n_eligible_30d": 83,
+  "n_archives": 107,
+  "n_eligible_7d": 103,
+  "n_eligible_14d": 98,
+  "n_eligible_30d": 89,
   "stats_7d_top5": {
     "n_periods": 30,
     "days_forward": 7,
     "avg_hit_rate": 26.7,
-    "avg_change_after": 0.45
+    "avg_change_after": 0.09
   },
   "stats_7d_top10": {
     "n_periods": 30,
     "days_forward": 7,
-    "avg_hit_rate": 22.7,
-    "avg_change_after": 0.49
+    "avg_hit_rate": 22.3,
+    "avg_change_after": 0.1
   },
   "stats_14d_top5": {
     "n_periods": 30,
     "days_forward": 14,
-    "avg_hit_rate": 14.7,
-    "avg_change_after": 0.55
+    "avg_hit_rate": 16.7,
+    "avg_change_after": 0.38
   },
   "stats_30d_top5": {
     "n_periods": 30,
     "days_forward": 30,
-    "avg_hit_rate": 14.0,
-    "avg_change_after": 0.26
+    "avg_hit_rate": 14.7,
+    "avg_change_after": 0.23
   }
 }
