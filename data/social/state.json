@@ -1,12 +1,6 @@
 {
  "posts": [
   {
-   "date": "2026-09-19",
-   "kind": "lesson",
-   "source": "manual",
-   "threads_id": "18078981263706777"
-  },
-  {
    "date": "2026-09-21",
    "kind": "us_brief",
    "source": "brief",
@@ -464,6 +458,12 @@
    "kind": "momentum",
    "source": "auto",
    "threads_id": "18137855050727037"
+  },
+  {
+   "date": "2026-10-20",
+   "kind": "us_brief",
+   "source": "brief",
+   "threads_id": "18106345766337894"
   }
  ],
  "queue_done": [
