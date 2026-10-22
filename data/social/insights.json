@@ -1,68 +1,7 @@
 {
  "posts": [
   {
-   "checked": "2026-10-22",
-   "date": "2026-09-22",
-   "kind": "momentum",
-   "media_id": "17891914773611204",
-   "metrics": {
-    "likes": 2,
-    "quotes": 0,
-    "replies": 0,
-    "reposts": 0,
-    "shares": 0,
-    "views": 36
-   },
-   "platform": "threads"
-  },
-  {
-   "checked": "2026-10-22",
-   "date": "2026-09-22",
-   "kind": "momentum",
-   "media_id": "18171749023458273",
-   "metrics": {
-    "comments": 0,
-    "likes": 0,
-    "reach": 1,
-    "saved": 0,
-    "shares": 0,
-    "total_interactions": 0,
-    "views": 2
-   },
-   "platform": "instagram"
-  },
-  {
-   "checked": "2026-10-22",
-   "date": "2026-09-23",
-   "kind": "us_brief",
-   "media_id": "18028929275888234",
-   "metrics": {
-    "likes": 1,
-    "quotes": 0,
-    "replies": 0,
-    "reposts": 0,
-    "shares": 0,
-    "views": 48
-   },
-   "platform": "threads"
-  },
-  {
-   "checked": "2026-10-22",
-   "date": "2026-09-23",
-   "kind": "kr_close",
-   "media_id": "18263613643307411",
-   "metrics": {
-    "likes": 0,
-    "quotes": 0,
-    "replies": 0,
-    "reposts": 0,
-    "shares": 0,
-    "views": 17
-   },
-   "platform": "threads"
-  },
-  {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-09-23",
    "kind": "theme",
    "media_id": "18003605237793877",
@@ -77,7 +16,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-09-23",
    "kind": "theme",
    "media_id": "18126328855890512",
@@ -93,7 +32,7 @@
    "platform": "instagram"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-09-24",
    "kind": "us_brief",
    "media_id": "18017572187955094",
@@ -108,7 +47,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-09-24",
    "kind": "screener",
    "media_id": "18073298069723977",
@@ -123,7 +62,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-09-24",
    "kind": "screener",
    "media_id": "18177763039428249",
@@ -139,7 +78,7 @@
    "platform": "instagram"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-09-25",
    "kind": "us_brief",
    "media_id": "17986639326074310",
@@ -154,7 +93,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-09-25",
    "kind": "momentum",
    "media_id": "18148580113552477",
@@ -169,7 +108,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-09-25",
    "kind": "momentum",
    "media_id": "18070169129768712",
@@ -185,7 +124,7 @@
    "platform": "instagram"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-09-28",
    "kind": "us_brief",
    "media_id": "18098852411533290",
@@ -200,7 +139,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-09-28",
    "kind": "kr_close",
    "media_id": "18114648362010291",
@@ -215,7 +154,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-09-28",
    "kind": "theme",
    "media_id": "17910834198499912",
@@ -230,7 +169,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-09-28",
    "kind": "theme",
    "media_id": "18124749445861676",
@@ -246,7 +185,7 @@
    "platform": "instagram"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-09-29",
    "kind": "us_brief",
    "media_id": "18016176425949922",
@@ -261,7 +200,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-09-29",
    "kind": "kr_close",
    "media_id": "18376647190237988",
@@ -276,7 +215,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-09-29",
    "kind": "theme",
    "media_id": "18110308975998802",
@@ -291,7 +230,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-09-29",
    "kind": "theme",
    "media_id": "18110623565523926",
@@ -307,7 +246,7 @@
    "platform": "instagram"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-09-30",
    "kind": "us_brief",
    "media_id": "18116537311974864",
@@ -322,7 +261,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-09-30",
    "kind": "kr_close",
    "media_id": "18460294267185977",
@@ -337,7 +276,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-09-30",
    "kind": "screener",
    "media_id": "18196034173391710",
@@ -352,7 +291,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-09-30",
    "kind": "screener",
    "media_id": "17993287910845424",
@@ -368,7 +307,7 @@
    "platform": "instagram"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-01",
    "kind": "us_brief",
    "media_id": "18171141100454949",
@@ -383,7 +322,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-01",
    "kind": "kr_close",
    "media_id": "17917003869452679",
@@ -398,7 +337,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-01",
    "kind": "momentum",
    "media_id": "18126087607869948",
@@ -413,7 +352,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-01",
    "kind": "momentum",
    "media_id": "18114132875077909",
@@ -429,7 +368,7 @@
    "platform": "instagram"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-02",
    "kind": "us_brief",
    "media_id": "18131277439685952",
@@ -444,7 +383,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-02",
    "kind": "kr_close",
    "media_id": "18051287948812615",
@@ -459,7 +398,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-02",
    "kind": "theme",
    "media_id": "17906223720570288",
@@ -474,7 +413,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-02",
    "kind": "theme",
    "media_id": "18394028017165305",
@@ -490,7 +429,7 @@
    "platform": "instagram"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-05",
    "kind": "us_brief",
    "media_id": "18107071487266209",
@@ -505,7 +444,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-05",
    "kind": "screener",
    "media_id": "18028644080898996",
@@ -520,7 +459,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-05",
    "kind": "screener",
    "media_id": "17959012440249159",
@@ -536,7 +475,7 @@
    "platform": "instagram"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-06",
    "kind": "us_brief",
    "media_id": "18198329983389377",
@@ -551,7 +490,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-06",
    "kind": "kr_close",
    "media_id": "17995675287034034",
@@ -566,7 +505,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-06",
    "kind": "screener",
    "media_id": "18127652638890015",
@@ -581,7 +520,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-06",
    "kind": "screener",
    "media_id": "18097305278643608",
@@ -597,7 +536,7 @@
    "platform": "instagram"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-07",
    "kind": "us_brief",
    "media_id": "17959972878231220",
@@ -612,7 +551,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-07",
    "kind": "kr_close",
    "media_id": "18139562620628045",
@@ -627,7 +566,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-07",
    "kind": "momentum",
    "media_id": "18469564507141465",
@@ -642,7 +581,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-07",
    "kind": "momentum",
    "media_id": "18135977704647480",
@@ -658,7 +597,7 @@
    "platform": "instagram"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-08",
    "kind": "us_brief",
    "media_id": "18437706736181690",
@@ -673,7 +612,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-08",
    "kind": "kr_close",
    "media_id": "18104596964255557",
@@ -688,7 +627,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-08",
    "kind": "theme",
    "media_id": "18154885195525062",
@@ -703,7 +642,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-08",
    "kind": "theme",
    "media_id": "18130134511809568",
@@ -719,7 +658,7 @@
    "platform": "instagram"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-09",
    "kind": "us_brief",
    "media_id": "17909508207505448",
@@ -734,7 +673,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-09",
    "kind": "screener",
    "media_id": "18074300003779382",
@@ -749,7 +688,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-09",
    "kind": "screener",
    "media_id": "18628149532045257",
@@ -765,7 +704,7 @@
    "platform": "instagram"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-12",
    "kind": "us_brief",
    "media_id": "18090146687300341",
@@ -780,7 +719,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-12",
    "kind": "kr_close",
    "media_id": "18132059800838457",
@@ -795,7 +734,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-12",
    "kind": "screener",
    "media_id": "18036650147894920",
@@ -810,7 +749,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-12",
    "kind": "screener",
    "media_id": "18025577525869686",
@@ -826,7 +765,7 @@
    "platform": "instagram"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-13",
    "kind": "us_brief",
    "media_id": "18384124666237312",
@@ -841,7 +780,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-13",
    "kind": "kr_close",
    "media_id": "18166844590482671",
@@ -856,7 +795,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-13",
    "kind": "momentum",
    "media_id": "18117476819059172",
@@ -871,7 +810,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-13",
    "kind": "momentum",
    "media_id": "17898415383393885",
@@ -887,7 +826,7 @@
    "platform": "instagram"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-14",
    "kind": "us_brief",
    "media_id": "17902888044599855",
@@ -902,7 +841,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-14",
    "kind": "kr_close",
    "media_id": "18109529564601451",
@@ -917,7 +856,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-14",
    "kind": "theme",
    "media_id": "17954063283266902",
@@ -932,7 +871,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-14",
    "kind": "theme",
    "media_id": "18081821294705801",
@@ -948,7 +887,7 @@
    "platform": "instagram"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-15",
    "kind": "us_brief",
    "media_id": "18465440476139070",
@@ -963,7 +902,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-15",
    "kind": "kr_close",
    "media_id": "18107117503958193",
@@ -978,7 +917,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-15",
    "kind": "screener",
    "media_id": "18144462688586568",
@@ -993,7 +932,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-15",
    "kind": "screener",
    "media_id": "18569943481074955",
@@ -1009,7 +948,7 @@
    "platform": "instagram"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-16",
    "kind": "us_brief",
    "media_id": "18232079839326027",
@@ -1024,7 +963,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-16",
    "kind": "kr_close",
    "media_id": "18123248095936559",
@@ -1039,7 +978,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-16",
    "kind": "momentum",
    "media_id": "18061252211543097",
@@ -1054,7 +993,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-16",
    "kind": "momentum",
    "media_id": "17990837099859323",
@@ -1070,7 +1009,7 @@
    "platform": "instagram"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-19",
    "kind": "us_brief",
    "media_id": "17992368456025066",
@@ -1085,7 +1024,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-19",
    "kind": "kr_close",
    "media_id": "18144386929607503",
@@ -1100,7 +1039,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-19",
    "kind": "momentum",
    "media_id": "18137855050727037",
@@ -1115,7 +1054,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-19",
    "kind": "momentum",
    "media_id": "17911399167503173",
@@ -1131,7 +1070,7 @@
    "platform": "instagram"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-20",
    "kind": "us_brief",
    "media_id": "18106345766337894",
@@ -1146,7 +1085,7 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-20",
    "kind": "kr_close",
    "media_id": "18080478242371101",
@@ -1156,12 +1095,12 @@
     "replies": 0,
     "reposts": 0,
     "shares": 0,
-    "views": 7
+    "views": 8
    },
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-20",
    "kind": "theme",
    "media_id": "18065158871716888",
@@ -1171,12 +1110,12 @@
     "replies": 0,
     "reposts": 0,
     "shares": 0,
-    "views": 2
+    "views": 5
    },
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-20",
    "kind": "theme",
    "media_id": "18096810326370416",
@@ -1192,25 +1131,10 @@
    "platform": "instagram"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-21",
    "kind": "us_brief",
    "media_id": "17921780727444364",
-   "metrics": {
-    "likes": 0,
-    "quotes": 0,
-    "replies": 0,
-    "reposts": 0,
-    "shares": 0,
-    "views": 2
-   },
-   "platform": "threads"
-  },
-  {
-   "checked": "2026-10-22",
-   "date": "2026-10-21",
-   "kind": "kr_close",
-   "media_id": "18124778852490207",
    "metrics": {
     "likes": 0,
     "quotes": 0,
@@ -1222,7 +1146,22 @@
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
+   "date": "2026-10-21",
+   "kind": "kr_close",
+   "media_id": "18124778852490207",
+   "metrics": {
+    "likes": 0,
+    "quotes": 0,
+    "replies": 0,
+    "reposts": 0,
+    "shares": 0,
+    "views": 5
+   },
+   "platform": "threads"
+  },
+  {
+   "checked": "2026-10-23",
    "date": "2026-10-21",
    "kind": "screener",
    "media_id": "18099052196194325",
@@ -1232,12 +1171,12 @@
     "replies": 0,
     "reposts": 0,
     "shares": 0,
-    "views": 1
+    "views": 2
    },
    "platform": "threads"
   },
   {
-   "checked": "2026-10-22",
+   "checked": "2026-10-23",
    "date": "2026-10-21",
    "kind": "screener",
    "media_id": "18217426423348397",
@@ -1251,7 +1190,68 @@
     "views": 0
    },
    "platform": "instagram"
+  },
+  {
+   "checked": "2026-10-23",
+   "date": "2026-10-22",
+   "kind": "us_brief",
+   "media_id": "18017343566955254",
+   "metrics": {
+    "likes": 0,
+    "quotes": 0,
+    "replies": 0,
+    "reposts": 0,
+    "shares": 0,
+    "views": 6
+   },
+   "platform": "threads"
+  },
+  {
+   "checked": "2026-10-23",
+   "date": "2026-10-22",
+   "kind": "kr_close",
+   "media_id": "17948978187345835",
+   "metrics": {
+    "likes": 0,
+    "quotes": 0,
+    "replies": 0,
+    "reposts": 0,
+    "shares": 0,
+    "views": 5
+   },
+   "platform": "threads"
+  },
+  {
+   "checked": "2026-10-23",
+   "date": "2026-10-22",
+   "kind": "momentum",
+   "media_id": "18091330046299757",
+   "metrics": {
+    "likes": 0,
+    "quotes": 0,
+    "replies": 0,
+    "reposts": 0,
+    "shares": 0,
+    "views": 3
+   },
+   "platform": "threads"
+  },
+  {
+   "checked": "2026-10-23",
+   "date": "2026-10-22",
+   "kind": "momentum",
+   "media_id": "18643297021022734",
+   "metrics": {
+    "comments": 0,
+    "likes": 0,
+    "reach": 0,
+    "saved": 0,
+    "shares": 0,
+    "total_interactions": 0,
+    "views": 0
+   },
+   "platform": "instagram"
   }
  ],
- "updated": "2026-10-22"
+ "updated": "2026-10-23"
 }
