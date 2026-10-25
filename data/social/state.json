@@ -2,12 +2,6 @@
  "posts": [
   {
    "date": "2026-09-25",
-   "kind": "us_brief",
-   "source": "brief",
-   "threads_id": "17986639326074310"
-  },
-  {
-   "date": "2026-09-25",
    "ig_id": "18070169129768712",
    "images": [
     "assets/cards/2026-09-25-momentum.jpg",
@@ -464,6 +458,12 @@
    "kind": "theme",
    "source": "auto",
    "threads_id": "17924707470436450"
+  },
+  {
+   "date": "2026-10-26",
+   "kind": "us_brief",
+   "source": "brief",
+   "threads_id": "18145429714510158"
   }
  ],
  "queue_done": [
