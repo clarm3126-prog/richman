@@ -1,17 +1,6 @@
 {
  "posts": [
   {
-   "date": "2026-09-25",
-   "ig_id": "18070169129768712",
-   "images": [
-    "assets/cards/2026-09-25-momentum.jpg",
-    "assets/cards/about.jpg"
-   ],
-   "kind": "momentum",
-   "source": "auto",
-   "threads_id": "18148580113552477"
-  },
-  {
    "date": "2026-09-28",
    "kind": "us_brief",
    "source": "brief",
@@ -464,6 +453,12 @@
    "kind": "us_brief",
    "source": "brief",
    "threads_id": "18145429714510158"
+  },
+  {
+   "date": "2026-10-26",
+   "kind": "kr_close",
+   "source": "brief",
+   "threads_id": "18102193745069796"
   }
  ],
  "queue_done": [
