@@ -1189,6 +1189,21 @@
     "views": 0
    },
    "platform": "instagram"
+  },
+  {
+   "checked": "2026-10-26",
+   "date": "2026-10-26",
+   "kind": "us_brief",
+   "media_id": "18145429714510158",
+   "metrics": {
+    "likes": 0,
+    "quotes": 0,
+    "replies": 0,
+    "reposts": 0,
+    "shares": 0,
+    "views": 2
+   },
+   "platform": "threads"
   }
  ],
  "updated": "2026-10-26"
