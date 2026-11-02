@@ -1170,7 +1170,7 @@
     "replies": 0,
     "reposts": 0,
     "shares": 0,
-    "views": 10
+    "views": 11
    },
    "platform": "threads"
   },
@@ -1189,6 +1189,21 @@
     "views": 0
    },
    "platform": "instagram"
+  },
+  {
+   "checked": "2026-11-02",
+   "date": "2026-11-02",
+   "kind": "us_brief",
+   "media_id": "18147617707579002",
+   "metrics": {
+    "likes": 1,
+    "quotes": 0,
+    "replies": 1,
+    "reposts": 0,
+    "shares": 0,
+    "views": 9
+   },
+   "platform": "threads"
   }
  ],
  "updated": "2026-11-02"
