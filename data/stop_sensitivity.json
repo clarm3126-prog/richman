@@ -1,38 +1,38 @@
 {
-  "updated": "2026-11-05 02:02:53 KST",
+  "updated": "2026-11-06 02:14:47 KST",
   "category": "minervini_strong",
   "days_forward": 30,
   "trailing": "+20% MA20 · +50% MA50 (손절선만 바꾼다)",
   "period": {
     "first_entry": "20260511",
-    "last_entry": "20260917",
-    "entry_days": 83,
-    "codes": 102,
+    "last_entry": "20260918",
+    "entry_days": 84,
+    "codes": 103,
     "index": {
       "from": "20260511",
-      "to": "20261104",
-      "change_pct": -27.3,
+      "to": "20261105",
+      "change_pct": -31.2,
       "high": 9114.55,
-      "low": 5469.47,
-      "max_drawdown_pct": -40.0
+      "low": 5383.8,
+      "max_drawdown_pct": -40.9
     }
   },
   "levels": [
     {
       "stop_pct": -5,
       "label": "-5%",
-      "count": 1389,
-      "avg_return": -5.15,
-      "median_return": -6.58,
+      "count": 1409,
+      "avg_return": -5.14,
+      "median_return": -6.57,
       "win_rate": 15.0,
       "min_return": -22.18,
-      "stopped_out_pct": 81.4
+      "stopped_out_pct": 81.3
     },
     {
       "stop_pct": -7,
       "label": "-7%",
-      "count": 1389,
-      "avg_return": -5.88,
+      "count": 1409,
+      "avg_return": -5.9,
       "median_return": -8.33,
       "win_rate": 17.4,
       "min_return": -22.95,
@@ -41,18 +41,18 @@
     {
       "stop_pct": -10,
       "label": "-10%",
-      "count": 1389,
-      "avg_return": -6.91,
+      "count": 1409,
+      "avg_return": -6.94,
       "median_return": -11.15,
       "win_rate": 20.7,
       "min_return": -24.27,
-      "stopped_out_pct": 70.7
+      "stopped_out_pct": 70.8
     },
     {
       "stop_pct": -12,
       "label": "-12%",
-      "count": 1389,
-      "avg_return": -7.47,
+      "count": 1409,
+      "avg_return": -7.51,
       "median_return": -12.8,
       "win_rate": 22.6,
       "min_return": -25.65,
@@ -61,21 +61,21 @@
     {
       "stop_pct": -15,
       "label": "-15%",
-      "count": 1389,
-      "avg_return": -8.15,
+      "count": 1409,
+      "avg_return": -8.19,
       "median_return": -15.49,
-      "win_rate": 24.9,
+      "win_rate": 24.8,
       "min_return": -29.68,
       "stopped_out_pct": 58.0
     },
     {
       "stop_pct": null,
       "label": "안 걸면",
-      "count": 1389,
-      "avg_return": -10.8,
+      "count": 1409,
+      "avg_return": -10.85,
       "median_return": -10.32,
-      "win_rate": 29.6,
-      "min_return": -60.9,
+      "win_rate": 29.5,
+      "min_return": -61.16,
       "stopped_out_pct": 0.0
     }
   ]
