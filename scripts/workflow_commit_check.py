@@ -80,43 +80,114 @@ WRITE_ATTRS = {"write_text", "write_bytes", "mkdir", "touch"}
 WRITE_FUNCS = {"save_json", "write_json", "dump_json", "save_text", "atomic_write"}
 
 
+# `_literal` 이 돌려주는 「모르겠다」. **`None` 과 달라야 한다.**
+#
+# 12318 이 준 규칙(「빈 값을 아니다로 읽지 않는다」)을 이 파일에서는
+# **한 갈래에만** 넣어 뒀다. 파싱 실패는 `UNPARSED` 로 알리면서,
+# **파싱은 됐고 경로만 못 짚은 쪽은** 그냥 `None` 이라
+# "우리 뿌리가 아니다"와 한 통에 섞였다. 그래서 쓰는 자리를 못 짚고도
+# 조용히 넘어가, 담기지 않는 파일이 있어도 "이상 없음"이 찍힌다.
+# (2026-11-10. 12318 이 자기 DM 판정기에서 같은 반쪽을 찾고 알려줬다 —
+#  그쪽은 「아님」 갈래에만 근거를 남겨, DM 이 나갈 사람 쪽이 비어 있었다.)
+#
+# **글자로 두면 안 된다.** 처음에 `"<모르겠다>"` 로 뒀더니 `_assigns` 의
+# `if lit:` 이 참으로 읽어 **가짜 경로로 저장**했고, 그 이름을 쓰는 자리가
+# 전부 「이름이 둘」이 되어 되레 더 눈멀었다. 거짓으로 읽히게 둔다 —
+# 혹시 빠뜨린 `if lit:` 이 있어도 「없다」로 읽히고 경로로는 안 쓰인다.
+class _Unknown:
+    __slots__ = ()
+
+    def __repr__(self):
+        return "<모르겠다>"
+
+    def __bool__(self):
+        return False
+
+
+UNKNOWN = _Unknown()
+
+
 def _literal(node, names):
-    """이 마디가 가리키는 data/ 경로. 모르면 None.
+    """이 마디가 가리키는 data/ 경로.
+
+    **셋을 구분해 돌려준다. 뒤의 둘을 섞으면 안 된다.**
+
+      ``"data/x"``  짚었다
+      ``None``      우리 뿌리(`data/`·`assets/`)가 아니다 — 볼 것 없다
+      ``UNKNOWN``   **못 짚었다** — 뿌리일 수도 있다. 조용히 넘기면 안 된다
 
     `"data/x"` · `Path("data/x")` · `Path("data") / "x"` ·
     `ROOT / "data" / "social"` · `STATE_DIR / f"{name}.json"` 을 따라간다.
     뒤의 둘을 놓쳐서 옆 세션 코드를 통째로 못 본 적이 있다.
     """
-    if isinstance(node, ast.Constant) and isinstance(node.value, str):
-        v = node.value
-        return v if any(v == r or v.startswith(r + "/") for r in ROOTS) else None
+    if isinstance(node, ast.Constant):
+        # 글자 상수는 보면 바로 안다 — 뿌리면 경로, 아니면 볼 것 없다
+        if isinstance(node.value, str):
+            v = node.value
+            return v if any(v == r or v.startswith(r + "/") for r in ROOTS) else None
+        return None
     if isinstance(node, ast.Name):
         got = names.get(node.id)
-        return next(iter(got)) if got and len(got) == 1 else None
+        if got and len(got) == 1:
+            return next(iter(got))
+        # 못 이은 이름. 뿌리를 가리킬 수도 있어서 「아니다」로 쓸 수 없다
+        return UNKNOWN
+    if isinstance(node, ast.Attribute) and node.attr == "parent":
+        # `out_path.parent.mkdir(...)` — 디렉터리를 만드는 흔한 꼴이다.
+        # 이걸 모르면 「모르겠다」가 여덟 곳 쏟아져 정작 봐야 할 것이 묻힌다.
+        inner = _literal(node.value, names)
+        if inner is None or inner is UNKNOWN:
+            return inner
+        head = inner.rstrip("/").rsplit("/", 1)[0]
+        return head if any(head == r or head.startswith(r + "/") for r in ROOTS) else None
     if isinstance(node, ast.Call) and getattr(node.func, "id", "") == "Path":
-        return _literal(node.args[0], names) if node.args else None
+        return _literal(node.args[0], names) if node.args else UNKNOWN
     if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Div):
         left = _literal(node.left, names)
-        if left is None:
+        if left is None or left is UNKNOWN:
             # ROOT / "data" / ... — 왼쪽을 몰라도 뿌리 이름이면 거기서 시작한다
             if isinstance(node.right, ast.Constant) and node.right.value in ROOTS:
                 return node.right.value
-            return None
+            return left
         if isinstance(node.right, ast.Constant) and isinstance(node.right.value, str):
             return left.rstrip("/") + "/" + node.right.value
         # 변수나 f-string 이 붙으면 그 위 디렉터리까지만 안다
         return left
-    return None
+    return UNKNOWN
 
 
 def _assigns(nodes, names):
-    """`이름 = 경로` 를 모은다. 한 이름이 여러 경로를 가리킬 수 있다."""
-    for n in nodes:
-        if isinstance(n, ast.Assign) and len(n.targets) == 1 \
-                and isinstance(n.targets[0], ast.Name):
+    """`이름 = 경로` 를 모은다. 한 이름이 여러 경로를 가리킬 수 있다.
+
+    ⚠️ **한 번만 훑으면 이어진 이름을 놓친다.**
+
+        hist_dir = Path("data/history")
+        path = hist_dir / f"{date}.json"      ← hist_dir 를 먼저 알아야 풀린다
+
+    `_walk_scope` 는 `stack.pop()` 으로 훑어서 **마디가 소스 순서로 오지
+    않는다.** 그래서 아래 줄을 먼저 보는 일이 생기고, 그때는 `hist_dir` 이
+    아직 없어서 `path` 가 안 풀린다.
+
+    ⚠️ **이게 지금 구멍을 만들고 있던 건 아니다.** 저 다섯 자리는 모두 같은
+    함수 안에 `hist_dir.mkdir()` 같은 **풀리는 줄이 따로 있어서** 디렉터리가
+    이미 잡혀 있었다. 고친 뒤에도 잡히는 경로는 하나도 안 늘었다(2026-11-10,
+    고치기 전 코드와 나란히 돌려 확인). 고치는 이유는 **「모르겠다」가 두
+    자리만 남게 해서**, 앞으로 `mkdir` 없이 한 줄로 쓰는 코드가 생기면 그게
+    묻히지 않고 보이게 하는 것이다.
+
+    → **더 안 늘어날 때까지 돈다.** 이어진 이름이 몇 단이어도 풀린다.
+    """
+    cand = [n for n in nodes
+            if isinstance(n, ast.Assign) and len(n.targets) == 1
+            and isinstance(n.targets[0], ast.Name)]
+    for _ in range(len(cand) + 1):
+        before = sum(len(v) for v in names.values())
+        for n in cand:
             lit = _literal(n.value, names)
             if lit:
                 names.setdefault(n.targets[0].id, set()).add(lit)
+        if sum(len(v) for v in names.values()) == before:
+            return
 
 
 def _walk_scope(node):
@@ -134,31 +205,64 @@ def _walk_scope(node):
         stack.extend(ast.iter_child_nodes(n))
 
 
-def _writes_in(nodes, names):
-    """이 마디들 안에서 실제로 쓰는 data/ 경로."""
+# 쓰기는 분명한데 **경로를 못 짚은 자리**. `(스크립트, 줄, 꼴)`.
+# 버리면 「쓰는 게 없다」와 구분이 안 된다 — `UNPARSED` 와 같은 뜻이고
+# 다른 점은 파일이 **읽히기는 했다**는 것뿐이다.
+UNSURE = set()
+
+
+def _root_name(node):
+    """`out_path.parent` · `d / f"{x}"` 처럼 얽힌 마디의 **맨 왼쪽 이름**.
+
+    그게 그 함수의 인자면, 경로는 **부르는 쪽이 정한다.** 거기서 잡히므로
+    여기서 「모르겠다」로 올리면 영원히 안 없어지는 잔소리가 된다.
+    """
+    while True:
+        if isinstance(node, ast.Name):
+            return node.id
+        if isinstance(node, ast.Attribute):
+            node = node.value
+        elif isinstance(node, ast.BinOp) and isinstance(node.op, ast.Div):
+            node = node.left
+        elif isinstance(node, ast.Call) and node.args:
+            node = node.args[0]
+        else:
+            return None
+
+
+def _writes_in(nodes, names, origin=None, params=()):
+    """이 마디들 안에서 실제로 쓰는 data/ 경로.
+
+    ⚠️ **경로를 못 짚은 쓰기를 버리지 않는다.** `UNSURE` 에 적어 두고
+    부르는 쪽이 사람에게 알린다. 버리면 쓰는 자리가 안 보이는 것을
+    "쓰는 게 없다"로 읽는다.
+    """
     out = set()
     for n in nodes:
         if not isinstance(n, ast.Call):
             continue
+        cands = []
         # path.write_text(...) · dir.mkdir(...)
         if isinstance(n.func, ast.Attribute) and n.func.attr in WRITE_ATTRS:
-            lit = _literal(n.func.value, names)
-            if lit:
-                out.add(lit)
+            cands.append((n.func.attr, n.func.value, _literal(n.func.value, names)))
         # save_json(path, ...) 같은 도우미
         fname = getattr(n.func, "id", None) or getattr(n.func, "attr", None)
         if fname in WRITE_FUNCS and n.args:
-            lit = _literal(n.args[0], names)
-            if lit:
-                out.add(lit)
+            cands.append((fname, n.args[0], _literal(n.args[0], names)))
         # open("data/x", "w") — json.dump 와 함께 쓰는 꼴
         if getattr(n.func, "id", "") == "open" and len(n.args) >= 2:
             mode = n.args[1]
             if isinstance(mode, ast.Constant) and isinstance(mode.value, str) \
                     and ("w" in mode.value or "a" in mode.value):
-                lit = _literal(n.args[0], names)
-                if lit:
-                    out.add(lit)
+                cands.append(("open", n.args[0], _literal(n.args[0], names)))
+        for what, node_, lit in cands:
+            if lit is UNKNOWN:
+                # 경로를 인자로 받는 도우미(`save_json(path, ...)`)는 뺀다.
+                # 부르는 쪽에서 `WRITE_FUNCS` 로 잡힌다.
+                if origin and _root_name(node_) not in params:
+                    UNSURE.add((origin, getattr(n, "lineno", 0), what))
+            elif lit:
+                out.add(lit)
     return out
 
 
@@ -170,12 +274,46 @@ def _tidy(paths):
     return {p for p in out if p not in SKIP}
 
 
+def _params(node):
+    """이 함수가 **인자로 받는** 이름들."""
+    a = node.args
+    out = {x.arg for x in list(a.posonlyargs) + list(a.args) + list(a.kwonlyargs)}
+    for v in (a.vararg, a.kwarg):
+        if v:
+            out.add(v.arg)
+    return out
+
+
+def _opaque(nodes, params):
+    """인자에서 **나온** 이름까지 모은다.
+
+        def save_json(path, data):
+            p = Path(path)              ← p 도 부르는 쪽이 정하는 것이다
+            p.parent.mkdir(...)
+
+    `path` 만 인자로 알고 `p` 를 모르면, 이 도우미 한 줄이 검사기 보고에
+    **매번 뜬다.** 늘 한 줄 뜨는 검사기는 사람이 안 본다.
+    """
+    out = set(params)
+    cand = [n for n in nodes
+            if isinstance(n, ast.Assign) and len(n.targets) == 1
+            and isinstance(n.targets[0], ast.Name)]
+    for _ in range(len(cand) + 1):
+        before = len(out)
+        for n in cand:
+            if _root_name(n.value) in out:
+                out.add(n.targets[0].id)
+        if len(out) == before:
+            break
+    return frozenset(out)
+
+
 def _scopes(tree):
-    """(함수 이름 또는 None, 그 안의 마디들, 그 안에서 보이는 이름들)."""
+    """(함수 이름 또는 None, 마디들, 보이는 이름들, 경로를 모를 수밖에 없는 이름들)."""
     top = list(_walk_scope(tree))
     globals_ = {}
     _assigns(top, globals_)
-    yield None, top, globals_
+    yield None, top, globals_, frozenset()
     for node in ast.walk(tree):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             body = list(_walk_scope(node))
@@ -185,7 +323,7 @@ def _scopes(tree):
             # **이름을 먼저 다 모은다.** 쓰기를 먼저 보면 이름이 아직
             # 안 이어져 있어, 잡아야 할 것을 놓치고 "이상 없음"을 찍는다.
             _assigns(body, names)
-            yield node.name, body, names
+            yield node.name, body, names, _opaque(body, _params(node))
 
 
 # 파싱이 안 된 스크립트들. **빈 결과와 구분해야 한다.**
@@ -210,22 +348,29 @@ def written_paths(src, origin=None):
             UNPARSED.add(origin)
         return set()
     out = set()
-    for _, body, names in _scopes(tree):
-        out |= _writes_in(body, names)
+    for _, body, names, params in _scopes(tree):
+        out |= _writes_in(body, names, origin, params)
     return _tidy(out)
 
 
-def func_writes(src):
-    """함수 이름 → 그 함수가 쓰는 경로."""
+def func_writes(src, origin=None):
+    """함수 이름 → 그 함수가 쓰는 경로.
+
+    ⚠️ 여기도 **반쪽이었다.** `written_paths` 는 파싱 실패를 알리는데
+    이쪽은 `{}` 만 돌려줬다. 빌려 쓰는 모듈이 안 읽히면 그 모듈 함수들의
+    쓰기를 통째로 못 보면서 조용하다.
+    """
     try:
         tree = ast.parse(src)
     except SyntaxError:
+        if origin:
+            UNPARSED.add(origin)
         return {}
     out = {}
-    for name, body, names in _scopes(tree):
+    for name, body, names, params in _scopes(tree):
         if name is None:
             continue
-        w = _tidy(_writes_in(body, names))
+        w = _tidy(_writes_in(body, names, origin, params))
         if w:
             out[name] = w
     return out
@@ -363,7 +508,8 @@ def writes_for(workflow_text):
             if not cand:
                 continue
             seen.add(cand)
-            for fname, paths in func_writes((ROOT / cand).read_text(encoding="utf-8")).items():
+            borrowed_src = (ROOT / cand).read_text(encoding="utf-8")
+            for fname, paths in func_writes(borrowed_src, origin=cand).items():
                 if fname in borrowed:
                     out |= paths
     return _tidy(out), seen
@@ -382,22 +528,29 @@ def holes():
 
     쓰지도 담지도 않는 워크플로(점검·알림 전용)는 둘 다 비는 게 맞다.
     """
-    found, blind = [], []
+    found, blind, murky = [], [], []
     for y in sorted(WF.glob("*.yml")):
         text = y.read_text(encoding="utf-8")
+        before = set(UNSURE)
         writes, scripts = writes_for(text)
         if not scripts:
             continue
+        # ⚠️ **일부만 못 짚은 것도 말해야 한다.** `blind` 는 쓰기가 **하나도**
+        # 안 보일 때만 걸린다. 셋 중 둘만 짚고 하나를 못 짚으면, 그 하나가
+        # 안 담겨 있어도 "이상 없음"이 찍혔다. 반쪽이던 자리다.
+        mine = [u for u in (UNSURE - before) if u[0] in scripts]
         adds = adds_of(text)
         if "<전부>" in adds:
             continue
         if adds and not writes:
             blind.append((y.name, sorted(adds)))
             continue
+        if mine:
+            murky.append((y.name, sorted(mine)))
         for w in sorted(writes):
             if not any(w == a or w.startswith(a.rstrip("/") + "/") for a in adds):
                 found.append((y.name, w))
-    return found, blind
+    return found, blind, murky
 
 
 CASES = [
@@ -441,6 +594,42 @@ ADD_CASES = [
 ]
 
 
+# 「모르겠다」 시험. **이게 이 고침의 핵심이다.**
+#
+# 경로를 못 짚은 쓰기를 `None` 으로 돌려주면 부르는 쪽은 그걸 "쓰는 게
+# 없다"로 읽는다. 그러면 안 담기는 파일이 있어도 조용하다. 그래서
+# **「모르겠다」와 「우리 것 아니다」를 가려서** 앞은 올리고 뒤는 넘긴다.
+#
+# (경로, 짚어야 하는 것, 모르겠다고 올려야 하나)
+UNSURE_CASES = [
+    # 인자로 받는 도우미 — 부르는 쪽에서 잡힌다. 올리면 잔소리가 안 없어진다
+    ('def f(p):\n    p.write_text(x)', set(), False),
+    ('def f(img, out_path):\n    out_path.parent.mkdir()', set(), False),
+    # 인자에서 **나온** 이름도 같다 — common.py 의 save_json 이 이 꼴이다
+    ('def f(path, data):\n    p = Path(path)\n    p.parent.mkdir()\n'
+     '    p.write_text(x)', set(), False),
+    # 못 짚었고 인자도 아니다 — **반드시 올려야 한다.** mkdir 로 따로 잡히는
+    # 줄이 없으면 이게 유일한 단서다
+    ('def f():\n    q = pick()\n    q.write_text(x)', set(), True),
+    ('def f():\n    with open(choose(), "w") as fh:\n        fh.write(x)', set(), True),
+    # 우리 뿌리가 아니다 — 조용히 넘긴다. 올리면 노이즈다
+    ('Path("README.md").write_text(x)', set(), False),
+    ('def f():\n    Path("build/out.txt").write_text(x)', set(), False),
+    # `.parent` — 디렉터리 만드는 흔한 꼴. 짚어야 한다
+    ('OUT = Path("data/us/names.json")\ndef f():\n    OUT.parent.mkdir()',
+     {"data/us"}, False),
+    # 이어진 이름. `_walk_scope` 가 소스 순서로 안 줘서 한 번만 훑으면 놓친다
+    ('def f(x):\n    d = Path("data/a")\n    q = d / f"{x}.json"\n'
+     '    q.write_text(y)', {"data/a"}, False),
+    # 세 단으로 이어도 풀려야 한다
+    ('ROOT = Path("data")\ndef f(x):\n    d = ROOT / "hist"\n'
+     '    q = d / f"{x}.json"\n    q.write_text(y)', {"data/hist"}, False),
+    # 한 이름이 두 곳을 가리키면 모른다 — 짚은 척하면 안 된다
+    ('def f(c):\n    d = Path("data/a") if c else Path("data/b")\n'
+     '    d.write_text(y)', set(), True),
+]
+
+
 def selftest():
     """잡을 힘이 있는지, 그리고 헛걸리지 않는지 시험한다.
 
@@ -469,7 +658,21 @@ def selftest():
         print("  %s %-46s 얻음 %s" % ("✅" if ok else "❌", head, sorted(got) or "없음"))
         if not ok:
             print("     바랐던 것: %s" % (sorted(want) or "없음"))
-    total = len(CASES) + len(ADD_CASES)
+    print("\n■ 모르겠다고 말하는지")
+    for src, want, want_unsure in UNSURE_CASES:
+        UNSURE.clear()
+        got = written_paths(src, origin="t.py")
+        raised = bool(UNSURE)
+        ok = got == want and raised == want_unsure
+        bad += not ok
+        head = src.replace("\n", " ⏎ ")[:44]
+        print("  %s %-46s %s" % ("✅" if ok else "❌", head,
+                                 "모르겠다" if raised else (sorted(got) or "조용")))
+        if not ok:
+            print("     바랐던 것: %s · 모르겠다 %s"
+                  % (sorted(want) or "없음", "O" if want_unsure else "X"))
+    UNSURE.clear()
+    total = len(CASES) + len(ADD_CASES) + len(UNSURE_CASES)
     print("\n시험 %d개 중 %d개 실패" % (total, bad))
     return 1 if bad else 0
 
@@ -532,8 +735,8 @@ def main():
         return show_map()
     if "--prove" in sys.argv:
         return prove()
-    found, blind = holes()
-    if not found and not blind and not UNPARSED:
+    found, blind, murky = holes()
+    if not found and not blind and not murky and not UNPARSED:
         if "-v" in sys.argv:
             print("워크플로 커밋 목록: 이상 없음")
         return 0
@@ -559,6 +762,20 @@ def main():
             print("  %s  담는다: %s" % (wf, ", ".join(adds)))
         print("  (경로를 인자로 받아 쓰거나, 이 자가 모르는 꼴일 수 있습니다.")
         print("   손으로 확인하고 --test 에 그 꼴을 사례로 넣으세요)")
+    if murky:
+        if found or blind:
+            print("")
+        # **일부만 못 짚은 것.** 쓰기가 하나도 안 보이는 `blind` 와 달리
+        # 여기는 **몇 개는 짚고 몇 개는 못 짚었다.** 짚은 것만 보고
+        # "이상 없음"으로 읽으면, 못 짚은 쪽이 안 담겨 있어도 조용하다.
+        print("쓰는 자리를 일부 못 짚은 워크플로 %d개 — 짚은 것만으로 판단하면 안 됩니다"
+              % len(murky))
+        for wf, items in murky:
+            print("  %s" % wf)
+            for script, line, what in items:
+                print("    %s:%d  %s(...) 의 경로를 모릅니다" % (script, line, what))
+        print("  (그 줄이 쓰는 경로가 git add 목록에 있는지 손으로 보세요.")
+        print("   꼴을 알려줄 수 있으면 _literal 에 넣고 --test 에 사례를 더하세요)")
     return 1
 
 

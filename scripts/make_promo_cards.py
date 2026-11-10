@@ -181,7 +181,129 @@ CARDS = {
 }
 
 
+def _load(name):
+    """data/<name>.json. 없거나 깨졌으면 None.
+
+    ⚠️ **빈 dict 를 돌려주면 안 된다.** 부르는 쪽이 그걸 "숫자가 0" 으로
+    읽고 카드를 그려 버린다. 못 읽었으면 **카드를 아예 안 만든다** —
+    낡은 숫자로 그린 카드가 블로그와 화면에 같이 나가는 쪽이 더 나쁘다.
+    """
+    p = Path(__file__).resolve().parents[1] / "data" / ("%s.json" % name)
+    if not p.exists():
+        return None
+    try:
+        import json
+        return json.loads(p.read_text(encoding="utf-8"))
+    except Exception as e:
+        print("  %s.json 을 못 읽었습니다: %s" % (name, e))
+        return None
+
+
+def _pct(v):
+    """-5.94 → '-5.9%'. 카드는 소수점 한 자리로 맞춘다."""
+    return "%+.1f%%" % v if v > 0 else "%.1f%%" % v
+
+
+def _backtest_card():
+    """미너비니 30일 카드. `data/backtest_stats.json` 에서 읽는다.
+
+    ⚠️ **지수는 `rules.benchmark_matched` 로 견준다.** 전에는 기간 내내
+    들고 있던 `benchmark` 와 견줬는데, 평균 9.3일 들고 빠져나온 수익률을
+    넉 달 들고 있던 지수와 나란히 두면 **덜 들고 있어서 덜 잃은 것이
+    잘 고른 것처럼 보인다.** 화면에서는 2026-10 에 고쳤고(index.html),
+    이 카드에만 옛 비교가 남아 있었다.
+    """
+    d = _load("backtest_stats")
+    if not d:
+        return None
+    try:
+        h = d["categories"]["minervini_strong"]["30d"]
+        r = h["rules"]
+        bm = r["benchmark_matched"]
+    except (KeyError, TypeError):
+        print("  backtest_stats.json 의 꼴이 달라졌습니다 — 카드를 건너뜁니다")
+        return None
+    return {
+        "eyebrow": "조건에 걸린 날 사서 30거래일",
+        "headline": ["손절 하나로", "*%s → %s*" % (_pct(h["avg_return"]),
+                                                 _pct(r["avg_return"]))],
+        "rows": [
+            {"label": "검증한 종목",
+             "value": "%d개 · %s건" % (h["unique_codes"], format(h["count"], ","))},
+            # 「그냥 들고」와 「손절선만 빼기」는 다른 숫자다. 앞은 추적도 없고
+            # 뒤는 추적이 남는다. label 을 흐리게 쓰면 읽는 사람이 섞어 읽는다.
+            {"label": "아무 규칙 없이 들고", "value": "평균 %s" % _pct(h["avg_return"])},
+            {"label": "-7% 손절 + 추적",
+             "value": "평균 %s" % _pct(r["avg_return"]), "mark": True},
+            {"label": "같은 날수만 든 코스피", "value": "평균 %s" % _pct(bm["avg_return"])},
+            {"label": "제일 크게 깨진 한 건",
+             "value": "%s → %s" % (_pct(h["min_return"]), _pct(r["min_return"]))},
+        ],
+        "highlight": ("승률은 %s%%에서 %s%%로 떨어집니다. 자주 잘리는 대신 크게 "
+                      "깨지지 않습니다. 코스피는 평균 %s일만 들고 견줬고, "
+                      "거기엔 아직 밀립니다."
+                      % (h["win_rate"], r["win_rate"], r.get("avg_days", "?"))),
+        "handle": HANDLE,
+        "tagline": TAGLINE,
+    }
+
+
+def _stop_card():
+    """손절선 민감도 카드. `data/stop_sensitivity.json` 에서 읽는다."""
+    ss = _load("stop_sensitivity")
+    if not ss:
+        return None
+    lv = {x["label"]: x for x in (ss.get("levels") or [])}
+    need = ["-5%", "-7%", "-10%", "-15%", "안 걸면"]
+    if any(k not in lv for k in need):
+        print("  stop_sensitivity.json 에 손절선 단계가 빠졌습니다 — 건너뜁니다")
+        return None
+    rows = []
+    for k in ("-5%", "-7%", "-10%", "-15%"):
+        x = lv[k]
+        row = {"label": k,
+               "value": "평균 %s · 승률 %s%%" % (_pct(x["avg_return"]), x["win_rate"])}
+        # mark를 준 줄에만 왼쪽 막대가 붙는다. 내가 쓰는 값이 어느 것인지
+        # 글을 안 읽어도 보이게 하려는 것이다.
+        if k == "-7%":
+            row["mark"] = True
+        rows.append(row)
+    b = lv["안 걸면"]
+    # ⚠️ 「안 걸면」이라고만 쓰면 **그냥 들고로 읽힌다.** 트레일링은 남는다.
+    rows.append({"label": "손절선만 빼면",
+                 "value": "평균 %s · 최악 %s" % (_pct(b["avg_return"]),
+                                               _pct(b["min_return"]))})
+    idx = ((ss.get("period") or {}).get("index") or {}).get("change_pct")
+    tail = ("다만 이 기간 지수가 %s였습니다." % _pct(idx)) if idx is not None else ""
+    return {
+        "eyebrow": "조건 통과 %s건에 대입" % format(b["count"], ","),
+        "headline": ["손절선을 몇 %로", "*잡아야 하나*"],
+        "rows": rows,
+        "highlight": ("좁을수록 평균이 낫고 승률은 떨어집니다. 손절선만 뺀 것은 "
+                      "그냥 들고가 아닙니다 — 따라 올리는 기준은 남아 있습니다. "
+                      + tail).strip(),
+        "handle": HANDLE,
+        "tagline": TAGLINE,
+    }
+
+
+def _data_cards():
+    """data/ 를 읽어 만드는 카드들을 `CARDS` 에 끼운다.
+
+    못 읽은 카드는 **넣지 않는다.** 낡은 숫자로 그리는 것보다 안 그리는
+    쪽이 낫다 — 카드는 블로그 글과 화면에 같이 쓰여서 어긋나면 들킨다.
+    """
+    for key, build in (("promo-backtest.jpg", _backtest_card),
+                       ("stop-levels.jpg", _stop_card)):
+        c = build()
+        if c:
+            CARDS[key] = c
+        else:
+            print("  %s 는 숫자를 못 읽어 건너뜁니다" % key)
+
+
 def main():
+    _data_cards()
     card.build_cards(CARDS, card.render_promo_card)
 
 
