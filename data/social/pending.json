@@ -1,17 +1,1 @@
-{
- "figure_notes": [],
- "image_rels": [
-  "assets/cards/trade-taesung.jpg",
-  "assets/cards/about.jpg"
- ],
- "image_urls": [
-  "https://stage2.kr/assets/cards/trade-taesung.jpg",
-  "https://stage2.kr/assets/cards/about.jpg"
- ],
- "key": "f5065423b7b5",
- "kind": "trade_log",
- "platforms": [],
- "source": "manual",
- "texts": {},
- "threads_image": true
-}
+{}
