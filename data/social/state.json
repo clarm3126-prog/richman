@@ -2,12 +2,6 @@
  "posts": [
   {
    "date": "2026-10-19",
-   "kind": "kr_close",
-   "source": "brief",
-   "threads_id": "18144386929607503"
-  },
-  {
-   "date": "2026-10-19",
    "ig_id": "17911399167503173",
    "images": [
     "assets/cards/2026-10-19-momentum.jpg",
@@ -459,6 +453,12 @@
    "kind": "trade_log",
    "source": "manual",
    "threads_id": "17912690922586968"
+  },
+  {
+   "date": "2026-11-17",
+   "kind": "us_brief",
+   "source": "brief",
+   "threads_id": "17956201578306172"
   }
  ],
  "queue_done": [
