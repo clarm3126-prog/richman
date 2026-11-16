@@ -2,12 +2,6 @@
  "posts": [
   {
    "date": "2026-10-19",
-   "kind": "us_brief",
-   "source": "brief",
-   "threads_id": "17992368456025066"
-  },
-  {
-   "date": "2026-10-19",
    "kind": "kr_close",
    "source": "brief",
    "threads_id": "18144386929607503"
@@ -454,6 +448,17 @@
    "kind": "kr_close",
    "source": "brief",
    "threads_id": "18116189905871786"
+  },
+  {
+   "date": "2026-11-16",
+   "ig_id": "18010951358784059",
+   "images": [
+    "assets/cards/trade-taesung.jpg",
+    "assets/cards/about.jpg"
+   ],
+   "kind": "trade_log",
+   "source": "manual",
+   "threads_id": "17912690922586968"
   }
  ],
  "queue_done": [
@@ -463,6 +468,7 @@
   "f9b4cca3efc2",
   "c6cb7d89fcd2",
   "5aff1befc36f",
-  "3d272ed22eba"
+  "3d272ed22eba",
+  "f5065423b7b5"
  ]
 }
