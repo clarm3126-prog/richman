@@ -65,13 +65,25 @@ def values():
             out[prefix + ".bigwin"] = c.get("big_wins_20pct")
             out[prefix + ".bigloss"] = c.get("big_losses_neg10pct")
             idx = ((c.get("period") or {}).get("index") or {})
+            # ⚠️ `.index` 는 **백테스트 기간 내내 든 지수**다(5월~11월 한 덩이).
+            # 글에서 "같은 기간 코스피"로 쓰면 안 된다 — 30거래일 들고 나온
+            # 수익률을 여섯 달 지수 변동과 견주는 것이라 비교가 성립하지 않는다.
+            # 남겨 두는 건 "이 구간이 하락장이었다"를 말할 때 쓰기 때문이다.
             out[prefix + ".index"] = idx.get("change_pct")
             out[prefix + ".drawdown"] = idx.get("max_drawdown_pct")
+            # 견줄 때 쓰는 자. **픽마다 같은 날수만 지수를 들고 있던 값이다.**
+            #   .bench   = 그 horizon 을 꽉 채워 들었을 때의 지수 (30일 보유와 견준다)
+            #   r.bench  = 규칙이 실제로 들고 있던 날수만큼의 지수 (규칙과 견준다)
+            # 이 둘이 없어서 글들이 `.index` 를 "같은 기간 코스피"로 쓰고 있었다.
+            # 2026-10 에 화면을 고치고(index.html) 11-10 에 카드를 고쳤는데,
+            # 대기열 글은 두 달째 옛 비교를 그대로 들고 있었다(2026-11-16).
+            out[prefix + ".bench"] = (c.get("benchmark") or {}).get("avg_return")
             r = c.get("rules") or {}
             out[prefix + "r.win"] = r.get("win_rate")
             out[prefix + "r.avg"] = r.get("avg_return")
             out[prefix + "r.min"] = r.get("min_return")
             out[prefix + "r.days"] = r.get("avg_days")
+            out[prefix + "r.bench"] = (r.get("benchmark_matched") or {}).get("avg_return")
             # 점수대별. label 이 한글이라 자리로 잡는다.
             for slot, label in (("bot", "하위 25%"), ("mid", "가운데 50%"), ("top", "상위 25%")):
                 for x in (c.get("by_score") or []):

@@ -243,7 +243,37 @@ def prepare(dry_run=False, only=None, force=False, auto=False, queue_only=False,
         text, fig_notes = figures.refresh(raw_text, manual.get("figures"))
         for note in fig_notes:
             print(f"  [숫자] {note}")
-        targets = [p for p in (manual.get("platforms") or platforms) if p in platforms]
+        # 🔴 **큐 항목의 platforms 를 믿기 전에 꼴을 본다.**
+        #
+        # `platforms: "[threads, instagram]"` 처럼 따옴표가 붙으면 YAML 이
+        # 목록이 아니라 **글자열**로 읽는다. 그러면 아래 추리기가 글자 단위로
+        # 돌아 `[`·`t`·`h`… 를 견주고, 하나도 안 맞아 `targets` 가 빈다.
+        # 빈 채로 넘어가면 `publish()` 가 "발행할 내용 없음"으로 돌아서고,
+        # 올린 게 없으니 done 표시도 안 된다. **다음 날 같은 글을 다시 집는다.**
+        # 큐가 그 한 편에 멈춘 채 뒤에 쌓인 서른 편이 영영 안 나갔다.
+        # 실행은 매번 success 였고 아무도 안 알려줬다 (2026-11-16 에 찾음).
+        want = manual.get("platforms")
+        if isinstance(want, str):
+            raise SystemExit(
+                "큐 항목의 platforms 가 글자열입니다: %r\n"
+                "  따옴표를 빼고 목록으로 적으세요 — platforms: [threads]\n"
+                "  글 첫 줄: %s" % (want, (manual.get("text") or "").strip()[:40])
+            )
+        targets = [p for p in (want or platforms) if p in platforms]
+        # 빈 목록을 조용히 통과시키지 않는다. 「올릴 곳이 없다」와
+        # 「올릴 것이 없다」는 다른 말이고, 뒤쪽으로 읽히면 큐가 멈춘다.
+        if not targets:
+            print("큐 글의 올릴 플랫폼이 없습니다 - 멈춥니다")
+            print("  글이 바라는 곳: %s" % (want or "(설정 기본값)"))
+            print("  지금 쓸 수 있는 곳: %s" % (platforms or "없음"))
+            print("  둘이 안 겹칩니다. 큐 항목의 platforms 나 시크릿을 보세요.")
+            tell_owner(
+                "⚠️ <b>대기열 글을 올릴 곳이 없습니다</b>\n\n"
+                "글이 바라는 곳: %s\n쓸 수 있는 곳: %s\n\n%s"
+                % (want or "(기본값)", platforms or "없음",
+                   (manual.get("text") or "").strip()[:60])
+            )
+            return
         # 인스타는 해시태그로 도달이 갈리므로 자동 글과 같은 태그를 붙인다.
         # key는 태그를 뺀 본문으로 잡아야 설정에서 태그를 바꿔도 이미 올린
         # 글이 다시 올라가지 않는다.
