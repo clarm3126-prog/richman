@@ -1,17 +1,6 @@
 {
  "posts": [
   {
-   "date": "2026-10-19",
-   "ig_id": "17911399167503173",
-   "images": [
-    "assets/cards/2026-10-19-momentum.jpg",
-    "assets/cards/about.jpg"
-   ],
-   "kind": "momentum",
-   "source": "auto",
-   "threads_id": "18137855050727037"
-  },
-  {
    "date": "2026-10-20",
    "kind": "us_brief",
    "source": "brief",
@@ -459,6 +448,12 @@
    "kind": "us_brief",
    "source": "brief",
    "threads_id": "17956201578306172"
+  },
+  {
+   "date": "2026-11-17",
+   "kind": "lesson",
+   "source": "manual",
+   "threads_id": "18148099126504445"
   }
  ],
  "queue_done": [
@@ -469,6 +464,7 @@
   "c6cb7d89fcd2",
   "5aff1befc36f",
   "3d272ed22eba",
-  "f5065423b7b5"
+  "f5065423b7b5",
+  "d83c143659d7"
  ]
 }
