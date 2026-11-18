@@ -1,17 +1,6 @@
 {
  "posts": [
   {
-   "date": "2026-10-20",
-   "ig_id": "18096810326370416",
-   "images": [
-    "assets/cards/2026-10-20-theme.jpg",
-    "assets/cards/about.jpg"
-   ],
-   "kind": "theme",
-   "source": "auto",
-   "threads_id": "18065158871716888"
-  },
-  {
    "date": "2026-10-21",
    "kind": "us_brief",
    "source": "brief",
@@ -454,6 +443,12 @@
    "kind": "lesson",
    "source": "manual",
    "threads_id": "17968444164204669"
+  },
+  {
+   "date": "2026-11-19",
+   "kind": "us_brief",
+   "source": "brief",
+   "threads_id": "18140452732729977"
   }
  ],
  "queue_done": [
