@@ -2,12 +2,6 @@
  "posts": [
   {
    "date": "2026-10-22",
-   "kind": "us_brief",
-   "source": "brief",
-   "threads_id": "18017343566955254"
-  },
-  {
-   "date": "2026-10-22",
    "kind": "kr_close",
    "source": "brief",
    "threads_id": "17948978187345835"
@@ -449,6 +443,12 @@
    "kind": "kr_close",
    "source": "brief",
    "threads_id": "18080540465465804"
+  },
+  {
+   "date": "2026-11-20",
+   "kind": "lesson",
+   "source": "manual",
+   "threads_id": "17992200375084340"
   }
  ],
  "queue_done": [
@@ -462,6 +462,7 @@
   "f5065423b7b5",
   "d83c143659d7",
   "a7e7bf1ae6c8",
-  "2c7f405feb68"
+  "2c7f405feb68",
+  "74b166e53e6d"
  ]
 }
