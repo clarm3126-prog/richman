@@ -1,1 +1,1 @@
-{"trading_day":"20261120","intraday":[],"close":[],"updated":"2026-11-20 04:27:46 KST"}
+{"trading_day":"20261120","intraday":[],"close":[{"code":"096870","name":"엘디티","market":"KOSDAQ","price":3260,"change":29.88,"ath":3205.0,"ath_date":"20260102","is_all_time":false,"base_days":322,"volume":82129,"vol_ratio":3.51,"supply_demand":false}],"updated":"2026-11-20 16:06:13 KST"}
