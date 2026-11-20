@@ -61,6 +61,35 @@ on:
     #
     # 금요일 17:18 발행은 Worker 가 맡는다(workers/post-scheduler).
 
+  # 🔴 **국장 마감 글은 「시각」이 아니라 「자료가 왔을 때」 올린다.**
+  #
+  # 2026-11-17 부터 나흘 동안 국장 마감 글이 한 편도 안 나갔다. 조회수가
+  # 제일 높은 종류인데(중앙 7회) 조용히 꺼져 있었다.
+  #
+  # `compose_kr_close` 는 `market.json` 의 `trading_day` 가 **오늘이어야**
+  # 글을 만든다. 어제 숫자를 오늘 마감인 것처럼 올리면 안 되니 맞는 가드다.
+  # 그런데 그날치 자료가 커밋되는 시각이 밀렸다. 재보니 이렇다(KST).
+  #   11-16  15:22  ← 이 날까지는 나갔다
+  #   11-17  16:49     11-18  16:19     11-19  16:17
+  # Worker 는 16:08 에 정확히 쏘므로 **9~41분 차이로 늘 진다.**
+  #
+  # 시각을 다시 잡아도 또 진다. `fetch-prices` 는 Worker 가 없어 전부
+  # 크론인데, 예정과 실행을 시간순으로 짝지어 재니 **중앙 471분(7.8시간)**
+  # 늦었다(n=60, 최대 618분). 자료가 오는 시각 자체가 날마다 흔들린다.
+  #
+  # → **자료를 담는 워크플로가 끝나면 그때 쏜다.** 이 저장소가 이미 네
+  #   군데서 쓰는 방식이다(momentum·backtest·earnings·theme-forecast).
+  #   `fetch-prices` 는 평일 다섯 번 도는데 `kind_today` 잠금이 있어
+  #   하루 한 편만 나간다. 시간 창(15:45-19:00)이 밤 발행을 막는다.
+  #   자료가 창 밖(새벽)에 오는 날은 그날 마감 글을 포기한다 — 새벽에
+  #   올리는 것보다 안 올리는 쪽이 낫다(`in_window` 주석 참고).
+  #
+  # 16:08 Worker 슬롯은 그대로 둔다. 자료가 일찍 오는 날은 그쪽이 먼저
+  # 올리고, 같은 날 두 번 나가는 것은 `kind_today` 가 막는다.
+  workflow_run:
+    workflows: ["Fetch Prices"]
+    types: [completed]
+
   # Cloudflare Worker 가 정확한 시각에 쏘는 신호.
   #
   # 위 크론은 남겨 둔다. Worker 가 멎어도 글은 나가야 하기 때문이다.
@@ -109,6 +138,10 @@ concurrency:
 
 jobs:
   post:
+    # Fetch Prices 가 실패했으면 글을 올리지 않는다. 자료가 반만 들어온
+    # 채로 마감 글이 나가면 숫자가 틀린다. 다른 사건(예약·Worker·수동)은
+    # 그대로 통과시킨다 — workflow_run 일 때만 결론을 본다.
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -174,10 +207,19 @@ jobs:
               echo "창 형식이 이상해 무시합니다: $DISPATCH_WINDOW"
             fi
           fi
+          # Fetch Prices 가 끝나서 뜬 실행. 자료가 막 들어온 직후이므로
+          # 국장 마감 글을 쏜다. `trading_day` 가 아직 어제면 compose 가
+          # 스스로 건너뛰고, 창(15:45-19:00)이 새벽 발행을 막는다.
+          # 하루 다섯 번 뜨지만 `kind_today` 잠금이 한 편만 통과시킨다.
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            MODE="--brief=kr_close"
+            WINDOW="15:45-19:00"
+            echo "Fetch Prices 완료 신호 — 국장 마감을 시도합니다"
+          fi
           # 크론으로 뜬 것만 여기서 모드를 정한다. Worker 신호로 들어오면
           # github.event.schedule 이 비어 있어 *) 에 걸리고, 그러면 위에서
           # 정한 모드가 --auto 로 덮어써진다.
-          if [ -z "$DISPATCH_MODE" ]; then
+          if [ -z "$DISPATCH_MODE" ] && [ "${{ github.event_name }}" = "schedule" ]; then
           case "${{ github.event.schedule }}" in
             "8 7 * * 1-5")   MODE="--brief=kr_close"; WINDOW="15:45-19:00" ;;
             "9 23 * * 0-4")  MODE="--brief=us_brief"; WINDOW="07:30-10:30" ;;
