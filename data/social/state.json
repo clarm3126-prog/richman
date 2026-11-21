@@ -2,12 +2,6 @@
  "posts": [
   {
    "date": "2026-10-22",
-   "kind": "kr_close",
-   "source": "brief",
-   "threads_id": "17948978187345835"
-  },
-  {
-   "date": "2026-10-22",
    "ig_id": "18643297021022734",
    "images": [
     "assets/cards/2026-10-22-momentum.jpg",
@@ -449,6 +443,17 @@
    "kind": "lesson",
    "source": "manual",
    "threads_id": "17992200375084340"
+  },
+  {
+   "date": "2026-11-21",
+   "ig_id": "18018641771752228",
+   "images": [
+    "assets/cards/promo-backtest.jpg",
+    "assets/cards/promo-list.jpg"
+   ],
+   "kind": "promo",
+   "source": "manual",
+   "threads_id": "18130963450633178"
   }
  ],
  "queue_done": [
@@ -463,6 +468,7 @@
   "d83c143659d7",
   "a7e7bf1ae6c8",
   "2c7f405feb68",
-  "74b166e53e6d"
+  "74b166e53e6d",
+  "919f45dc32e3"
  ]
 }
