@@ -1,17 +1,6 @@
 {
  "posts": [
   {
-   "date": "2026-10-22",
-   "ig_id": "18643297021022734",
-   "images": [
-    "assets/cards/2026-10-22-momentum.jpg",
-    "assets/cards/about.jpg"
-   ],
-   "kind": "momentum",
-   "source": "auto",
-   "threads_id": "18091330046299757"
-  },
-  {
    "date": "2026-10-23",
    "kind": "us_brief",
    "source": "brief",
@@ -454,6 +443,17 @@
    "kind": "promo",
    "source": "manual",
    "threads_id": "18130963450633178"
+  },
+  {
+   "date": "2026-11-22",
+   "ig_id": "18080249942729875",
+   "images": [
+    "assets/cards/minervini-trend.jpg",
+    "assets/cards/minervini-filter.jpg"
+   ],
+   "kind": "lesson",
+   "source": "manual",
+   "threads_id": "18097995857259127"
   }
  ],
  "queue_done": [
@@ -469,6 +469,7 @@
   "a7e7bf1ae6c8",
   "2c7f405feb68",
   "74b166e53e6d",
-  "919f45dc32e3"
+  "919f45dc32e3",
+  "29c1de7524dc"
  ]
 }
