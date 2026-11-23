@@ -849,7 +849,7 @@
     "replies": 0,
     "reposts": 0,
     "shares": 0,
-    "views": 21
+    "views": 22
    },
    "platform": "threads"
   },
@@ -1123,7 +1123,7 @@
     "replies": 0,
     "reposts": 0,
     "shares": 0,
-    "views": 5
+    "views": 6
    },
    "platform": "threads"
   },
@@ -1142,6 +1142,36 @@
     "views": 0
    },
    "platform": "instagram"
+  },
+  {
+   "checked": "2026-11-23",
+   "date": "2026-11-23",
+   "kind": "us_brief",
+   "media_id": "17871799653659827",
+   "metrics": {
+    "likes": 0,
+    "quotes": 0,
+    "replies": 0,
+    "reposts": 0,
+    "shares": 0,
+    "views": 5
+   },
+   "platform": "threads"
+  },
+  {
+   "checked": "2026-11-23",
+   "date": "2026-11-23",
+   "kind": "kr_close",
+   "media_id": "18122205053065878",
+   "metrics": {
+    "likes": 0,
+    "quotes": 0,
+    "replies": 0,
+    "reposts": 0,
+    "shares": 0,
+    "views": 0
+   },
+   "platform": "threads"
   }
  ],
  "updated": "2026-11-23"
