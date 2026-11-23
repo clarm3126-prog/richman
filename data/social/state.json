@@ -1,17 +1,6 @@
 {
  "posts": [
   {
-   "date": "2026-10-23",
-   "ig_id": "18081287924711497",
-   "images": [
-    "assets/cards/2026-10-23-theme.jpg",
-    "assets/cards/about.jpg"
-   ],
-   "kind": "theme",
-   "source": "auto",
-   "threads_id": "17924707470436450"
-  },
-  {
    "date": "2026-10-26",
    "kind": "us_brief",
    "source": "brief",
@@ -454,6 +443,17 @@
    "kind": "kr_close",
    "source": "brief",
    "threads_id": "18122205053065878"
+  },
+  {
+   "date": "2026-11-23",
+   "ig_id": "18108226202633349",
+   "images": [
+    "assets/cards/blog-soslab.jpg",
+    "assets/cards/about.jpg"
+   ],
+   "kind": "trade_log",
+   "source": "manual",
+   "threads_id": "18171844237480787"
   }
  ],
  "queue_done": [
@@ -470,6 +470,7 @@
   "2c7f405feb68",
   "74b166e53e6d",
   "919f45dc32e3",
-  "29c1de7524dc"
+  "29c1de7524dc",
+  "e88893fdbed9"
  ]
 }
