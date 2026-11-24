@@ -1,17 +1,6 @@
 {
  "posts": [
   {
-   "date": "2026-10-26",
-   "ig_id": "17952694026294101",
-   "images": [
-    "assets/cards/2026-10-26-theme.jpg",
-    "assets/cards/about.jpg"
-   ],
-   "kind": "theme",
-   "source": "auto",
-   "threads_id": "18397065256200250"
-  },
-  {
    "date": "2026-10-27",
    "kind": "us_brief",
    "source": "brief",
@@ -454,6 +443,17 @@
    "kind": "kr_close",
    "source": "brief",
    "threads_id": "18139587250656503"
+  },
+  {
+   "date": "2026-11-24",
+   "ig_id": "18113546957191164",
+   "images": [
+    "assets/cards/blog-ligachem.jpg",
+    "assets/cards/about.jpg"
+   ],
+   "kind": "trade_log",
+   "source": "manual",
+   "threads_id": "18137416592490712"
   }
  ],
  "queue_done": [
@@ -471,6 +471,7 @@
   "74b166e53e6d",
   "919f45dc32e3",
   "29c1de7524dc",
-  "e88893fdbed9"
+  "e88893fdbed9",
+  "6bde62c6d04b"
  ]
 }
