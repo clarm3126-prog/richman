@@ -1,17 +1,6 @@
 {
  "posts": [
   {
-   "date": "2026-10-27",
-   "ig_id": "18111591008338346",
-   "images": [
-    "assets/cards/2026-10-27-screener.jpg",
-    "assets/cards/about.jpg"
-   ],
-   "kind": "screener",
-   "source": "auto",
-   "threads_id": "18109717382256066"
-  },
-  {
    "date": "2026-10-28",
    "kind": "us_brief",
    "source": "brief",
@@ -454,6 +443,17 @@
    "kind": "kr_close",
    "source": "brief",
    "threads_id": "18417942295094152"
+  },
+  {
+   "date": "2026-11-25",
+   "ig_id": "18107406812023448",
+   "images": [
+    "assets/cards/blog-daewon.jpg",
+    "assets/cards/about.jpg"
+   ],
+   "kind": "trade_log",
+   "source": "manual",
+   "threads_id": "18031277300877116"
   }
  ],
  "queue_done": [
@@ -472,6 +472,7 @@
   "919f45dc32e3",
   "29c1de7524dc",
   "e88893fdbed9",
-  "6bde62c6d04b"
+  "6bde62c6d04b",
+  "66ea73c0f3fe"
  ]
 }
