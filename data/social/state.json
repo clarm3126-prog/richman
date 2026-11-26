@@ -1,17 +1,6 @@
 {
  "posts": [
   {
-   "date": "2026-10-28",
-   "ig_id": "17906218455351723",
-   "images": [
-    "assets/cards/2026-10-28-momentum.jpg",
-    "assets/cards/about.jpg"
-   ],
-   "kind": "momentum",
-   "source": "auto",
-   "threads_id": "18219187570357183"
-  },
-  {
    "date": "2026-10-29",
    "kind": "us_brief",
    "source": "brief",
@@ -454,6 +443,17 @@
    "kind": "kr_close",
    "source": "brief",
    "threads_id": "18113190125239979"
+  },
+  {
+   "date": "2026-11-26",
+   "ig_id": "18031864553986286",
+   "images": [
+    "assets/cards/blog-pskholdings.jpg",
+    "assets/cards/about.jpg"
+   ],
+   "kind": "trade_log",
+   "source": "manual",
+   "threads_id": "18104881388562269"
   }
  ],
  "queue_done": [
@@ -473,6 +473,7 @@
   "29c1de7524dc",
   "e88893fdbed9",
   "6bde62c6d04b",
-  "66ea73c0f3fe"
+  "66ea73c0f3fe",
+  "84207d47e123"
  ]
 }
