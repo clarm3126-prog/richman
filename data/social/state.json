@@ -2,12 +2,6 @@
  "posts": [
   {
    "date": "2026-10-29",
-   "kind": "us_brief",
-   "source": "brief",
-   "threads_id": "18435795748198159"
-  },
-  {
-   "date": "2026-10-29",
    "kind": "kr_close",
    "source": "brief",
    "threads_id": "18163157122501289"
@@ -454,6 +448,12 @@
    "kind": "trade_log",
    "source": "manual",
    "threads_id": "18104881388562269"
+  },
+  {
+   "date": "2026-11-27",
+   "kind": "us_brief",
+   "source": "brief",
+   "threads_id": "17962319547057258"
   }
  ],
  "queue_done": [
