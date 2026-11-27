@@ -2,12 +2,6 @@
  "posts": [
   {
    "date": "2026-10-29",
-   "kind": "kr_close",
-   "source": "brief",
-   "threads_id": "18163157122501289"
-  },
-  {
-   "date": "2026-10-29",
    "ig_id": "18472014331186616",
    "images": [
     "assets/cards/2026-10-29-theme.jpg",
@@ -454,6 +448,16 @@
    "kind": "us_brief",
    "source": "brief",
    "threads_id": "17962319547057258"
+  },
+  {
+   "date": "2026-11-27",
+   "images": [
+    "assets/cards/blog-principles.jpg",
+    "assets/cards/about.jpg"
+   ],
+   "kind": "lesson",
+   "source": "manual",
+   "threads_id": "18023015048736124"
   }
  ],
  "queue_done": [
@@ -474,6 +478,7 @@
   "e88893fdbed9",
   "6bde62c6d04b",
   "66ea73c0f3fe",
-  "84207d47e123"
+  "84207d47e123",
+  "8b571fd139b4"
  ]
 }
