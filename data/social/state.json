@@ -2,12 +2,6 @@
  "posts": [
   {
    "date": "2026-10-30",
-   "kind": "us_brief",
-   "source": "brief",
-   "threads_id": "18098514824421536"
-  },
-  {
-   "date": "2026-10-30",
    "kind": "kr_close",
    "source": "brief",
    "threads_id": "18141843304545902"
@@ -453,6 +447,17 @@
    "kind": "kr_close",
    "source": "brief",
    "threads_id": "17883605349553306"
+  },
+  {
+   "date": "2026-11-28",
+   "ig_id": "18126294256944175",
+   "images": [
+    "assets/cards/minervini-vs-momentum.jpg",
+    "assets/cards/about.jpg"
+   ],
+   "kind": "lesson",
+   "source": "manual",
+   "threads_id": "18107968292372843"
   }
  ],
  "queue_done": [
@@ -474,6 +479,7 @@
   "6bde62c6d04b",
   "66ea73c0f3fe",
   "84207d47e123",
-  "8b571fd139b4"
+  "8b571fd139b4",
+  "b03649f97989"
  ]
 }
